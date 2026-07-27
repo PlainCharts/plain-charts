@@ -55,6 +55,7 @@
       "!lib/kapelka/examples/**",
       "css/**",
       "images/**",
+      "addons/pacman/**",
       "packages/themes/Black and White Dark.json",
       "packages/themes/Choco Light.json",
       "packages/chart-themes/Halo Dark.json",

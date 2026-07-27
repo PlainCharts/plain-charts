@@ -1,0 +1,505 @@
+{
+  "packages": [
+    {
+      "class": "adapters",
+      "id": "cqg",
+      "name": "CQG",
+      "description": "Futures market data and trading through the CQG gateway.",
+      "icon": "",
+      "info": "info.md",
+      "path": "data_engine/adapters/cqg",
+      "runtime": "index.js"
+    },
+    {
+      "class": "adapters",
+      "id": "mt5",
+      "name": "MetaTrader 5",
+      "description": "Market data and trading through a MetaTrader 5 terminal bridge.",
+      "icon": "",
+      "info": "info.md",
+      "path": "data_engine/adapters/mt5",
+      "runtime": "index.js"
+    },
+    {
+      "class": "adapters",
+      "id": "oanda",
+      "name": "OANDA",
+      "description": "Forex and CFD market data and trading through the OANDA API.",
+      "icon": "",
+      "info": "",
+      "path": "data_engine/adapters/oanda",
+      "runtime": "index.js"
+    },
+    {
+      "class": "adapters",
+      "id": "schwab",
+      "name": "Schwab",
+      "description": "Stocks and options market data and trading through the Schwab API.",
+      "icon": "",
+      "info": "info.md",
+      "path": "data_engine/adapters/schwab",
+      "runtime": "index.js"
+    },
+    {
+      "class": "addons",
+      "id": "data-interceptor",
+      "name": "Data Interceptor",
+      "description": "Discovers and streams the raw field schema from each live broker feed.",
+      "icon": "icon.png",
+      "info": "",
+      "path": "addons/data-interceptor",
+      "runtime": "index.js"
+    },
+    {
+      "class": "addons",
+      "id": "pacman",
+      "name": "Pacman",
+      "description": "The package manager — browse, install, and remove studies, addons, tools, and more.",
+      "icon": "icon.png",
+      "info": "",
+      "path": "addons/pacman",
+      "runtime": "index.js"
+    },
+    {
+      "class": "addons",
+      "id": "perf-monitor",
+      "name": "Performance Monitor",
+      "description": "Live resource monitor for the whole app — CPU, memory, buses, and latency per window.",
+      "icon": "icon.png",
+      "info": "",
+      "path": "addons/perf-monitor",
+      "runtime": "index.js"
+    },
+    {
+      "class": "addons",
+      "id": "position-manager",
+      "name": "Position Manager",
+      "description": "A live trading panel — market entry plus watcher-driven bracket automation on the active chart.",
+      "icon": "icon.png",
+      "info": "",
+      "path": "addons/position-manager",
+      "runtime": "index.js"
+    },
+    {
+      "class": "addons",
+      "id": "screenshot",
+      "name": "Screenshot",
+      "description": "Capture the chart to an image — download, copy, print, or preview.",
+      "icon": "icon.png",
+      "info": "",
+      "path": "addons/screenshot",
+      "runtime": "index.js"
+    },
+    {
+      "class": "primitives",
+      "id": "string-beads",
+      "name": "String and beads",
+      "description": "An on-chart order view: a vertical line carrying entry, stop, target, and order dots.",
+      "icon": "",
+      "info": "",
+      "path": "packages/primitives/string-beads",
+      "runtime": "index.js"
+    },
+    {
+      "class": "studies",
+      "id": "bollinger",
+      "name": "Bollinger Bands",
+      "description": "A moving average with standard-deviation bands above and below.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/bollinger",
+      "runtime": "bollinger.js"
+    },
+    {
+      "class": "studies",
+      "id": "day_marker",
+      "name": "Day Marker",
+      "description": "Vertical lines marking each new day, session, and time boundary.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/day_marker",
+      "runtime": "day_marker.js"
+    },
+    {
+      "class": "studies",
+      "id": "fvg",
+      "name": "Fair Value Gap",
+      "description": "A study that highlights market imbalances.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/fvg",
+      "runtime": "fvg.js"
+    },
+    {
+      "class": "studies",
+      "id": "ma_ribbon",
+      "name": "MA Ribbon",
+      "description": "A study that displays multiple moving averages on the chart.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/ma_ribbon",
+      "runtime": "ma_ribbon.js"
+    },
+    {
+      "class": "studies",
+      "id": "open_interest",
+      "name": "Open Interest",
+      "description": "A study that plots the number of open contracts over time.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/open_interest",
+      "runtime": "open_interest.js"
+    },
+    {
+      "class": "studies",
+      "id": "pr_terrain",
+      "name": "%R Terrain 3D (ether demo)",
+      "description": "A study that renders Williams %R as a 3D terrain heatmap.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/pr_terrain",
+      "runtime": "pr_terrain.js"
+    },
+    {
+      "class": "studies",
+      "id": "pr_trend_exhaustion",
+      "name": "%R Trend Exhaustion",
+      "description": "A study that flags trend exhaustion using Williams %R.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/pr_trend_exhaustion",
+      "runtime": "pr_trend_exhaustion.js"
+    },
+    {
+      "class": "studies",
+      "id": "rsi",
+      "name": "Relative Strength Index (RSI)",
+      "description": "A momentum oscillator that measures the speed of price changes.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/rsi",
+      "runtime": "rsi.js"
+    },
+    {
+      "class": "studies",
+      "id": "session_marker",
+      "name": "Session Marker",
+      "description": "A study that helps you keep track of multiple market sessions.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/session_marker",
+      "runtime": "session_marker.js"
+    },
+    {
+      "class": "studies",
+      "id": "sma_cross",
+      "name": "SMA Cross",
+      "description": "Fast and slow simple moving averages on the price pane.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/sma_cross",
+      "runtime": "sma_cross.js"
+    },
+    {
+      "class": "studies",
+      "id": "time_marker",
+      "name": "Time marker",
+      "description": "A study that marks specific times of day on the chart.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/time_marker",
+      "runtime": "time_marker.js"
+    },
+    {
+      "class": "studies",
+      "id": "volume",
+      "name": "Volume",
+      "description": "A study that plots total traded volume as a histogram.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/volume",
+      "runtime": "volume.js"
+    },
+    {
+      "class": "studies",
+      "id": "volume_cvd",
+      "name": "Cumulative Volume Delta",
+      "description": "A study that tracks the running sum of buy minus sell volume.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/volume_cvd",
+      "runtime": "volume_cvd.js"
+    },
+    {
+      "class": "studies",
+      "id": "volume_delta_candle",
+      "name": "Volume Delta x-axis",
+      "description": "A study that plots per-bar buy minus sell volume along the time axis.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/volume_delta_candle",
+      "runtime": "volume_delta_candle.js"
+    },
+    {
+      "class": "studies",
+      "id": "volume_profile",
+      "name": "Volume Profile",
+      "description": "A study that shows volume traded at each price level.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/volume_profile",
+      "runtime": "volume_profile.js"
+    },
+    {
+      "class": "studies",
+      "id": "volume_up_down_absorption",
+      "name": "Up/Down Volume + Absorption",
+      "description": "A study that splits volume into buying and selling and flags absorption.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/volume_up_down_absorption",
+      "runtime": "volume_up_down_absorption.js"
+    },
+    {
+      "class": "studies",
+      "id": "vwap",
+      "name": "VWAP",
+      "description": "A study that plots the volume-weighted average price.",
+      "icon": "",
+      "info": "",
+      "path": "packages/studies/vwap",
+      "runtime": "vwap.js"
+    },
+    {
+      "class": "themes",
+      "id": "Black and White Dark",
+      "name": "Black and White Dark",
+      "description": "A dark theme in pure grayscale, no color accents.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Black and White Dark.json"
+    },
+    {
+      "class": "themes",
+      "id": "Blue Night Dark",
+      "name": "Blue Night Dark",
+      "description": "A dark theme in deep navy blue.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Blue Night Dark.json"
+    },
+    {
+      "class": "themes",
+      "id": "Choco Dark",
+      "name": "Choco Dark",
+      "description": "A dark theme in warm chocolate browns.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Choco Dark.json"
+    },
+    {
+      "class": "themes",
+      "id": "Choco Light",
+      "name": "Choco Light",
+      "description": "A light theme in warm chocolate browns.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Choco Light.json"
+    },
+    {
+      "class": "themes",
+      "id": "Gruvbox Dark",
+      "name": "Gruvbox Dark",
+      "description": "A dark theme in warm retro Gruvbox tones -- groove browns, creamy text, a yellow accent.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Gruvbox Dark.json"
+    },
+    {
+      "class": "themes",
+      "id": "Purple Dark",
+      "name": "Purple Dark",
+      "description": "A dark theme in deep purple.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Purple Dark.json"
+    },
+    {
+      "class": "themes",
+      "id": "Purple Light",
+      "name": "Purple Light",
+      "description": "A light theme in soft purple.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Purple Light.json"
+    },
+    {
+      "class": "themes",
+      "id": "Teal Dark",
+      "name": "Teal Dark",
+      "description": "A dark theme in cool teal.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Teal Dark.json"
+    },
+    {
+      "class": "themes",
+      "id": "Yellow Dark",
+      "name": "Yellow Dark",
+      "description": "A dark theme with warm yellow accents.",
+      "icon": "",
+      "path": "packages/themes",
+      "runtime": "Yellow Dark.json"
+    },
+    {
+      "class": "tools",
+      "id": "arrow",
+      "name": "Arrow",
+      "description": "A drawing tool that points an arrow at a spot on the chart.",
+      "icon": "arrow.png",
+      "info": "",
+      "path": "packages/tools/arrow",
+      "runtime": "arrow.js"
+    },
+    {
+      "class": "tools",
+      "id": "callout",
+      "name": "Callout",
+      "description": "A drawing tool that pins a text bubble to a point on the chart.",
+      "icon": "callout.png",
+      "info": "",
+      "path": "packages/tools/callout",
+      "runtime": "callout.js"
+    },
+    {
+      "class": "tools",
+      "id": "cursor",
+      "name": "Cursor",
+      "description": "The default pointer — a plain crosshair, no drawing.",
+      "icon": "cursor.png",
+      "info": "",
+      "path": "packages/tools/cursor",
+      "runtime": "cursor.js"
+    },
+    {
+      "class": "tools",
+      "id": "fib",
+      "name": "Fib retracement",
+      "description": "A drawing tool that plots Fibonacci retracement levels between two points.",
+      "icon": "fib.png",
+      "info": "",
+      "path": "packages/tools/fib",
+      "runtime": "fib.js"
+    },
+    {
+      "class": "tools",
+      "id": "hline",
+      "name": "Horizontal Line",
+      "description": "A drawing tool that draws a horizontal line across the whole chart.",
+      "icon": "hline.png",
+      "info": "",
+      "path": "packages/tools/hline",
+      "runtime": "hline.js"
+    },
+    {
+      "class": "tools",
+      "id": "hray",
+      "name": "Horizontal Ray",
+      "description": "A drawing tool that draws a horizontal line from a point to the right edge.",
+      "icon": "hray.png",
+      "info": "",
+      "path": "packages/tools/hray",
+      "runtime": "hray.js"
+    },
+    {
+      "class": "tools",
+      "id": "levelray",
+      "name": "Level Line",
+      "description": "A one-click line that shoots forward and stops at the first candle to reach the level.",
+      "icon": "levelray.png",
+      "info": "",
+      "path": "packages/tools/levelray",
+      "runtime": "levelray.js"
+    },
+    {
+      "class": "tools",
+      "id": "path",
+      "name": "Path",
+      "description": "A drawing tool for a multi-point line.",
+      "icon": "path.png",
+      "info": "",
+      "path": "packages/tools/path",
+      "runtime": "path.js"
+    },
+    {
+      "class": "tools",
+      "id": "range",
+      "name": "Price Range",
+      "description": "Three measuring tools in one — price, date, and combined range.",
+      "icon": "priceRange.png",
+      "info": "",
+      "path": "packages/tools/range",
+      "runtime": "range.js"
+    },
+    {
+      "class": "tools",
+      "id": "rect",
+      "name": "Rectangle",
+      "description": "A tool that draws a rectangle.",
+      "icon": "rect.png",
+      "info": "",
+      "path": "packages/tools/rect",
+      "runtime": "rect.js"
+    },
+    {
+      "class": "tools",
+      "id": "symbol",
+      "name": "Symbol",
+      "description": "A tool that drops a Unicode glyph on the chart as a sticker.",
+      "icon": "symbol.png",
+      "info": "",
+      "path": "packages/tools/symbol",
+      "runtime": "symbol.js"
+    },
+    {
+      "class": "tools",
+      "id": "text",
+      "name": "Text",
+      "description": "A tool that places a text label on the chart.",
+      "icon": "text.png",
+      "info": "",
+      "path": "packages/tools/text",
+      "runtime": "text.js"
+    },
+    {
+      "class": "tools",
+      "id": "trendline",
+      "name": "Trend Line",
+      "description": "Three line tools in one — trend line, ray, and extended line.",
+      "icon": "trendline.png",
+      "info": "",
+      "path": "packages/tools/trendline",
+      "runtime": "trendline.js"
+    },
+    {
+      "class": "tools",
+      "id": "vline",
+      "name": "Vertical Line",
+      "description": "A tool that draws a vertical line down the whole chart.",
+      "icon": "vline.png",
+      "info": "",
+      "path": "packages/tools/vline",
+      "runtime": "vline.js"
+    },
+    {
+      "class": "tools",
+      "id": "zoom",
+      "name": "Zoom In",
+      "description": "A tool that zooms in on an area of the chart.",
+      "icon": "zoom.png",
+      "info": "",
+      "path": "packages/tools/zoom",
+      "runtime": "zoom.js"
+    }
+  ]
+}
