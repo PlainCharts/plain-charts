@@ -10,7 +10,7 @@
 // package's location in the repo is a known, carried in the catalog's `path`). Enough to FEEL the flow.
 'use strict';
 
-const DEFAULT_REPO = 'https://raw.githubusercontent.com/ether-strannik/pacman/main';
+const DEFAULT_REPO = 'https://raw.githubusercontent.com/PlainCharts/plain-charts/main';
 
 // The addon is eval'd with require() shimmed, so siblings load via dynamic import — kicked off at load,
 // awaited in openModal. lang.js = language identity for vocab packs (Weblate DB + flag mapping);
