@@ -1,0 +1,48 @@
+name: Regenerate Pacman catalog
+
+# Pacman browses <repo>/main/index.json, and raw.githubusercontent.com can't list
+# folders -- so the catalog must be regenerated whenever a package is added,
+# removed, or changed. This does it automatically: on a push touching any content
+# location, rerun the generator and, if index.json changed, commit it back.
+#
+# No loop: the push here uses GITHUB_TOKEN, and GitHub does not start new workflow
+# runs for GITHUB_TOKEN-authored pushes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'addons/**'
+      - 'data_engine/adapters/**'
+      - 'static/locale/**'
+      - 'scripts/catalog-index.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pacman-catalog
+  cancel-in-progress: true
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Regenerate index.json
+        run: node scripts/catalog-index.mjs
+      - name: Commit if the catalog changed
+        run: |
+          if git diff --quiet -- index.json; then
+            echo "Catalog unchanged."
+          else
+            git config user.name "PlainCharts"
+            git config user.email "plain-charts@proton.me"
+            git add index.json
+            git commit -m "chore: regenerate pacman catalog"
+            git push
+          fi
