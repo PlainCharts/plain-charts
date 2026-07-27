@@ -1,0 +1,14 @@
+# Skill: "You add a study through the settings block," not "Studies are
+# configured via settings." — targets impersonal passive, not all passive.
+extends: existence
+message: "Passive/impersonal — name the actor ('You add X…'), not '%s'."
+level: warning
+ignorecase: true
+raw:
+  - '\b(?:is|are|was|were|be|been|being|can be|could be|may be|might be|must be|shall be|should be|will be|would be)\s+\w+(?:ed|en)\s+(?:via|by|through|using|with)\b'
+  - '\bit\s+is\s+\w+(?:ed|en)\s+(?:that|to)\b'
+  - '\bthere\s+(?:is|are|was|were)\s+\w+(?:ed|en)\b'
+  - '\b(?:is|are|was|were)\s+required\s+to\b'
+  - '\b(?:is|are|was|were)\s+used\s+to\b'
+  - '\b(?:is|are|was|were)\s+designed\s+to\b'
+  - '\b(?:is|are|was|were)\s+intended\s+to\b'

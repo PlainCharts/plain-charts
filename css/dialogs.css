@@ -1,0 +1,229 @@
+/* small popovers + dialogs: chart-type dialog, chart right-click context menu, per-drawing menu,
+   drawing-template save dialog, symbol glyph picker, drag/alert cursors, multi-select, Fib grid. */
+
+/* ---- chart-type dialog ---- */
+.ct-dialog { width: 300px; padding-bottom: 10px; }
+.ct-body { padding: 4px 0; }
+.ct-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 8px 14px; }
+.ct-row label { color: var(--tx-dim); font-size: 13px; }
+.ct-select { background: var(--panel); color: var(--tx); border: 1px solid var(--bd); border-radius: 5px;
+             padding: 5px 8px; font-size: 13px; min-width: 158px; }
+.ct-sec { padding: 10px 14px 2px; font-size: 11px; letter-spacing: .05em; color: var(--tx-dim); }
+.ct-line { border-top: 1px solid var(--bd); margin-top: 6px; }
+.ct-hl-host { display: inline-flex; align-items: center; gap: 6px; }
+.ct-hl-lbl { color: var(--tx-dim); font-size: 12px; font-weight: 600; }
+
+/* ---- right-click context menu ---- */
+#chartContextMenu { position: fixed; display: none; flex-direction: column; background: var(--panel);
+                    border: 1px solid var(--bd); border-radius: 8px; padding: 5px; z-index: 80;
+                    box-shadow: 0 8px 30px rgba(0,0,0,.5); min-width: 160px; }
+#chartContextMenu.open { display: flex; }
+.ctx-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 5px;
+            cursor: pointer; font-size: 13px; }
+.ctx-item:hover { background: var(--hover); }
+.ctx-item.disabled { opacity: .4; cursor: default; }
+.ctx-item.disabled:hover { background: none; }
+.ctx-ico { color: var(--tx2); width: 16px; text-align: center; }
+.ctx-label { flex: 1; white-space: nowrap; }
+.ctx-key { color: var(--tx-dim); font-size: 11px; padding-left: 20px; }
+.ctx-div { height: 1px; background: var(--bd-soft); margin: 5px 4px; }
+/* per-drawing right-click menu */
+.dwg-menu { position: fixed; z-index: 96; min-width: 180px; background: var(--panel); border: 1px solid var(--bd);
+            border-radius: 8px; padding: 5px; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+.dwg-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 5px;
+            cursor: pointer; font-size: 13px; color: var(--tx); }
+.dwg-item:hover { background: var(--hover); }
+.dwg-item.disabled { opacity: .4; cursor: default; }
+.dwg-item.disabled:hover { background: none; }
+.dwg-item.dwg-opt { padding: 6px 10px 6px 24px; font-size: 12px; }
+.dwg-optbox { max-height: 190px; overflow-y: auto; }
+.dwg-inp { display: block; width: calc(100% - 12px); box-sizing: border-box; margin: 4px 6px 6px; padding: 6px 8px;
+           font-size: 13px; color: var(--tx); background: var(--panel); border: 1px solid var(--bd); border-radius: 6px; }
+.dwg-inp:focus { outline: none; border-color: var(--accent-ui); }
+.dwg-check { width: 14px; text-align: center; color: var(--tx); }
+.dwg-div { height: 1px; background: var(--bd-soft); margin: 5px 4px; }
+.dwg-item.dwg-sub { position: relative; }
+.dwg-arrow { margin-left: auto; padding-left: 10px; color: var(--tx-dim); font-size: 10px; }
+.dwg-submenu { position: absolute; left: 100%; top: -6px; display: none; }
+.dwg-submenu-left { left: auto; right: 100%; }   /* fly left (for right-docked menus) */
+/* Save drawing template dialog (combobox over existing names) */
+.dialog.tmpl-save { width: 380px; max-width: 92vw; padding: 16px 18px; }
+.tmpl-save-body { margin: 8px 0 14px; }
+.tmpl-save-lbl { display: block; font-size: 12px; color: var(--tx-dim); margin-bottom: 6px; }
+.tmpl-combo { position: relative; }
+.tmpl-save-input { width: 100%; box-sizing: border-box; }
+.tmpl-suggest { position: absolute; left: 0; right: 0; top: 100%; margin-top: 3px; display: none;
+                background: var(--panel); border: 1px solid var(--bd); border-radius: 6px;
+                max-height: 200px; overflow-y: auto; z-index: 5; box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+.tmpl-suggest-row { padding: 8px 10px; font-size: 13px; cursor: pointer; }
+.tmpl-suggest-row:hover { background: var(--hover); }
+.dialog.confirm-dlg { width: 380px; max-width: 92vw; padding: 16px 18px; }
+.confirm-body { font-size: 13px; color: var(--tx); line-height: 1.5; margin: 12px 0 16px; }
+.dwg-item.dwg-sub:hover > .dwg-submenu { display: block; }
+.dwg-head { padding: 4px 10px 6px; font-size: 11px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .04em; }
+.dwg-switch { margin-left: auto; flex: none; width: 28px; height: 16px; border-radius: 9px; background: var(--bd); position: relative; transition: background .15s; }
+.dwg-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: left .15s; }
+.dwg-switch.on { background: var(--accent-ui); }
+.dwg-switch.on::after { left: 14px; }
+/* Symbol tool glyph palette (icon picker) */
+.sym-picker { position: fixed; z-index: 97; width: 296px; max-height: 70vh; overflow-y: auto;
+              background: var(--panel); border: 1px solid var(--bd); border-radius: 10px;
+              padding: 6px 8px 10px; box-shadow: 0 10px 40px rgba(0,0,0,.55); }
+.sym-cat { padding: 9px 4px 4px; font-size: 11px; color: var(--tx-dim);
+           text-transform: uppercase; letter-spacing: .04em; }
+.sym-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.sym-cell { display: flex; align-items: center; justify-content: center; height: 32px;
+            border: none; background: transparent; color: var(--tx); border-radius: 6px;
+            cursor: pointer; font-size: 18px; line-height: 1; padding: 0; }
+.sym-cell:hover { background: var(--hover); }
+/* ---- Create-alert dialog (opened from a drawing's right-click menu + quick-editor bell) ---- */
+.dialog.alert-dlg { width: 780px; max-width: 94vw; padding: 0; }
+.aldlg-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--bd-soft); }
+.aldlg-title { flex: 1; font-size: 15px; font-weight: 600; color: var(--tx); }
+.aldlg-sym { font-weight: 600; }
+.aldlg-body { max-height: 66vh; overflow-y: auto; }
+/* two columns: General + Message (left) | Conditions + Actions (right) */
+.aldlg-split-body { display: flex; align-items: stretch; }
+.aldlg-col { flex: 1; min-width: 0; padding: 6px 0; }
+.aldlg-split-body > .aldlg-col:first-child { flex: 0 0 280px; }   /* General + Message column: fixed 280px */
+.aldlg-col + .aldlg-col { border-left: 1px solid var(--bd-soft); }
+/* Properties-style collapsible sections (General / Conditions / Message / Actions) */
+.aldlg-sec-head { display: flex; align-items: center; gap: 8px; padding: 9px 16px; cursor: pointer;
+                  border-bottom: 1px solid var(--bd-soft); user-select: none; }
+.aldlg-sec-head:hover { background: var(--hover); }
+.aldlg-sec-tri { width: 10px; flex: none; color: var(--tx-dim); font-size: 9px; }
+.aldlg-sec-title { font-size: 13px; font-weight: 600; color: var(--tx); }
+.aldlg-play { margin-left: auto; flex: none; display: inline-flex; align-items: center; justify-content: center;
+              width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 1px solid var(--bd);
+              background: transparent; color: var(--tx); cursor: pointer; }
+.aldlg-play:hover { background: var(--hover); }
+.aldlg-play.off { color: var(--tx-dim); }
+.aldlg-sec-body { padding: 8px 16px; }
+.aldlg-sec-empty > .aldlg-sec-body { display: none; }
+.aldlg-sec.collapsed .aldlg-sec-body { display: none; }
+/* labelled field rows inside a section */
+.aldlg-frow { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.aldlg-frow > label { flex: none; width: 76px; color: var(--tx-dim); font-size: 13px; }
+.aldlg-fctl { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-start; }
+.aldlg-in, .aldlg-sel { width: 100%; box-sizing: border-box; background: var(--field); color: var(--tx);
+             border: 1px solid var(--bd); border-radius: 6px; padding: 7px 9px; font-size: 13px; }
+.aldlg-chk { width: 16px; height: 16px; cursor: pointer; }
+/* Conditions table (Object | Condition | Object) */
+.aldlg-cond-match { font-size: 13px; color: var(--tx-dim); margin-bottom: 10px; }
+.aldlg-cond-msel { background: var(--field); color: var(--tx); border: 1px solid var(--bd); border-radius: 6px;
+                   padding: 4px 6px; font-size: 13px; margin: 0 2px; }
+.aldlg-cond-table { border: 1px solid var(--bd-soft); border-radius: 6px; overflow: hidden; }
+.aldlg-cond-row { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+.aldlg-cond-1col .aldlg-cond-row { grid-template-columns: 1fr; }
+.aldlg-cond-4col .aldlg-cond-row { grid-template-columns: 0.85fr 1.15fr 0.85fr 1fr; }   /* Condition (operator) needs room for "Moving Down %" */
+.aldlg-cond-vinput { width: 100%; background: var(--field); color: var(--tx); border: 1px solid var(--bd);
+                     border-radius: 5px; padding: 5px 6px; font-size: 13px; }
+/* Moving % cells: a narrow number input inline with a unit label ("%", "in … bar") */
+.aldlg-cond-move { gap: 4px; }
+.aldlg-cond-move .aldlg-cond-vinput { width: 48px; flex: none; }
+.aldlg-cond-unit { color: var(--tx-dim); font-size: 12px; white-space: nowrap; }
+/* Interval picker (the alert's own timeframe): favourite intervals as segments + an "Other" dropdown */
+.aldlg-tf { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
+.aldlg-tf-lbl { color: var(--tx-dim); font-size: 13px; margin-right: 1px; }
+.aldlg-tf-seg { background: none; border: 1px solid transparent; color: var(--tx-dim); font-size: 13px;
+                padding: 2px 8px; border-radius: 4px; cursor: pointer; line-height: 1.5; }
+.aldlg-tf-seg:hover { color: var(--tx); background: var(--hover); }
+.aldlg-tf-seg.active { color: var(--tx); background: var(--field); border-color: var(--bd); font-weight: 600; }
+.aldlg-tf-other { display: inline-flex; align-items: center; gap: 3px; background: none; border: 1px solid var(--bd);
+                  color: var(--tx-dim); font-size: 13px; padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+.aldlg-tf-other:hover { color: var(--tx); }
+.aldlg-cond-head { background: var(--field); border-bottom: 1px solid var(--bd-soft); }
+.aldlg-cond-tbody .aldlg-cond-row + .aldlg-cond-row { border-top: 1px solid var(--bd-soft); }
+.aldlg-cond-tbody .aldlg-cond-row { cursor: pointer; }
+.aldlg-cond-tbody .aldlg-cond-row.sel { background: var(--active); }
+.aldlg-cond-cell { padding: 8px 10px; font-size: 13px; color: var(--tx); min-width: 0; overflow: hidden;
+                   text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; }
+.aldlg-cond-head .aldlg-cond-cell { color: var(--tx-dim); font-weight: 600; }
+.aldlg-cond-op { width: 100%; background: var(--field); color: var(--tx); border: 1px solid var(--bd);
+                 border-radius: 5px; padding: 5px 6px; font-size: 13px; }
+.aldlg-cond-acts { display: flex; justify-content: flex-end; gap: 14px; padding: 8px 2px 0; }
+.aldlg-cond-act { font-size: 13px; font-style: italic; color: var(--accent-ui); cursor: pointer; }
+.aldlg-cond-act:hover { text-decoration: underline; }
+.aldlg-cond-act.disabled { color: var(--tx-dim); cursor: default; text-decoration: none; pointer-events: none; }
+/* Message editor + placeholder tags */
+.aldlg-msg-text { width: 100%; box-sizing: border-box; resize: vertical; min-height: 62px; background: var(--field);
+                  color: var(--tx); border: 1px solid var(--bd); border-radius: 6px; padding: 8px 10px;
+                  font: inherit; font-size: 13px; }
+.aldlg-msg-text:focus { outline: none; border-color: var(--accent-ui); }
+.aldlg-tags { display: flex; gap: 6px; margin-top: 8px; }
+.aldlg-tag-btn { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: 12px;
+                 background: var(--btn); color: var(--tx); border: 1px solid var(--bd); border-radius: 6px; cursor: pointer; }
+.aldlg-tag-btn:hover { background: var(--btn-h); }
+.aldlg-ph-item { font-family: ui-monospace, Menlo, Consolas, monospace; }
+/* custom dropdown (Expiration) — collapsed label shows the resolved date+time, menu lists type labels */
+.aldlg-drop { width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;
+              gap: 8px; background: var(--field); color: var(--tx); border: 1px solid var(--bd); border-radius: 6px;
+              padding: 7px 9px; font-size: 13px; cursor: pointer; }
+.aldlg-drop:hover { border-color: var(--tx-dim); }
+.aldlg-drop-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aldlg-caret { flex: none; color: var(--tx-dim); font-size: 12px; }
+.aldlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--bd-soft); }
+
+/* ---- the small time-alert dialog: narrow, single column, padded body (no collapsible sections) ---- */
+.dialog.alert-dlg-time { width: 320px; }
+.alert-dlg-time .aldlg-body { padding: 10px 16px; }
+.aldlg-when { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aldlg-when .aldlg-in-time { width: 74px; flex: none; }
+/* the segmented HH:MM time field (segTime) styled as an aldlg field frame -- height matches .aldlg-in (31px) */
+.aldlg-when .seg-time { box-sizing: border-box; width: 74px; height: 31px; background: var(--field); border: 1px solid var(--bd); border-radius: 6px; padding: 0 6px 0 9px; display: inline-flex; align-items: center; }
+/* the 1-minute roller: two tiny stacked arrows on the right of the time box */
+.aldlg-when .seg-time .aldlg-time-spin { display: inline-flex; flex-direction: column; margin-left: auto; }
+.aldlg-when .seg-time .aldlg-spin { display: block; width: 13px; height: 11px; padding: 0; border: none; background: transparent; color: var(--tx-dim); font-size: 7px; line-height: 11px; cursor: pointer; }
+.aldlg-when .seg-time .aldlg-spin:hover { color: var(--tx); }
+.aldlg-when .aldlg-in-date { width: 90px; flex: none; min-width: 0; }
+.aldlg-inline { display: inline-flex; align-items: center; gap: 5px; color: var(--tx); font-size: 13px; white-space: nowrap; cursor: pointer; }
+.alert-dlg-time .aldlg-freq { width: 210px; flex: none; }
+/* the time dialog has short labels (When/Freq./Message/Actions) -- tighten the label column + gap */
+.alert-dlg-time .aldlg-frow { gap: 8px; padding-left: 11px; }   /* align labels with the Action box's inner content */
+.alert-dlg-time .aldlg-frow > label { width: 56px; }
+.alert-dlg-time .aldlg-msg-short { width: 210px; resize: none; line-height: 1.4; }
+
+/* ---- universal date + time picker (src/ui/datetime-picker.js) ---- */
+.dialog.dtp-dlg { width: 290px; max-width: 92vw; padding: 0; }
+.dtp-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
+.dtp-back { cursor: pointer; color: var(--tx-dim); font-size: 18px; line-height: 1; }
+.dtp-back:hover { color: var(--tx); }
+.dtp-title { font-size: 15px; font-weight: 600; color: var(--tx); }
+.dtp-io { display: flex; gap: 8px; padding: 0 14px 8px; }
+.dtp-field { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; }
+.dtp-in { width: 100%; box-sizing: border-box; background: var(--field); color: var(--tx); border: 1px solid var(--bd);
+          border-radius: 6px; padding: 8px 30px 8px 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.dtp-in:focus { outline: none; border-color: var(--accent-ui); }
+.dtp-time .seg-time { width: 100%; box-sizing: border-box; padding: 8px 30px 8px 10px; border-radius: 6px; }
+.dtp-ico { position: absolute; right: 9px; color: var(--tx-dim); pointer-events: none; display: flex; }
+.dtp-cal { padding: 4px 14px 6px; }
+.dtp-cal-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px 8px; }
+.dtp-nav { cursor: pointer; color: var(--tx-dim); font-size: 16px; line-height: 1; padding: 2px 10px; border-radius: 5px; user-select: none; }
+.dtp-nav:hover { background: var(--hover); color: var(--tx); }
+.dtp-month { font-size: 14px; font-weight: 600; color: var(--tx); }
+.dtp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dtp-wd { text-align: center; font-size: 11px; color: var(--tx-dim); padding: 4px 0; }
+.dtp-day { text-align: center; font-size: 13px; color: var(--tx); padding: 7px 0; border-radius: 6px; cursor: pointer; user-select: none; }
+.dtp-day:hover { background: var(--hover); }
+.dtp-day.sel { background: var(--tx); color: var(--panel); font-weight: 600; }
+.dtp-day.sel:hover { background: var(--tx); }
+.dtp-day.blank { visibility: hidden; cursor: default; }
+.dtp-foot { padding: 10px 14px 14px; }
+.dtp-set { width: 100%; padding: 10px; font-size: 13px; }
+
+/* ↕ cursor while hovering/dragging a price-alert line or an addon draggable line (beats the engine's inline crosshair cursor) */
+.alert-cursor-ns, .alert-cursor-ns *, .drag-cursor-ns, .drag-cursor-ns * { cursor: ns-resize !important; }
+/* pointer while hovering the alert-line hover pill's trash (quick-delete) button */
+.alert-cursor-pointer, .alert-cursor-pointer * { cursor: pointer !important; }
+/* multi-select control (Stats picker) — looks like a select, opens a checkbox menu */
+.set-multi { min-width: 150px; display: inline-flex; align-items: center; justify-content: space-between;
+             gap: 10px; text-align: left; }
+/* full-width settings block (Fib level grid) — label on its own line, control below */
+.set-row-block { display: block; }
+.set-block-label { font-size: 12px; color: var(--tx-dim); margin: 4px 0 8px; }
+.fib-levels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 14px; }
+.fib-lv { display: flex; align-items: center; gap: 6px; }
+.fib-lv-val { width: 58px; }
+.fib-lv-del { cursor: pointer; color: var(--tx-dim); font-size: 11px; }
+.fib-lv-del:hover { color: var(--tx); }
+.fib-lv-add { margin-top: 10px; }

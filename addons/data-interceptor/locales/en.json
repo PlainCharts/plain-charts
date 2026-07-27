@@ -1,0 +1,8 @@
+{
+  "Clear": "Clear",
+  "Data Interceptor needs api.onRaw (the raw feed tap). Update the app.": "Data Interceptor needs api.onRaw (the raw feed tap). Update the app.",
+  "Download JSON": "Download JSON",
+  "Waiting for feed… load a symbol / go live.": "Waiting for feed… load a symbol / go live.",
+  "channels": "channels",
+  "fields": "fields"
+}

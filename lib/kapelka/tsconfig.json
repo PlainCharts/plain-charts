@@ -1,0 +1,21 @@
+{
+  // kapelka's OWN type-checker -- the library types itself (this is a standalone repo, vendored into the
+  // app). `tsc --noEmit` only; NEVER a build -- the engine ships the exact .js authored (no-build, like the
+  // app). `checkJs` is TRUE: every source .js is type-checked (the engine is fully JSDoc-typed). The docs/
+  // tree (the built docs site + its mirror copies of the library) is excluded -- it is not source. Opt a
+  // file OUT with `// @ts-nocheck` (rare).
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["index.js", "core/**/*.js", "skin/**/*.js", "studies/**/*.js", "examples/**/*.js"],
+  "exclude": ["docs", "node_modules", "dist"]
+}

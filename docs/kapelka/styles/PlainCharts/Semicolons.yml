@@ -1,0 +1,10 @@
+# Skill: "If it needs a semicolon or a dash to hold together, split it."
+extends: existence
+message: "Split the sentence."
+level: suggestion
+nonword: true
+scope: text
+tokens:
+  - ';'
+  - '\s+--\s+'
+  - '\s+—\s+'

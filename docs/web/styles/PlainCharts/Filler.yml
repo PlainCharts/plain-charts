@@ -1,0 +1,43 @@
+# Skill: "Every word must earn its place." — intensifiers rarely do.
+# Suggestion-level on purpose: this is the noisy tier.
+extends: existence
+message: "Filler — cut '%s' or make it earn its place."
+level: suggestion
+ignorecase: true
+tokens:
+  - very
+  - really
+  - simply
+  - actually
+  - basically
+  - quite
+  - rather
+  - pretty
+  - fairly
+  - somewhat
+  - kind of
+  - sort of
+  - just
+  - even
+  - almost
+  - nearly
+  - perhaps
+  - maybe
+  - of course
+  - clearly
+  - obviously
+  - certainly
+  - definitely
+  - indeed
+  - literally
+  - undoubtedly
+  - truly
+  - essentially
+  - generally
+  - typically
+  - virtually
+  - in fact
+  - as a matter of fact
+  - needless to say
+  - it should be noted
+  - it is worth noting

@@ -1,0 +1,31 @@
+{
+  "name": "Black and White Dark",
+  "description": "A dark theme in pure grayscale, no color accents.",
+  "palette": {
+    "bg": "#141414",
+    "panel": "#1e1e1e",
+    "field": "#222222",
+    "btn": "#262626",
+    "btnH": "#303030",
+    "btnTx": "#f0f0f0",
+    "accent": "#ffffff",
+    "accentH": "#e0e0e0",
+    "accentTx": "#000000",
+    "hover": "#1e1e1e",
+    "active": "rgba(255, 255, 255, 0.14)",
+    "bd": "#333333",
+    "bdSoft": "#242424",
+    "tx": "#f5f5f5",
+    "txDim": "#909090",
+    "tx2": "#c4c4c4",
+    "icon": "#ffffff",
+    "ctrl": "#222222",
+    "ctrlTx": "#d0d0d0",
+    "ctrlOn": "#ffffff",
+    "ctrlOnTx": "#000000",
+    "pos": "#e6e6e6",
+    "neg": "#808080",
+    "frameColor": "#e0e0e0",
+    "frameWidth": 1
+  }
+}

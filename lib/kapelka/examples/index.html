@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kapelka — candles + RSI sub-pane</title>
+  <style>
+    :root { --bg: #d1d4dc; --panel: #c7cad3; --tx: #2a2e39; --bd: #b2b5be; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--tx);
+                 font: 13px -apple-system, BlinkMacSystemFont, Arial, sans-serif; }
+    .wrap { display: flex; flex-direction: column; height: 100%; }
+    header { padding: 10px 14px; border-bottom: 1px solid var(--bd); display: flex;
+             align-items: baseline; gap: 12px; }
+    header h1 { font-size: 14px; font-weight: 600; margin: 0; }
+    header span { color: #6b7280; font-size: 12px; }
+    #chart { flex: 1; min-height: 0; }
+    footer { padding: 6px 14px; border-top: 1px solid var(--bd); color: #6b7280; font-size: 11px; }
+    code { color: #7c4dff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>kapelka</h1>
+      <span>MESU26 &middot; 5m &middot; "Green n Black #2" theme &mdash; candlesticks + a 14-period RSI sub-pane &middot; zero dependencies, no build step</span>
+    </header>
+    <div id="chart"></div>
+    <footer>
+      Real CQG MESU26 5-minute history from <code>MESU26-5m.json</code> (cache format
+      <code>{ bars: [[time, open, high, low, close, volume], ...] }</code>). Colors come from <code>settings.json</code>.
+    </footer>
+  </div>
+
+  <script type="module">
+    // Import the library from its public entry (one folder up). Over a static
+    // file server this needs no bundler and no build step.
+    import { mountChart, Candles, Line } from '../index.js';
+    import { generateBars, computeRSI } from './feed.js';
+
+    // 1) Look-and-feel: fetch the settings file (fall back to sane defaults if it
+    //    can't be loaded, e.g. opened via file:// without a server).
+    const settings = await fetch('./settings.json').then((r) => r.json()).catch(() => ({
+      background: '#d1d4dc', textColor: '#50535e', gridColor: '#d1d4dc', borderColor: '#b2b5be',
+      crosshair: { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' },
+      candles: { upColor: '#5b9c7b', downColor: '#2a2e39', borderUpColor: '#3a3e48', borderDownColor: '#3a3e48', wickUpColor: '#3a3e48', wickDownColor: '#3a3e48' },
+      rsi: { period: 14, color: '#ff8800', overbought: 70, oversold: 30, guideColor: '#b2b5be' },
+    }));
+
+    // 2) Create the chart, mapping settings -> mountChart() options.
+    const ch = settings.crosshair || {};
+    const chart = mountChart(document.getElementById('chart'), {
+      layout: { background: { color: settings.background }, textColor: settings.textColor },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+      // cursor: gray, dotted (engine reads the line style off vertLine/horzLine)
+      cursor: { color: ch.color, labelBg: ch.labelBg, labelText: ch.labelText,
+                   vertLine: { style: ch.style }, horzLine: { style: ch.style } },
+      // indexBased: bars are placed by position, so session gaps (the CME daily halt)
+      // collapse instead of leaving whitespace - the engine's signature x-axis behavior.
+      timeAxis: { borderColor: settings.borderColor, timeVisible: true, indexBased: true },
+      rightPriceAxis: { borderColor: settings.borderColor },
+      // allow zooming out far enough to show the whole dataset at once (default cap is 500 bars)
+      maxZoom: 2500,
+    });
+
+    // 3) The "datafeed": real CQG MESU26 5-minute bars. The history file is the cache
+    //    format { bars: [[time, open, high, low, close, volume], ...] } (time = UNIX
+    //    seconds) - we map each row to the engine's bar shape. Falls back to a
+    //    synthesized series if the file can't be fetched (e.g. opened via file://).
+    // Trim the history to last Friday's 16:00 UTC close (2026-06-26 16:00).
+    const CUTOFF = Date.UTC(2026, 5, 26, 16, 0, 0) / 1000;
+    const bars = await fetch('./MESU26-5m.json')
+      .then((r) => r.json())
+      .then((d) => (d.bars || [])
+        .map(([time, open, high, low, close, volume]) => ({ time, open, high, low, close, volume }))
+        .filter((b) => b.time <= CUTOFF))
+      .catch(() => generateBars({ count: 1440, step: 300 }));
+
+    // 4) Main pane (paneIndex 0): candlesticks, colored from settings.
+    //    Drop volume so no volume bars are drawn (price only).
+    const candles = chart.addPlot(Candles, settings.candles, 0);
+    candles.feed(bars.map(({ volume, ...b }) => b));
+
+    // Open zoomed in to the most recent ~150 bars (readable 5m candles), right edge at
+    // the last bar; scroll/zoom out to see the rest of the history.
+    const VISIBLE = 150;
+    chart.timeAxis().setBarWindow({ from: bars.length - VISIBLE, to: bars.length - 1 + 6 });
+
+    // 5) Sub-pane (paneIndex 1): a 14-period RSI line, drawn below the price.
+    const rsiCfg = settings.rsi || { period: 14, color: '#c49bff' };
+    const rsi = chart.addPlot(Line, { color: rsiCfg.color, lineWidth: 1.5 }, 1);
+    rsi.feed(computeRSI(bars, rsiCfg.period));
+
+    // overbought / oversold guide lines on the RSI scale
+    if (rsiCfg.overbought) rsi.addLevel({ price: rsiCfg.overbought, color: rsiCfg.guideColor, lineStyle: 2 });
+    if (rsiCfg.oversold)   rsi.addLevel({ price: rsiCfg.oversold,   color: rsiCfg.guideColor, lineStyle: 2 });
+  </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Navigation & zoom — try it</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #d1d4dc; overflow: hidden; }
+    #chart { height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script type="module">
+    // A live playground for the engine's navigation and zoom gestures: candles on the main pane and an
+    // RSI on a sub-pane, so every gesture applies -- pan, wheel/Ctrl+wheel zoom, price-axis drag/reset,
+    // and dragging the pane separator to resize. Theme from the demos' shared settings.json.
+    import { mountChart, Candles, Line } from '/index.js';
+
+    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
+    const rsiCfg = s.rsi || { period: 14, color: '#ff8800' };
+
+    const { generateBars, computeRSI } = await import('/examples/feed.js');
+    const bars = generateBars({ count: 500, seed: 7, step: 300 });
+
+    const chart = mountChart(document.getElementById('chart'), {
+      layout: { background: { color: s.background || '#d1d4dc' }, textColor: s.textColor || '#50535e' },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+      cursor: { color: cx.color, labelBg: cx.labelBg, labelText: cx.labelText, vertLine: { style: cx.style }, horzLine: { style: cx.style } },
+      timeAxis: { borderColor: s.borderColor || '#b2b5be', timeVisible: true, indexBased: true },
+      rightPriceAxis: { borderColor: s.borderColor || '#b2b5be' },
+      maxZoom: 3000,
+    });
+
+    const candles = chart.addPlot(Candles, s.candles || {
+      upColor: '#5b9c7b', downColor: '#2a2e39', borderUpColor: '#3a3e48', borderDownColor: '#3a3e48', wickUpColor: '#3a3e48', wickDownColor: '#3a3e48',
+    }, 0);
+    candles.feed(bars.map(({ volume, ...b }) => b));
+
+    // an RSI on its own sub-pane -> gives a pane separator to drag
+    const rsi = chart.addPlot(Line, { color: rsiCfg.color, lineWidth: 1.5 }, 1);
+    rsi.feed(computeRSI(bars, rsiCfg.period || 14));
+
+    chart.timeAxis().setBarWindow({ from: Math.max(0, bars.length - 160), to: bars.length - 1 + 4 });
+  </script>
+</body>
+</html>

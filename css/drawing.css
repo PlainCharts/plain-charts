@@ -1,0 +1,108 @@
+/* drawing-tool chrome: interaction overlay, in-place text editor, style popover, the tabbed
+   drawing settings dialog, segmented time input, and the per-timeframe Visibility slider. */
+
+/* drawing-engine interaction overlay (pointer-events toggled by the engine) */
+.draw-overlay { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+/* in-place text editor for drawing labels (anchored at the label's screen position) */
+.draw-text-edit { position: absolute; z-index: 6; min-width: 6px; outline: none; white-space: pre-wrap;
+                  line-height: 1.25; caret-color: currentColor; background: rgba(41,98,255,.08);
+                  box-shadow: 0 0 0 1px rgba(41,98,255,.6); border-radius: 2px; padding: 0 1px; }
+/* selected-drawing style popover */
+.style-pop { position: fixed; z-index: 80; background: var(--panel); border: 1px solid var(--bd);
+             border-radius: 8px; padding: 6px 8px; min-width: 210px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+/* drawing settings dialog (tabbed) */
+.dialog.set-dlg { width: 460px; max-width: 94vw; padding: 16px 18px; }
+.set-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.set-title { font-size: 16px; font-weight: 600; }
+.set-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--bd); margin-bottom: 10px; }
+.set-tab { padding: 6px 0; font-size: 13px; color: var(--tx-dim); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.set-tab:hover { color: var(--tx); }
+.set-tab.active { color: var(--tx); border-bottom-color: var(--tx); }
+.set-body { min-height: 84px; max-height: 56vh; overflow-y: auto; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; }
+.set-row-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx); }
+.set-row-left input[type=checkbox] { cursor: pointer; }
+.set-controls { display: flex; align-items: center; gap: 6px; }
+/* a row of two labelled fields side by side (e.g. Label | Background) */
+.set-fields { justify-content: space-between; }
+.set-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx); }
+.set-field > label { margin-right: 6px; }   /* breathing room between a field's label and its picker */
+.set-field input[type=checkbox] { cursor: pointer; }
+.set-note { font-size: 13px; color: var(--tx-dim); padding: 14px 2px; }
+.std-plot { border-bottom: 1px solid var(--bd); padding: 4px 0 8px; }
+.std-plot:last-child { border-bottom: 0; }
+.std-plot-name { font-weight: 600; }
+.std-group { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+             color: var(--tx-dim); border-bottom: 1px solid var(--bd); padding: 10px 0 5px; margin: 6px 0 8px; }
+.std-group:first-child { padding-top: 2px; }
+.dialog.std-dlg { width: 380px; }
+.dialog.std-dlg.std-ma_ribbon { width: 480px; }   /* MA Ribbon: one tidy row per MA needs more width */
+.dialog.std-dlg.std-ma_ribbon .set-controls select { width: 100px; }   /* tighter Type/Source dropdowns for the inline row (beats the 132px .std-in rule) */
+.dialog.std-dlg.std-session_marker { width: 410px; }   /* Session Marker: tabbed, inline-grouped rows need more width */
+/* declarative UI: inline groups (several controls on one flex row) + live enable/disable greying */
+.set-row.set-inline { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-start; }
+.set-inline-cell { display: flex; align-items: center; gap: 6px; }
+.set-inline-cell > .lbl { font-size: 12px; opacity: .75; }
+.set-disabled { opacity: .4; pointer-events: none; }
+/* tz control: compact UTC-offset stepper (the app's timezone control, not a dropdown) */
+.set-tz { display: inline-flex; align-items: center; gap: 3px; }
+.set-tz input[type=number] { width: 46px; text-align: center; box-sizing: border-box; }
+.set-tz-step { width: 22px; height: 26px; padding: 0; border: 1px solid var(--bd); background: var(--panel);
+               color: var(--tx); border-radius: 4px; cursor: pointer; line-height: 1; font-size: 14px; }
+.set-tz-step:hover { background: rgba(255,255,255,0.07); }
+.std-in .set-row-left { gap: 8px; }
+.std-in .set-controls select, .std-in .set-controls input[type=text] { width: 132px; box-sizing: border-box; }
+.std-in .set-controls input[type=number] { width: 70px; }
+.std-plot .set-controls input[type=number] { width: 48px; }
+.set-controls input[type=number]:not(.set-coord-in) { width: 56px; }
+.set-coord-in { width: 100px; box-sizing: border-box; }
+.set-coord-txt { width: 150px; font-family: inherit; }
+/* Segmented time input: HH:MM:SS(+AM/PM) that looks like one field, borderless segments */
+.seg-time { display: inline-flex; align-items: center; box-sizing: border-box; width: 150px;
+            background: var(--field); border: 1px solid var(--bd); border-radius: 4px; padding: 3px 6px; }
+.seg-time:focus-within { border-color: var(--accent-ui); }
+.seg-time .seg { width: 2ch; border: 0; background: transparent; color: var(--tx); font-family: inherit;
+                 font-size: 13px; text-align: center; padding: 0; outline: none; -moz-appearance: textfield; }
+.seg-time .seg::selection { background: var(--accent-ui); color: var(--accent-tx); }
+.seg-time .seg-ap { width: 2.5ch; }
+.seg-time .seg-sep { color: var(--tx-dim); font-size: 13px; padding: 0 1px; user-select: none; }
+.set-text-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.set-fontsize { width: 66px; }
+.set-tbtn { width: 32px; height: 28px; flex: none; border: 1px solid var(--bd); border-radius: 5px; background: var(--field); color: var(--tx); cursor: pointer; }
+.set-tbtn:hover { background: var(--btn-h); }
+.set-tbtn.on { background: var(--active); border-color: var(--accent-ui); }
+.set-text-area { width: 100%; box-sizing: border-box; height: 88px; resize: vertical; font-family: inherit; font-size: 13px;
+                 background: var(--field); color: var(--tx); border: 1px solid var(--bd); border-radius: 6px; padding: 8px; }
+.set-align-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.set-align-row label { font-size: 13px; color: var(--tx); margin-right: auto; }
+.set-align-grid-row { position: relative; min-height: 84px; }
+.set-align-grid { display: grid; grid-template-columns: repeat(3, 26px); grid-template-rows: repeat(3, 26px); gap: 3px;
+                  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.set-align-cell { display: flex; padding: 4px; border: 1px solid var(--bd); border-radius: 4px; background: var(--field); cursor: pointer; }
+.set-align-cell:hover { background: var(--btn-h); }
+.set-align-cell.on { border-color: var(--accent-ui); background: var(--active); }
+.set-align-cell.off { opacity: .3; cursor: default; }
+.set-align-bar { width: 9px; height: 3px; border-radius: 1px; background: var(--tx-dim); }
+.set-align-cell.on .set-align-bar { background: var(--accent-ui); }
+/* quick text-alignment popup (right-click a label) — reuses the grid cells above */
+.align-pop { position: fixed; z-index: 80; padding: 8px; background: var(--panel);
+             border: 1px solid var(--bd); border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+.align-pop .set-align-grid { position: static; transform: none; }
+.set-soon { color: var(--tx-dim); font-size: 13px; padding: 16px 2px; }
+
+/* Visibility tab: per-timeframe enable + min..max dual-range slider */
+.set-vis-hint { color: var(--tx-dim); font-size: 12px; padding: 2px 0 10px; }
+.set-vis-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
+.set-vis-head { display: flex; align-items: center; gap: 8px; width: 84px; flex: none; font-size: 13px; color: var(--tx); }
+.set-vis-head input[type=checkbox] { cursor: pointer; }
+.set-vis-ctrls { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.set-vis-num { width: 74px; flex: none; box-sizing: border-box; }
+.set-vis-slider { position: relative; flex: none; width: 150px; height: 18px; margin-left: 12px; }
+/* track is inset 9px so the round handles (centered on the ends) stay inside the slider box */
+.set-vis-track { position: absolute; left: 9px; right: 9px; top: 50%; height: 3px;
+                 transform: translateY(-50%); background: var(--bd); border-radius: 2px; }
+.set-vis-fill { position: absolute; top: 50%; height: 3px; transform: translateY(-50%); background: var(--accent-ui); border-radius: 2px; }
+.set-vis-handle { position: absolute; top: 50%; left: 0; width: 12px; height: 12px;
+                  transform: translate(-50%, -50%); border-radius: 50%; background: #fff; border: 1px solid var(--accent-ui);
+                  box-shadow: 0 1px 3px rgba(0,0,0,.4); cursor: pointer; touch-action: none; z-index: 1; }
+.set-vis-handle.on { border-color: #1e53e5; box-shadow: 0 0 0 3px rgba(41,98,255,.2); }

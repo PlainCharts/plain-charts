@@ -1,0 +1,42 @@
+{
+  "name": "Chalk",
+  "description": "A dark chart theme with chalk-white and slate-blue candles.",
+  "candles": {
+    "bodyVisible": true,
+    "upColor": "#f7f7f7",
+    "downColor": "#8396b1",
+    "borderVisible": true,
+    "borderUpColor": "#f7f7f7",
+    "borderDownColor": "#8396b1",
+    "wickVisible": true,
+    "wickUpColor": "#f7f7f7",
+    "wickDownColor": "#8396b1"
+  },
+  "canvas": {
+    "background": "#0f0f0f",
+    "gridMode": "none",
+    "gridColor": "#1a1a20",
+    "gridStyle": 0,
+    "crosshairColor": "#9698a1",
+    "crosshairWidth": 1,
+    "crosshairStyle": 1,
+    "scaleTextColor": "#b2b5be",
+    "scaleFontSize": 12,
+    "scaleFontFamily": "Helvetica, Arial, sans-serif",
+    "scaleLineColor": "rgba(255, 255, 255, 0)"
+  },
+  "lines": {
+    "priceLine": true,
+    "priceLineColor": "#9aa0aa",
+    "priceLineWidth": 1,
+    "priceLineDash": "dotted",
+    "bidLine": false,
+    "bidLineColor": "#078d77",
+    "bidLineWidth": 1,
+    "bidLineDash": "dotted",
+    "askLine": false,
+    "askLineColor": "#a283d8",
+    "askLineWidth": 1,
+    "askLineDash": "dotted"
+  }
+}

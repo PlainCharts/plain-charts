@@ -1,0 +1,157 @@
+/* dropdown menus + modals opened from the top strip: timeframe menu, indicator (fx) menu,
+   indicator code editor, addons modal, indicators library modal, timeframe rows. */
+
+/* timeframe dropdown */
+#tfMenu { position: fixed; display: none; background: var(--panel); border: 1px solid var(--bd);
+          border-radius: 8px; padding: 6px; box-shadow: 0 8px 30px rgba(0,0,0,.5);
+          z-index: 60; min-width: 184px; max-height: 72vh; overflow-y: auto; }
+#tfMenu.open { display: block; }
+/* Indicators ƒx dropdown (fast path) */
+#studyTplMenu { position: fixed; display: none; background: var(--panel); border: 1px solid var(--bd);
+             border-radius: 8px; min-width: 250px; padding: 4px; z-index: 50; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+#studyTplMenu.open { display: block; }
+#studyTplMenu { min-width: 290px; max-width: 340px; }
+.stpl-lico { color: var(--tx-dim); width: 18px; text-align: center; }
+.stpl-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 8px; border-radius: 5px; cursor: pointer; }
+.stpl-row:hover { background: var(--hover); }
+.stpl-col { flex: 1; min-width: 0; }
+.stpl-name { font-size: 13px; color: var(--tx); }
+.stpl-sub { font-size: 11px; color: var(--tx-dim); margin-top: 2px; line-height: 1.35;
+            overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.stpl-del { color: var(--tx-dim); visibility: hidden; font-size: 12px; }
+.stpl-row:hover .stpl-del { visibility: visible; }
+.stpl-del:hover { color: var(--tx); }
+.stpl-div { height: 1px; background: var(--bd-soft); margin: 4px 4px; }
+.study-head { font-size: 10px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .05em; padding: 8px 8px 3px; }
+.study-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px;
+             cursor: pointer; color: var(--tx); font-size: 13px; }
+.study-row:hover { background: var(--hover); }
+.study-row.dim .lbl { opacity: .45; }
+.study-row .lbl { flex: 1; }
+.study-ico { color: var(--tx-dim); font-size: 12px; width: 16px; text-align: center; visibility: hidden; }
+.study-ico:hover { color: var(--tx); }
+.study-row:hover .study-ico { visibility: visible; }
+
+/* Indicator code editor */
+.dialog.editor { width: 940px; max-width: 95vw; }
+.editor-code { width: 100%; box-sizing: border-box; height: 48vh; min-height: 300px; max-height: 64vh; margin: 4px 0 2px;
+               font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.55;
+               background: var(--field); color: var(--tx); border: 1px solid var(--bd); border-radius: 6px;
+               padding: 12px; resize: vertical; white-space: pre; overflow: auto; tab-size: 2; }
+.editor-con-label { font-size: 10px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .05em; margin: 8px 0 3px; }
+.editor-console { height: 96px; overflow: auto; box-sizing: border-box; padding: 8px 10px; border-radius: 6px;
+                  background: var(--bg); border: 1px solid var(--bd); color: var(--tx-dim);
+                  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+.editor-console.ok { color: #6cc070; border-color: #2e5e36; }
+.editor-console.err { color: #f07a7a; border-color: #5e2e2e; }
+
+/* Addons modal */
+.dialog.addons { width: 720px; max-width: 92vw; height: 70vh; max-height: 640px; display: flex; flex-direction: column; padding: 0; }
+.addon-body { display: flex; flex: 1; min-height: 0; border-top: 1px solid var(--bd); }
+.addon-list { width: 230px; flex: none; overflow-y: auto; padding: 8px; border-right: 1px solid var(--bd); }
+.addon-detail { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 12px 14px; }
+.addon-empty { color: var(--tx-dim); font-size: 13px; padding: 14px 8px; }
+.addon-action { padding: 7px 8px; border-radius: 6px; cursor: pointer; color: var(--tx-dim); font-size: 13px; }
+.addon-action:hover { background: var(--hover); color: var(--tx); }
+.addon-sep { height: 1px; background: var(--bd); margin: 6px 4px; }
+.addon-del:hover { border-color: #5e2e2e; color: #f07a7a; }
+.addon-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; color: var(--tx); font-size: 13px; }
+.addon-row:hover { background: var(--hover); }
+.addon-row.active { background: var(--active); }
+.addon-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tx-dim); flex: none; }
+.addon-dot.on { background: #6cc070; }
+.addon-dot.err { background: #f07a7a; }
+.addon-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.addon-dhead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.addon-dtitle { font-size: 14px; font-weight: 600; flex: 1; }
+.addon-status { font-size: 12px; color: var(--tx-dim); }
+.addon-status.on { color: #6cc070; }
+.addon-status.err { color: #f07a7a; }
+.addon-reload { font-size: 12px; }
+.addon-error { color: #f07a7a; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px;
+               white-space: pre-wrap; background: var(--bg); border: 1px solid #5e2e2e; border-radius: 6px; padding: 8px; margin-bottom: 8px; max-height: 120px; overflow: auto; }
+.addon-logs { flex: 1; overflow: auto; background: var(--bg); border: 1px solid var(--bd); border-radius: 6px; padding: 8px 10px;
+              font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; line-height: 1.5; color: var(--tx-dim); white-space: pre-wrap; }
+/* addon setup form (from the inputs schema) */
+.addon-settings { border: 1px solid var(--bd-soft); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: var(--field); }
+.addon-set-hdr { color: var(--tx-dim); font-size: 11px; letter-spacing: .06em; margin-bottom: 8px; }
+.addon-set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.addon-set-label { font-size: 13px; color: var(--tx); }
+.addon-set-ctl { width: 160px; padding: 4px 6px; font-size: 13px; background: var(--bg); color: var(--tx); border: 1px solid var(--bd); border-radius: 5px; }
+.addon-set-ctl[type=checkbox] { width: auto; }
+.addon-set-ctl[type=color] { width: 40px; height: 26px; padding: 0; }
+.addon-set-save { margin-top: 8px; }
+/* the addon's OWN blank settings dialog (it fills the root itself) */
+.addon-set-dlg { width: 540px; max-width: 94vw; max-height: 80vh; display: flex; flex-direction: column; }
+.addon-set-root { padding: 14px 16px; overflow: auto; }
+.addon-set-root.addon-set-empty { color: var(--tx-dim); font-size: 13px; }
+/* addon as a DOCKED slide-out panel (right-panel, like the watchlist) */
+.addon-panel { height: 100%; display: flex; flex-direction: column; }
+.addon-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--bd); }
+.addon-panel-title { font-size: 13px; color: var(--tx); }
+.addon-panel-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; }
+
+/* Indicators Library modal */
+.dialog.lib { width: 720px; max-width: 92vw; height: 70vh; max-height: 640px; display: flex; flex-direction: column; padding: 0; }
+.lib-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 10px; }
+.lib-head h3 { margin: 0; font-size: 16px; }
+.lib-x { cursor: pointer; color: var(--tx-dim); font-size: 14px; }
+.lib-x:hover { color: var(--tx); }
+.lib-search { margin: 0 18px 12px; width: auto; }
+.lib-body { display: flex; flex: 1; min-height: 0; border-top: 1px solid var(--bd); }
+.lib-side { width: 200px; flex: none; overflow-y: auto; padding: 8px; border-right: 1px solid var(--bd); }
+.lib-list { flex: 1; overflow-y: auto; padding: 8px; }
+.lib-sec { font-size: 10px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .05em; padding: 10px 8px 4px; }
+.lib-nav { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--tx); font-size: 13px; }
+.lib-nav:hover { background: var(--hover); }
+.lib-nav.active { background: var(--active); }
+.lib-nav-ico { width: 16px; text-align: center; color: var(--tx-dim); }
+.lib-nav-lbl { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-nav-tools { display: none; gap: 2px; }
+.lib-nav:hover .lib-nav-tools { display: flex; }
+.lib-newlist { color: var(--tx-dim); }
+.lib-rename { width: 100%; box-sizing: border-box; }
+.lib-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; color: var(--tx); font-size: 13px; }
+.lib-row:hover { background: var(--hover); }
+.lib-row.added { background: var(--active); }
+.lib-name { flex: 1; }
+.lib-name.dim { opacity: .45; }
+.lib-star { width: 16px; text-align: center; color: var(--tx-dim); cursor: pointer; }
+.lib-star.on { color: #f5c518; }
+.lib-ico { width: 16px; text-align: center; color: var(--tx-dim); visibility: hidden; cursor: pointer; }
+.lib-row:hover .lib-ico, .lib-nav:hover .lib-ico { visibility: visible; }
+.lib-ico:hover { color: var(--tx); }
+.lib-empty { color: var(--tx-dim); font-size: 13px; padding: 16px 10px; }
+.lib-pop { position: fixed; z-index: 70; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px;
+           min-width: 200px; padding: 4px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.lib-pop-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px; cursor: pointer; color: var(--tx); font-size: 13px; }
+.lib-pop-row:hover { background: var(--hover); }
+.lib-check { width: 16px; text-align: center; color: var(--tx-dim); }
+.lib-check.on { color: #42a5f5; }
+.lib-pop-input { width: 100%; box-sizing: border-box; }
+.tf-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+          border-radius: 5px; cursor: pointer; }
+.tf-row:hover { background: var(--hover); }
+.tf-row.active { background: var(--active); }
+.tf-row .lbl { flex: 1; }
+.tf-row .star { width: 16px; text-align: center; color: #555; font-size: 14px;
+                cursor: pointer; user-select: none; }
+.tf-row .star.on { color: #f5c518; }
+.tf-row .del { width: 16px; text-align: center; color: #555; font-size: 12px;
+               cursor: pointer; user-select: none; visibility: hidden; }
+.tf-row:hover .del { visibility: visible; }
+.tf-row .del:hover { color: #f77; }
+.tf-divider { height: 1px; background: var(--bd-soft); margin: 6px 4px; }
+.tf-add-row { padding: 6px 8px; border-radius: 5px; cursor: pointer; color: #6ea8ff; }
+.tf-add-row:hover { background: var(--hover); }
+.tf-add-form { display: flex; gap: 6px; align-items: center; padding: 6px 8px; flex-wrap: wrap; }
+.tf-add-form .tf-num { width: 58px; }
+.tf-add-form .tf-unit { flex: 1; min-width: 84px; }
+.tf-add-form .tf-add-err { width: 100%; color: #f77; font-size: 11px; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-tx); }
+button.primary:hover { background: var(--accent-h); border-color: var(--accent-h); }
+#btnOpenConnect { font-weight: 600; }
+#conn { display: inline-flex; align-items: center; gap: 12px; }
+#conn:empty { display: none; }
+.conn-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--tx-dim); white-space: nowrap; }
+.conn-chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--conn); flex: none; }

@@ -1,0 +1,111 @@
+/* the full chart/app Settings dialog: shell, nav, sub-tabs, rows/fields, help popovers,
+   theme-mode grid, Time clocks, Data cards, About, and the footer template menu. */
+
+/* ---- settings dialog ---- */
+.settings-dialog { width: 640px; max-width: 92vw; height: 600px; max-height: 88vh; background: var(--panel);
+                   border: 1px solid var(--bd); border-radius: 10px; display: flex; flex-direction: column;
+                   box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.sd-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px;
+           border-bottom: 1px solid var(--bd-soft); }
+.sd-head h3 { margin: 0; font-size: 16px; }
+.sd-x { background: none; border: none; color: var(--tx-dim); font-size: 15px; cursor: pointer; }
+.sd-x:hover { color: var(--tx); }
+.sd-body { display: flex; flex: 1; min-height: 320px; overflow: hidden; }
+.sd-nav { width: 180px; border-right: 1px solid var(--bd-soft); padding: 10px; overflow-y: auto; }
+.sd-nav-group { padding: 12px 12px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+                letter-spacing: .06em; color: var(--tx); opacity: .9; }
+.sd-nav-group:first-child { padding-top: 2px; }
+.sd-nav-item { padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--tx-dim); }
+.sd-nav-item:hover { background: var(--bd-soft); }
+.sd-nav-item.active { background: var(--active); color: var(--tx); }
+.sd-content { flex: 1; padding: 16px 20px; overflow-y: auto; }
+.sd-section { color: var(--tx-dim); font-size: 11px; letter-spacing: .06em; margin-bottom: 14px; }
+.sd-divider { border-top: 1px solid var(--bd-soft); margin: 2px 0 16px; }
+/* sub-tabs within a settings section (e.g. Trading: Style | Visibility) */
+.sd-subtabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--bd-soft); }
+.sd-subtab { padding: 6px 12px; font-size: 13px; color: var(--tx2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.sd-subtab:hover { color: var(--tx); }
+.sd-subtab.active { color: var(--tx); border-bottom-color: var(--accent-ui); }
+.sd-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sd-row .sd-label { flex: 1; font-size: 13px; }
+.tt-row { cursor: default; }
+/* Light/Dark theme-mode grid (Settings > App > Theme) */
+.tmode-grid { display: grid; grid-template-columns: 62px 1fr; gap: 6px 10px; align-items: center; margin: 4px 0 12px; }
+.tmode-h { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--tx-dim); }
+.tmode-row { background: transparent; border: 1px solid transparent; color: var(--tx); cursor: pointer;
+             text-align: left; padding: 5px 8px; border-radius: 5px; font-size: 13px; }
+.tmode-row:hover { background: var(--hover); }
+.tmode-row.active { border-color: var(--accent-ui); color: var(--accent-ui); }
+.tmode-grid select { width: 100%; box-sizing: border-box; }
+.tt-row.tt-drag { opacity: .5; }
+.tt-grip { color: var(--tx-dim); cursor: grab; padding: 0 2px; }
+.sd-inline { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.sd-field { display: flex; align-items: center; gap: 6px; }
+.sd-field span { font-size: 13px; color: var(--tx-dim); }
+.sd-unit { font-size: 13px; color: var(--tx-dim); }
+.sd-text { width: 150px; padding: 5px 8px; font-size: 13px; background: var(--field);
+           border: 1px solid var(--bd); border-radius: 5px; color: var(--tx); font-family: inherit; }
+.sd-btn { padding: 4px 10px; font-size: 12px; color: var(--tx); background: var(--field);
+          border: 1px solid var(--bd); border-radius: 5px; cursor: pointer; }
+.sd-btn:hover { border-color: var(--tx-dim); }
+.sd-help { position: relative; display: inline-flex; }
+.sd-help-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--bd);
+               background: var(--field); color: var(--tx-dim); font-weight: 700; font-size: 12px;
+               line-height: 1; cursor: pointer; padding: 0; }
+.sd-help-btn:hover { color: var(--tx); border-color: var(--tx-dim); }
+.sd-help-pop { display: none; position: absolute; top: 26px; right: 0; z-index: 60; width: 280px;
+               background: var(--panel); border: 1px solid var(--bd); border-radius: 8px; padding: 10px 12px;
+               box-shadow: 0 8px 28px rgba(0,0,0,.5); }
+.sd-help-pop.open { display: block; }
+.sd-help-h { font-size: 11px; letter-spacing: .04em; color: var(--tx-dim); text-transform: uppercase;
+             margin: 4px 0 6px; }
+.sd-help-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; padding: 2px 0; }
+.sd-help-row code { color: var(--tx); font-family: ui-monospace, monospace; }
+.sd-help-row span { color: var(--tx-dim); }
+.sd-help-ex { cursor: pointer; border-radius: 4px; padding: 3px 4px; }
+.sd-help-ex:hover { background: var(--bd-soft); }
+.sd-row input[type=checkbox] { width: auto; cursor: pointer; }
+.sd-row input[type=color] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--bd);
+                            border-radius: 5px; background: var(--field); cursor: pointer; }
+.sd-placeholder { color: var(--tx-dim); font-size: 13px; }
+/* Settings > Time live clocks */
+.time-clock { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+              padding: 8px 2px; border-bottom: 1px solid var(--bd-soft); font-size: 13px; }
+.time-clock .tc-label { color: var(--tx-dim); }
+.time-clock .tc-val { color: var(--tx); font-variant-numeric: tabular-nums; }
+/* Settings > Data: one card per opted-in (broker, symbol) */
+.data-card { border: 1px solid var(--bd-soft); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; background: var(--field); }
+.data-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.data-card-title { font-size: 14px; font-weight: 600; color: var(--tx); }
+.data-card-ctl { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.data-card-ctl .sd-label { min-width: auto; }
+.data-card-cov { font-size: 12px; color: var(--tx2); line-height: 1.7; font-variant-numeric: tabular-nums; }
+.data-cov-line { white-space: nowrap; }
+.data-del { margin-top: 10px; color: var(--neg, #ef5350); border-color: var(--bd-soft); background: transparent; }
+.data-del:hover { border-color: var(--neg, #ef5350); }
+.sd-about-logo { width: 56px; height: 56px; object-fit: contain; display: block; margin-bottom: 12px; }
+.sd-about-title { font-size: 22px; font-weight: 700; color: var(--tx); }
+.sd-about-slogan { font-size: 13px; font-style: italic; color: var(--tx2); margin-top: 4px; }
+.sd-about-ver { font-size: 12px; color: var(--tx-dim); margin-top: 6px; }
+.hk-desc { font-size: 12px; color: var(--tx-dim); }
+/* interval quick-input (change-interval hotkey) */
+.tf-qi { position: fixed; z-index: 96; }
+.tf-qi-input { width: 130px; padding: 6px 10px; font-size: 13px; background: var(--field); color: var(--tx);
+               border: 1px solid var(--bd); border-radius: 6px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.theme-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; }
+.theme-bar select { flex: 1; }
+.theme-bar button:disabled { opacity: .4; cursor: default; }
+.sd-foot { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--bd-soft); }
+.sd-template { position: relative; }
+#sd-tmpl-menu { position: absolute; bottom: 36px; left: 0; display: none; flex-direction: column;
+                background: var(--panel); border: 1px solid var(--bd); border-radius: 8px; padding: 5px; z-index: 90;
+                box-shadow: 0 8px 30px rgba(0,0,0,.5); min-width: 160px; }
+#sd-tmpl-menu.open { display: flex; }
+.tmpl-item { padding: 7px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+.tmpl-item:hover { background: var(--hover); }
+.tmpl-div { height: 1px; background: var(--bd-soft); margin: 5px 4px; }
+.tmpl-row { display: flex; align-items: center; }
+.tmpl-row .tmpl-label { flex: 1; }
+.tmpl-x { visibility: hidden; color: var(--tx-dim); padding: 0 4px; border-radius: 4px; font-size: 12px; }
+.tmpl-row:hover .tmpl-x { visibility: visible; }
+.tmpl-x:hover { color: var(--danger, #e5534b); background: var(--bd); }

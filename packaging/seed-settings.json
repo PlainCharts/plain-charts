@@ -1,0 +1,101 @@
+{
+  "intervals": [
+    {
+      "id": "1m",
+      "unit": "m",
+      "n": 1
+    },
+    {
+      "id": "3m",
+      "unit": "m",
+      "n": 3
+    },
+    {
+      "id": "5m",
+      "unit": "m",
+      "n": 5
+    },
+    {
+      "id": "10m",
+      "unit": "m",
+      "n": 10
+    },
+    {
+      "id": "12m",
+      "unit": "m",
+      "n": 12
+    },
+    {
+      "id": "13m",
+      "unit": "m",
+      "n": 13
+    },
+    {
+      "id": "15m",
+      "unit": "m",
+      "n": 15
+    },
+    {
+      "id": "30m",
+      "unit": "m",
+      "n": 30
+    },
+    {
+      "id": "1h",
+      "unit": "h",
+      "n": 1
+    },
+    {
+      "id": "4h",
+      "unit": "h",
+      "n": 4
+    },
+    {
+      "id": "12h",
+      "unit": "h",
+      "n": 12
+    },
+    {
+      "id": "D",
+      "unit": "D",
+      "n": 1
+    },
+    {
+      "id": "W",
+      "unit": "W",
+      "n": 1
+    },
+    {
+      "id": "M",
+      "unit": "M",
+      "n": 1
+    }
+  ],
+  "favoriteTimeframes": [
+    "5m",
+    "4h",
+    "W",
+    "M",
+    "D",
+    "15m",
+    "1h",
+    "3m",
+    "1m",
+    "12h"
+  ],
+  "themeMode": "light",
+  "currentTheme": "Choco Light",
+  "maskIcons": true,
+  "themeModes": {
+    "light": {
+      "app": "Choco Light",
+      "chart": "Green n Black #2"
+    },
+    "dark": {
+      "app": "Black and White Dark",
+      "chart": "Green n Black #2"
+    }
+  },
+  "optStudyRecomputeMs": 250,
+  "optPaintConflateMs": 100
+}

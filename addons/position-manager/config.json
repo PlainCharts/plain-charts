@@ -1,0 +1,22 @@
+{
+  "broker": "cqg",
+  "symbol": "MESU26",
+  "qty": 4,
+  "offset": 10,
+  "thresholdTicks": 1,
+  "hideOnEntry": [],
+  "levels": [
+    {
+      "tgtQty": 2
+    },
+    {
+      "tgtQty": 2
+    }
+  ],
+  "offsetUnit": "points",
+  "colors": {
+    "buy": "#427b5a",
+    "sell": "#593e25",
+    "auto": "#006ab3"
+  }
+}

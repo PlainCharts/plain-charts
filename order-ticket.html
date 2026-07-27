@@ -1,0 +1,279 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Order</title>
+  <!-- Standalone order-ticket window. Its OWN OS window (not an in-window dialog) so it floats free over a
+       docked/thin Trade Desk. Loads with the desktop preload -> a PROXY window that will drive orders through
+       the data-host broker. Step 1: just the 4-tab shell (Market / Limit / Stop / Modify). -->
+  <style>
+    /* mirror the main app theme (index.html :root) so the dialog matches the app exactly */
+    :root {
+      --bg: #0e0e11; --panel: #15151b; --field: #16161c; --btn: #1c1c22; --btn-h: #2a2a33; --btn-tx: #ddd;
+      --accent: #2962ff; --accent-h: #1e53e5; --accent-tx: #fff; --accent-ui: #2962ff;
+      --hover: #23232b; --active: #1e2a4a; --bd: #333; --bd-soft: #222;
+      --tx: #ddd; --tx-dim: #888; --tx2: #aaa;
+      --pos: #3fb950; --neg: #f85149;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--panel); color: var(--tx);
+                 font: 13px/1.4 system-ui, -apple-system, sans-serif; user-select: none; }
+    #order-root { display: flex; flex-direction: column; height: 100%; }
+    input[type=checkbox], input[type=radio] { accent-color: var(--accent-ui); }   /* checked = interface accent */
+    /* frameless custom title bar (like the main app): the bar drags the window; controls don't */
+    .ot-titlebar { display: flex; align-items: stretch; height: 32px; background: var(--panel);
+                   border-bottom: 1px solid var(--bd); -webkit-app-region: drag; flex: 0 0 auto; }
+    .ot-title { display: flex; align-items: center; padding: 0 12px; font-size: 12px; font-weight: 500; color: var(--tx); }
+    .ot-spacer { flex: 1; -webkit-app-region: drag; }
+    .ot-ctrls { display: flex; -webkit-app-region: no-drag; }
+    .ot-btn { width: 40px; border: none; background: transparent; color: var(--tx-dim); font-size: 13px; line-height: 1;
+              cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+    .ot-btn:hover { background: var(--btn-h); color: var(--tx); }
+    .ot-btn.ot-close:hover { background: #e81123; color: #fff; }
+    .ot-btn.ot-pin svg { transform: rotate(45deg); transition: transform .12s, color .12s; }
+    .ot-btn.ot-pin.on { color: var(--accent-ui); }
+    .ot-btn.ot-pin.on svg { transform: rotate(0deg); }
+    .ot-tabs { display: flex; justify-content: space-between; padding: 0 28px; border-bottom: 1px solid var(--bd); flex: 0 0 auto; }
+    .ot-tab { padding: 13px 2px 11px; font-size: 14px; color: var(--tx-dim); cursor: pointer; border-bottom: 2px solid transparent;
+              margin-bottom: -1px; transition: color .12s; }
+    .ot-tab:hover { color: var(--tx); }
+    .ot-tab.active { color: var(--tx); border-bottom-color: var(--accent-ui); }
+    .ot-body { flex: 1 1 auto; padding: 16px; overflow: auto; display: flex; flex-direction: column; }
+    /* form fields */
+    .ot-field { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .ot-check { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer; font-size: 12px; color: var(--tx-dim); }
+    .ot-label { font-size: 12px; color: var(--tx-dim); flex: 0 0 auto; }
+    .ot-input { flex: 1 1 auto; min-width: 0; background: var(--field); border: 1px solid var(--bd); color: var(--tx);
+                border-radius: 4px; padding: 5px 8px; font-size: 13px; outline: none; }
+    .ot-input:focus { border-color: var(--accent-ui); }
+    /* Account + Symbol on one row: account dropdown grows, symbol stays ticker-width */
+    .ot-acctsym { gap: 6px; }
+    .ot-acct-sel { flex: 0 0 120px; min-width: 0; }                      /* == every other input (120) */
+    .ot-acctsym .ot-input { padding: 4px 8px; }                          /* 25px tall, matching the field boxes below (base .ot-input is 27) */
+    .ot-acctsym label:nth-of-type(2) { margin-left: auto; }             /* push the Symbol group to the right so its box stays aligned with the col2 boxes below */
+    .ot-acctsym .ot-combo { flex: 0 0 120px; }
+    /* symbol combobox: typeable input + dropdown arrow, with an absolutely-positioned pick list from the watchlists */
+    .ot-combo { position: relative; flex: 1 1 auto; min-width: 0; display: flex; }
+    .ot-combo .ot-input { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; }
+    .ot-combo-arrow { flex: 0 0 auto; width: 26px; background: var(--field); border: 1px solid var(--bd); color: var(--tx-dim);
+                      border-top-right-radius: 4px; border-bottom-right-radius: 4px; cursor: pointer; font-size: 11px; }
+    .ot-combo-arrow:hover { color: var(--tx); }
+    .ot-combo-menu { position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 10; max-height: 220px; overflow-y: auto;
+                     background: var(--panel); border: 1px solid var(--bd); border-radius: 4px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+    .ot-combo-opt { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 9px; cursor: pointer; font-size: 13px; }
+    .ot-combo-opt:hover { background: var(--hover); }
+    .ot-combo-sym { color: var(--tx); }
+    .ot-combo-br { color: var(--tx-dim); font-size: 11px; }
+    .ot-combo-empty { padding: 8px 9px; color: var(--tx-dim); font-size: 12px; }
+    /* themed scrollbars, following the app vars (WebKit = Chromium/Brave; scrollbar-color = Gecko/Floorp) */
+    * { scrollbar-width: thin; scrollbar-color: var(--bd) transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bd); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--tx-dim); background-clip: padding-box; }
+    /* the loaded position as a headerless mini table (id | symbol | side | qty | open price), above the symbol */
+    .ot-postable { display: flex; align-items: stretch; margin-bottom: 18px; border: 1px solid var(--bd);
+                   border-radius: 4px; overflow: hidden; font-size: 12px; background: var(--field); }
+    .ot-pcell { padding: 5px 8px; border-right: 1px solid var(--bd); color: var(--tx); white-space: nowrap;
+                overflow: hidden; text-overflow: ellipsis; }
+    .ot-pcell:last-child { border-right: none; }
+    .ot-postable-closed { opacity: 0.5; }   /* the position fully closed -> dim the last-known row */
+    .ot-pcell-id { color: var(--tx-dim); }
+    .ot-pcell-sym { flex: 1 1 auto; min-width: 0; }
+    .ot-pcell-buy { color: var(--pos); text-transform: uppercase; }
+    .ot-pcell-sell { color: var(--neg); text-transform: uppercase; }
+    .ot-pcell-qty, .ot-pcell-px { text-align: right; }
+    /* Modify tab: SL/TP editor -- price box + linked distance box + unit label per row, Modify button below-right */
+    .ot-modify { margin-top: 0; }   /* account-row already provides the 10px gap; the old 14px made Modify/Limit/Stop sit lower than Market */
+    .ot-mod-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ot-mod-label { flex: 0 0 68px; text-align: right; font-size: 12px; color: var(--tx-dim); }
+    .ot-mod-price, .ot-mod-dist { background: var(--field); border: 1px solid var(--bd); color: var(--tx);
+                                  border-radius: 4px; padding: 4px 8px; font-size: 13px; outline: none; text-align: right; }
+    /* keep the native spinner at the right edge, but push it off the digits so they don't collide */
+    .ot-mod-price::-webkit-inner-spin-button, .ot-mod-dist::-webkit-inner-spin-button { margin-left: 10px; }
+    .ot-mod-price { flex: 1 1 auto; min-width: 0; }
+    /* min-width:0 is REQUIRED: a flex item defaults to min-width:auto (= min-content), and a number input's
+       min-content (with its spinner) is ~160px, which overrides flex-basis and steals the row. */
+    .ot-mod-dist { flex: 0 0 72px; min-width: 0; }
+    .ot-mod-price:focus, .ot-mod-dist:focus { border-color: var(--accent-ui); }
+    /* Market tab: the Dist boxes are read-only reference (a market order has no fixed distance) -- grayed, no caret/spinner. */
+    .ot-mod-dist.ot-dist-ref { background: var(--panel); color: var(--tx-dim); opacity: 0.7; cursor: default; }
+    .ot-mod-dist.ot-dist-ref::-webkit-inner-spin-button { display: none; }
+    /* Remove-level box (Modify tab): a small square X after the Stop/Target price box; clears that level on the position. */
+    .ot-lvl-x { flex: 0 0 25px; height: 25px; padding: 0; background: var(--field); border: 1px solid var(--bd); border-radius: 4px;
+                color: var(--tx-dim); font-size: 11px; line-height: 1; cursor: pointer; }
+    .ot-lvl-x:hover { border-color: var(--neg); color: var(--neg); }
+    /* Stake mode: the Volume box is a READ-ONLY live preview of the computed size -- grayed, no caret, no spinner. */
+    .ot-mod-price.ot-computed { background: var(--panel); color: var(--tx-dim); cursor: default; opacity: 0.75; }
+    .ot-mod-price.ot-computed::-webkit-inner-spin-button { display: none; }
+    .ot-mod-unit { flex: 0 0 auto; font-size: 12px; color: var(--tx-dim); min-width: 34px; }
+    .ot-mod-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+    .ot-mod-actions + .ot-mod-actions { margin-top: 8px; }   /* Modify row sits just under the Partial/Close row */
+    .ot-mod-actions .ot-btn-primary { width: 67px; padding-left: 8px; padding-right: 8px; }   /* Modify narrowed to Close's width (Close unchanged) */
+    .ot-mod-qty::placeholder { color: var(--tx-dim); }
+    /* Bottom actions: a right-aligned 2x2 grid -- [Close][Modify] / [Qty][Partial]. Fixed-width columns + full-width
+       cells make each column's two controls share edges (Close over the Qty input, Modify over Partial). */
+    .ot-mod-bottom { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+    .ot-mod-bottom .ot-mod-status { flex: 1 1 auto; min-width: 0; }
+    .ot-mod-grid { display: grid; grid-template-columns: repeat(2, 76px); gap: 8px 10px; flex: 0 0 auto; }
+    .ot-mod-grid > * { width: 100%; box-sizing: border-box; margin: 0; }
+    .ot-mod-status { font-size: 12px; color: var(--tx-dim); }
+    .ot-mod-status.ok { color: var(--pos); }
+    .ot-mod-status.err { color: var(--neg); }
+    .ot-btn-primary { background: var(--accent); border: 1px solid transparent; color: var(--accent-tx); border-radius: 4px;
+                      padding: 6px 16px; font-size: 13px; cursor: pointer; }
+    .ot-btn-primary:hover { background: var(--accent-h); }
+    .ot-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* universal controls footer -- always visible under a divider on every tab */
+    .ot-footer { position: relative; flex: 0 0 auto; border-top: 1px solid var(--bd); padding: 10px 16px; display: flex; flex-direction: column; gap: 6px; }
+    .ot-bar-row { display: flex; align-items: center; gap: 8px; }
+    .ot-btn-close { background: var(--btn); border: 1px solid var(--bd); color: var(--tx); border-radius: 4px;
+                    padding: 6px 16px; font-size: 13px; cursor: pointer; }
+    .ot-btn-close:hover { background: var(--btn-h); }
+    /* Market tab Buy/Sell -- primary (accent) buttons like Ok, full-width row */
+    .ot-btn-buy, .ot-btn-sell { flex: 1 1 0; padding: 6px 16px; border: 1px solid transparent; border-radius: 4px; background: var(--accent); color: var(--accent-tx); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .ot-btn-buy:hover, .ot-btn-sell:hover { background: var(--accent-h); }
+    /* gated out: the bracket implies the opposite direction -> this side is not a valid entry */
+    .ot-btn-buy:disabled, .ot-btn-sell:disabled { opacity: 0.4; cursor: not-allowed; }
+    .ot-btn-buy:disabled:hover, .ot-btn-sell:disabled:hover { background: var(--accent); }
+    /* Buy/Sell block is BOTTOM-PINNED (margin-top:auto) to a fixed anchor above the footer/gear, so the buttons sit at
+       one spot for every account type -- hiding the SL/TP rows above reflows only the slack, never the buttons.
+       (Limit/Stop tabs still use this; the Market tab uses the grid below.) */
+    .ot-mkt-actions { margin-top: auto; padding-right: 50px; display: flex; flex-direction: column; gap: 10px; }   /* holds [status][bid/ask][Buy/Sell]; 50px right == Market's col3+gap, gap 10 == Market's row-gap */
+    /* live bid/ask for the traded symbol -- centered, just above Buy/Sell. Theme text colour (no hardcoded hue). */
+    .ot-quote { text-align: center; font-size: 24px; font-weight: 300; color: var(--tx); letter-spacing: .01em; font-variant-numeric: tabular-nums; margin-bottom: 14px; }
+    .ot-quote-sep { color: var(--tx-dim); margin: 0 8px; font-weight: 400; }
+    .ot-quote.empty { color: var(--tx-dim); font-weight: 400; }
+    /* Market tab = a FIXED 2-column FIELDS grid (+ a 40px right gutter for the floating gear). Fields span or split into
+       the two columns. It sizes to content (flex 0 0 auto); the shared bottom block (.ot-mkt-actions) bottom-pins below
+       it via margin-top:auto, exactly like Limit/Stop. Because every track is fixed, hiding any cell leaves the rest put. */
+    .ot-mkt-grid { flex: 0 0 auto; display: grid;
+                   grid-template-columns: 180px 1fr 40px;   /* col1 fixed (label:input rows align) | col2 checkboxes | gear gutter */
+                   grid-template-rows: auto auto auto auto auto;   /* Qt type(+Stake) | Volume | Stop | Target | Project+Bracket */
+                   column-gap: 10px; row-gap: 10px; }
+    .ot-mkt-grid .ot-mod-row { margin-bottom: 0; gap: 6px; }         /* gap 6 == the account row, so col1 boxes line up with the account box */
+    .ot-mkt-grid .ot-mod-label { flex: 0 0 47.3px; }                 /* == "Account:" label width -> Volume/Stop/Target box LEFT = account box LEFT */
+    .ot-mkt-toggles { display: flex; align-items: center; gap: 22px; padding-left: 49px; }   /* Project order + Bracket under Target; indented so the Project checkbox's left edge aligns with the col1 boxes' left edge */
+    .ot-mkt-grid .ot-input:not(.ot-preset-sel) { padding: 4px 8px; }      /* Qt type + Stake -> 25px, matching the Volume/Stop/Target boxes */
+    .ot-ls-grid .ot-input { padding: 4px 8px; }                           /* Qt type + Stake + Exp -> 25px, matching the field boxes on Limit/Stop */
+    .ot-ls-grid input[type="date"].ot-input { height: 25px; }             /* date input has a taller intrinsic min-height; pin it to 25 like the rest */
+    .ot-mkt-grid .ot-bar-row { margin: 0; }
+    /* Limit/Stop tabs = the same fixed-grid idea: col1 = the resting order (Volume / Price / Expiration), col2 = the
+       hedging-only SL/TP column (hidden whole on netting accounts -- nothing reflows), gear gutter on the right. */
+    .ot-ls-grid { display: grid; grid-template-columns: 180px minmax(0, 1fr); column-gap: 10px; row-gap: 10px; }
+    .ot-ls-grid .ot-mod-row { margin-bottom: 0; gap: 6px; }              /* gap 6 == the account row, so col1 boxes line up with the account box */
+    .ot-ls-grid .ot-mod-label { flex: 0 0 47.3px; }                      /* == "Account:" label width -> Volume/Price/Stop/Target box LEFT = account box LEFT (col2 labels keep their inline flex:0 0 auto) */
+    .ot-foot-status { font-size: 12px; color: var(--tx-dim); text-align: right; min-height: 14px; line-height: 14px; }
+    .ot-foot-status.err { color: var(--neg); }
+    /* PLACED state (post-order): gray + lock every form section except the bottom actions block (which holds New Order) */
+    .ot-body.ot-placed .ot-postable, .ot-body.ot-placed .ot-acctsym,
+    .ot-body.ot-placed .ot-mkt-grid, .ot-body.ot-placed .ot-ls-grid { opacity: 0.45; pointer-events: none; }
+    .ot-btn-new { flex: 1 1 0; }   /* the single New Order button fills the Buy/Sell row's width */
+    /* user-authored quick buttons: 3 equal columns that STRETCH to fill the window width (no right-edge gap).
+       The window is separately grown to the buttons' natural width (measured in JS) so labels never truncate. */
+    .ot-qbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex: 1 1 auto; min-width: 0; }
+    .ot-qbtns .ot-btn-close { width: auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* gear floats into the bottom-right corner of the UPPER portion (the body), just above the footer divider */
+    .ot-gear { position: absolute; right: 12px; bottom: 100%; margin-bottom: 16px; z-index: 5;   /* margin matches the body's 16px bottom padding so the gear's bottom aligns with the Buy/Sell buttons */
+               width: 28px; height: 28px; background: var(--bg); border: 1px solid var(--bd);
+               color: var(--tx-dim); border-radius: 4px; cursor: pointer; font-size: 14px; line-height: 1; }
+    .ot-gear:hover { color: var(--tx); border-color: var(--tx-dim); }
+    /* gear editor overlay (covers below the title bar) */
+    .ot-editor { position: fixed; top: 32px; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--bg);
+                 display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; overflow: auto; }
+    .ot-ed-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 500; color: var(--tx); }
+    .ot-ed-x { background: transparent; border: none; color: var(--tx-dim); cursor: pointer; font-size: 13px; }
+    .ot-ed-x:hover { color: var(--tx); }
+    .ot-ed-list { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; overflow: auto; }
+    .ot-ed-row { display: flex; align-items: center; gap: 6px; border-radius: 4px; }
+    .ot-ed-label { flex: 0 0 96px; }
+    /* script preview: abbreviated with ellipsis, click to open the script dialog */
+    .ot-ed-scriptpreview { flex: 1 1 auto; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis;
+                           white-space: nowrap; background: var(--field); border: 1px solid var(--bd); color: var(--tx-dim);
+                           border-radius: 4px; padding: 5px 8px; font-family: ui-monospace, Menlo, Consolas, monospace;
+                           font-size: 12px; cursor: pointer; }
+    .ot-ed-scriptpreview:hover { border-color: var(--tx-dim); color: var(--tx); }
+    .ot-ed-scriptpreview.invalid { border-color: var(--neg); }
+    /* script dialog (over the editor): 3-row textarea + command list + Cancel/Save */
+    .ot-scripted { position: fixed; top: 32px; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--bg);
+                   display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; overflow: auto; }
+    .ot-scripted-ta { width: 100%; background: var(--field); border: 1px solid var(--bd); color: var(--tx);
+                      border-radius: 4px; padding: 8px; font-family: ui-monospace, Menlo, Consolas, monospace;
+                      font-size: 13px; resize: vertical; outline: none; }
+    .ot-scripted-ta:focus { border-color: var(--accent-ui); }
+    .ot-scripted-ta.invalid { border-color: var(--neg); }
+    .ot-scripted-err { color: var(--neg); font-size: 12px; min-height: 14px; line-height: 14px; }
+    .ot-scripted-cmds { display: flex; flex-direction: column; gap: 0; flex: 1 1 auto; overflow: auto; }
+    /* command-reference tabs (buy/sell | set | move | close) above the scrolling command list */
+    .ot-cmd-tabs { display: flex; gap: 4px; border-top: 1px solid var(--bd); padding-top: 8px; flex: 0 0 auto; }
+    .ot-cmd-tab { flex: 0 0 auto; padding: 4px 10px; background: var(--btn); border: 1px solid var(--bd); color: var(--tx-dim);
+                  border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .ot-cmd-tab:hover { color: var(--tx); }
+    .ot-cmd-tab.active { background: var(--active); color: var(--tx); border-color: var(--accent-ui); }
+    .ot-cmd { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 2px 8px;
+              border-radius: 4px; cursor: pointer; }
+    .ot-cmd:hover { background: var(--hover); }
+    .ot-cmd-t { color: var(--tx); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+    .ot-cmd-d { color: var(--tx-dim); font-size: 11px; }
+    .ot-scripted-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+    .ot-ed-drag { flex: 0 0 auto; cursor: grab; color: var(--tx-dim); padding: 0 4px; user-select: none; font-size: 14px; line-height: 1; }
+    .ot-ed-drag:active { cursor: grabbing; }
+    .ot-ed-row.dragging { opacity: 0.45; }
+    .ot-ed-row.drop-above { box-shadow: inset 0 2px 0 0 var(--accent-ui); }
+    .ot-ed-row.drop-below { box-shadow: inset 0 -2px 0 0 var(--accent-ui); }
+    /* FIXED columns (toolbar-dialog style): [drag] [name 78] [script grows] [hotkey 92] [x] */
+    .ot-ed-label { flex: 0 0 78px; min-width: 0; }
+    .ot-ed-action { flex: 0 0 118px; }
+    .ot-ed-mini { flex: 0 0 auto; width: 26px; height: 28px; background: var(--btn); border: 1px solid var(--bd);
+                  color: var(--tx-dim); border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .ot-ed-mini:hover { color: var(--tx); border-color: var(--tx-dim); }
+    /* per-button hotkey recorder pill (mirrors the toolbar's .tool-hk) */
+    .ot-ed-hk { flex: 0 0 92px; text-align: center; padding: 5px 6px; border: 1px solid var(--bd); border-radius: 4px;
+                background: var(--field); color: var(--tx); font-size: 12px; cursor: pointer; white-space: nowrap;
+                overflow: hidden; text-overflow: ellipsis; }
+    .ot-ed-hk:hover { background: var(--hover); }
+    .ot-ed-hk.empty { color: var(--tx-dim); border-style: dashed; }
+    .ot-ed-hk.rec { border-color: var(--accent-ui); color: var(--accent-ui); }
+    .ot-ed-empty { color: var(--tx-dim); font-size: 12px; padding: 8px 0; }
+    /* bottom status line (mirrors .ot-scripted-err): says WHY a chord was refused */
+    .ot-ed-msg { color: var(--tx-dim); font-size: 12px; min-height: 16px; line-height: 16px; padding: 2px 0; }
+    .ot-ed-msg.err { color: var(--neg); }
+    .ot-ed-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+    /* template selector (footer, left) -- palette-picker pattern; the menu opens UPWARD (footer is at the bottom) */
+    .ot-tpldd { position: relative; flex: 1 1 auto; min-width: 0; }
+    .ot-tpldd-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px;
+                    padding: 6px 8px; border: 1px solid var(--bd); border-radius: 4px; background: var(--field);
+                    color: var(--tx); font-size: 12px; cursor: pointer; }
+    .ot-tpldd-btn:hover { background: var(--hover); }
+    .ot-tpldd-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ot-tpldd-caret { color: var(--tx-dim); flex: 0 0 auto; }
+    .ot-tplmenu { position: absolute; bottom: calc(100% + 4px); left: 0; min-width: 100%; max-height: 220px; overflow: auto;
+                  background: var(--field); border: 1px solid var(--bd); border-radius: 4px; box-shadow: 0 6px 18px rgba(0,0,0,.28); z-index: 30; }
+    .ot-tplmenu-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; cursor: pointer; }
+    .ot-tplmenu-row:hover { background: var(--hover); }
+    .ot-tplmenu-row.sel { color: var(--accent-ui); }
+    .ot-tplmenu-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .ot-tplmenu-x { flex: 0 0 auto; border: none; background: none; color: var(--tx-dim); cursor: pointer; font-size: 13px; line-height: 1; padding: 0 2px; }
+    .ot-tplmenu-x:hover { color: var(--neg); }
+    .ot-tplmenu-new { border-top: 1px solid var(--bd); }
+    .ot-tplmenu-input { width: 100%; border: none; background: none; color: var(--tx); font-size: 12px; outline: none; }
+    /* universal VISIBILITY / HIDE ON ENTRY frame -- lives inside the footer, above the quick buttons (footer padding
+       provides the side gutters, so no horizontal margin here) */
+    .ot-vis-frame { flex: 0 0 auto; margin: 0 0 2px; padding: 8px 10px; border: 1px solid var(--bd); border-radius: 6px;
+                    display: flex; flex-direction: column; gap: 7px; }
+    .ot-vis-sec { display: flex; align-items: center; gap: 10px; }
+    .ot-vis-title { flex: 0 0 92px; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--tx-dim); }
+    .ot-vis-checks { display: flex; gap: 14px; }
+    .ot-vis-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--tx-dim); cursor: pointer; }
+    .ot-vis-check input { cursor: pointer; }
+    select.ot-input { -webkit-appearance: none; appearance: none; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div id="order-root"></div>
+  <script>
+    window.addEventListener('error', (e) => console.error('[order-ticket]', e.message, e.filename, e.lineno));
+  </script>
+  <script type="module" src="src/order-ticket/window.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>data host</title></head>
+<body>
+  <!-- Headless ecosystem data host (Electron). Runs the REAL broker + every adapter and the
+       bridge server, owning all connections on behalf of every UI window. Never shown.
+       ?role=data makes broker.js take the host branch. -->
+  <script>
+    // surface a failed boot to the main process console (this window has no visible UI)
+    window.addEventListener('error', (e) => console.error('[data-host]', e.message, e.filename, e.lineno));
+    window.addEventListener('unhandledrejection', (e) => console.error('[data-host] unhandled', (e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+  </script>
+  <script src="lib/protobuf.min.js"></script>
+  <script type="module">
+    import './data_engine/data-host.js';   // the ENGINE's data-host entry: real data layer + bridge server
+    import './src/perf/sampler.js';        // publish this window's live perf sample (Performance Monitor addon reads it)
+  </script>
+</body>
+</html>

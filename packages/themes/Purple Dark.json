@@ -1,0 +1,31 @@
+{
+  "name": "Purple Dark",
+  "description": "A dark theme in deep purple.",
+  "palette": {
+    "bg": "#0a0810",
+    "panel": "#141020",
+    "field": "#181327",
+    "btn": "#221a38",
+    "btnH": "#2e2450",
+    "btnTx": "#e9e6f4",
+    "accent": "#8b7fe8",
+    "accentH": "#7a6ce0",
+    "accentTx": "#ffffff",
+    "hover": "#1c1630",
+    "active": "rgba(139, 127, 232, 0.20)",
+    "bd": "#2a2442",
+    "bdSoft": "#1b1630",
+    "tx": "#efedf7",
+    "txDim": "#736e8a",
+    "tx2": "#a8a3c0",
+    "icon": "#8b7fe8",
+    "ctrl": "#1a1530",
+    "ctrlTx": "#c9c3e0",
+    "ctrlOn": "#8b7fe8",
+    "ctrlOnTx": "#0a0810",
+    "pos": "#4ad2a8",
+    "neg": "#ff6b8a",
+    "frameColor": "#8b7fe8",
+    "frameWidth": 1
+  }
+}

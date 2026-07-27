@@ -1,0 +1,37 @@
+{
+  "_comment": "Config + look-and-feel for the demos. studies.html consumes the `feed` and `studies` sections (the data source and which indicators to show); both example pages map the theme fields onto createChart() + candle options. Edit and reload — no code changes.",
+
+  "feed": {
+    "_comment": "Binance public market data (no key, CORS-enabled). interval/symbol are Binance values.",
+    "api": "https://data-api.binance.vision/api/v3",
+    "symbol": "BTCUSDT",
+    "interval": "5m",
+    "count": 600,
+    "live": true
+  },
+  "studies": ["volume_profile", "rsi"],
+
+  "background": "#d1d4dc",
+  "textColor": "#50535e",
+  "gridColor": "#d1d4dc",
+  "borderColor": "#b2b5be",
+
+  "crosshair": { "color": "#6a6d78", "style": 1, "labelBg": "#2a2e39", "labelText": "#ffffff" },
+
+  "candles": {
+    "upColor": "#5b9c7b",
+    "downColor": "#2a2e39",
+    "borderUpColor": "#3a3e48",
+    "borderDownColor": "#3a3e48",
+    "wickUpColor": "#3a3e48",
+    "wickDownColor": "#3a3e48"
+  },
+
+  "rsi": {
+    "period": 14,
+    "color": "#ff8800",
+    "overbought": 70,
+    "oversold": 30,
+    "guideColor": "#b2b5be"
+  }
+}

@@ -1,0 +1,7 @@
+# Skill: "One sentence per paragraph is the default. Two is the ceiling."
+extends: occurrence
+message: "Paragraph has more than two sentences — split it."
+level: warning
+scope: paragraph
+token: '[.?!](?:\s|$)'
+max: 2

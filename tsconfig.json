@@ -1,0 +1,27 @@
+{
+  // Type CHECKER only -- never a build. `npm run typecheck` runs `tsc --noEmit`, which reads our JSDoc
+  // annotations and reports type errors; it emits nothing and the app still ships the exact .js we write.
+  //
+  // `checkJs` is TRUE -- checking is MANDATORY: every .js is type-checked by default. The migration is
+  // complete: the whole app (src/adapters/addons) AND the vendored lib/kapelka engine it imports are fully
+  // JSDoc-typed, so a new file is checked the moment it lands. TS checks imported files regardless of
+  // `exclude`, and kapelka is now clean under strict, so the flip holds. Opt a file OUT (rare) with
+  // `// @ts-nocheck`. (The // @ts-check markers throughout are now redundant no-ops but harmless.)
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",   // ES-module imports carry explicit .js extensions -- Bundler resolves them as-is
+    "baseUrl": ".",
+    "paths": { "/src/*": ["./src/*"], "/addons/*": ["./addons/*"], "/data_engine/*": ["./data_engine/*"] },   // browser-absolute imports: adapters use '/src/...' + '/data_engine/...'; multi-file addons import siblings via '/addons/...'
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": true,                 // check every .js by default (opt OUT with `// @ts-nocheck`)
+    "noEmit": true,                  // pure checker -- produce no output, ever
+    "strict": true,
+    "skipLibCheck": true,            // don't type-check dependency .d.ts files
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.js", "data_engine/**/*.js", "addons/**/*.js", "addons/addon-globals.d.ts", "src/tools/tools-global.d.ts", "src/studies/studies-global.d.ts", "src/desktop.d.ts"],
+  "exclude": ["node_modules", "lib", "dist", "data", "docs", "images", "settings", "electron", "plain", "data_engine/terminal"]
+}

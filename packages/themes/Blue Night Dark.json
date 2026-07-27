@@ -1,0 +1,31 @@
+{
+  "name": "Blue Night Dark",
+  "description": "A dark theme in deep navy blue.",
+  "palette": {
+    "bg": "#12163a",
+    "panel": "#1a1f4a",
+    "field": "#1e2456",
+    "btn": "#232a63",
+    "btnH": "#2d3576",
+    "btnTx": "#e8eaf5",
+    "accent": "#e5227f",
+    "accentH": "#d11570",
+    "accentTx": "#ffffff",
+    "hover": "#1c2250",
+    "active": "rgba(229, 34, 127, 0.16)",
+    "bd": "#2c3370",
+    "bdSoft": "#1e2450",
+    "tx": "#eef0fb",
+    "txDim": "#8a90c0",
+    "tx2": "#b3b8e0",
+    "icon": "#c9cef0",
+    "ctrl": "#1a1f4a",
+    "ctrlTx": "#c9cef0",
+    "ctrlOn": "#e5227f",
+    "ctrlOnTx": "#ffffff",
+    "pos": "#3ecf8e",
+    "neg": "#f0544a",
+    "frameColor": "#e5227f",
+    "frameWidth": 1
+  }
+}

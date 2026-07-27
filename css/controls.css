@@ -1,0 +1,114 @@
+/* left drawing-tool rail buttons + tool manager, the one icon primitive (src/ui/icon.js),
+   the bottom bar (date ranges, quick-coordinates editor, clock) and the timezone popover. */
+
+.tool-btn { width: 38px; height: 34px; flex: none; border: 1px solid transparent; background: transparent;
+            color: var(--tx-dim); border-radius: 7px; cursor: pointer; font-size: 16px;
+            display: flex; align-items: center; justify-content: center; }
+.tool-btn:hover { background: var(--btn-h); color: var(--tx); }
+.tool-btn.active { background: var(--active); color: var(--tx); border-color: var(--bd); }
+.tool-mgr { font-size: 18px; }
+.tool-spacer { flex: 1 1 auto; min-height: 8px; }   /* pushes the Features section to the bottom */
+.tool-sep { height: 1px; flex: none; background: var(--bd-soft); margin: 4px 5px; }
+.tool-mgr-list { padding: 6px 4px 4px; max-height: 60vh; overflow-y: auto; }
+.tool-mgr-actions { display: flex; gap: 14px; padding: 4px 8px 8px; border-bottom: 1px solid var(--bd); margin-bottom: 6px; }
+.tool-mgr-action { color: var(--tx-dim); font-size: 13px; cursor: pointer; }
+.tool-mgr-action:hover { color: var(--tx); }
+.tool-mgr-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 13px; color: var(--tx); }
+.tool-mgr-row:hover { background: var(--hover); }
+.tool-chk { width: 16px; text-align: center; color: var(--tx-dim); cursor: pointer; }
+.tool-chk.on { color: #42a5f5; }
+.tool-img { width: 22px; height: 22px; object-fit: contain; display: block; }
+/* The one icon primitive (src/ui/icon.js). Unmasked: the raw PNG (real colours). Masked: PNG alpha
+   becomes a CSS mask, filled by currentColor (theme + hover/active) or the user's iconMaskColor. */
+.app-icon { display: block; flex: none; background-repeat: no-repeat; background-position: center; background-size: contain; }
+.app-icon.masked { background-image: none !important; background-color: var(--icon);
+                   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+                   -webkit-mask-position: center;  mask-position: center;
+                   -webkit-mask-size: contain;     mask-size: contain; }
+/* while masking is on, glyph + inline-SVG chrome icons take the theme's icon colour too */
+.icons-masked .strip-btn svg, .icons-masked .tool-btn svg, .icons-masked .rail-btn svg,
+.icons-masked .bb-max svg, .icons-masked .glyph-ico { color: var(--icon); }
+.tool-icon-cell { display: flex; align-items: center; gap: 4px; width: 70px; }
+.tool-icon-prev { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+                  border: 1px solid var(--bd); border-radius: 5px; font-size: 14px; color: var(--tx-dim); }
+.tool-icon-prev img { width: 20px; height: 20px; object-fit: contain; }
+.tool-mgr-name { flex: 1; }
+.tool-mgr-row .tool-ico { width: 16px; text-align: center; color: var(--tx-dim); cursor: pointer; }
+.tool-mgr-row .tool-ico:hover { color: var(--tx); }
+.tool-hk { min-width: 78px; text-align: center; padding: 2px 8px; border: 1px solid var(--bd); border-radius: 5px;
+           font-size: 12px; color: var(--tx); cursor: pointer; white-space: nowrap; }
+.tool-hk:hover { background: var(--hover); }
+.tool-hk.empty { color: var(--tx-dim); border-style: dashed; }
+.tool-hk.rec { border-color: #42a5f5; color: #42a5f5; }
+.tool-mgr-grip { width: 12px; text-align: center; color: var(--tx-dim); cursor: grab; }
+.tool-mgr-row.tool-mgr-dragging { opacity: .5; }
+/* insertion-point line while dragging (box-shadow: no layout shift) */
+.tool-mgr-row.tool-mgr-drop-above { box-shadow: 0 -2px 0 0 #42a5f5; }
+.tool-mgr-row.tool-mgr-drop-below { box-shadow: 0 2px 0 0 #42a5f5; }
+.tool-mgr-sep { height: 1px; background: var(--bd); margin: 10px 4px 4px; }
+.tool-mgr-fhead { font-size: 10px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .05em; padding: 2px 8px 6px; }
+/* bottom bar: date ranges + clock */
+#bottombar { height: 30px; box-sizing: border-box; display: flex; align-items: center;
+             gap: 6px; padding: 0 10px; border-top: 1px solid var(--bd-soft); font-size: 12px; }
+.bb-left { display: flex; gap: 2px; }
+.bb-range { padding: 4px 7px; background: transparent; border: none; color: var(--tx2);
+            border-radius: 4px; cursor: pointer; font-size: 12px; }
+.bb-range:hover { background: var(--bd-soft); color: var(--tx); }
+/* quick-coordinates editor (selected hline price / vline date+time), left of the clock */
+.bb-qc { display: none; align-items: center; gap: 6px; margin-right: 20px; white-space: nowrap; }
+.bb-qc-lbl { color: var(--tx-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+.bb-qc-in { height: 22px; box-sizing: border-box; background: var(--panel); color: var(--tx);
+            border: 1px solid var(--bd); border-radius: 4px; padding: 0 6px; font-size: 12px;
+            font-family: inherit; font-variant-numeric: tabular-nums; }
+.bb-qc-in:focus { outline: none; border-color: var(--accent-ui); }
+.bb-qc-price { width: 92px; }
+.bb-qc .seg-time { width: auto; height: 22px; padding: 0 6px; }
+.bb-qc-datewrap { position: relative; display: inline-flex; align-items: center; gap: 3px; }
+.bb-qc-cal { height: 22px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px;
+             background: transparent; border: 1px solid var(--bd); border-radius: 4px; color: var(--tx-dim); cursor: pointer; }
+.bb-qc-cal:hover { background: var(--bd-soft); color: var(--tx); }
+.bb-qc-cal svg { display: block; }
+/* the native picker input is only an anchor for showPicker() -- kept out of view */
+.bb-qc-picker { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+/* compact line-style swatch (reuses .cp-stroke; the universal picker opens on click) */
+.bb-qc-stroke { height: 22px; gap: 6px; padding: 0 6px; border-radius: 4px; }
+.bb-qc-stroke .cp-stroke-sw { width: 15px; height: 15px; }
+.bb-qc-stroke .cp-stroke-line { width: 26px; }
+/* fill colour swatch: a plain colour box */
+.bb-qc-fill { width: 26px; }
+/* create-alert quick button (bell icon), right-most in the quick-coords editor */
+.bb-qc-alert { height: 22px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px;
+               background: transparent; border: 1px solid var(--bd); border-radius: 4px; color: var(--tx-dim); cursor: pointer; }
+.bb-qc-alert:hover { background: var(--bd-soft); color: var(--tx); }
+.bb-qc-alert svg { display: block; }
+/* text swatch: colour square + a live "Text" sample (twin of the line swatch) */
+.cp-text-sample { display: inline-block; line-height: 1; font-size: 13px; }
+.bb-qc-text { height: 22px; gap: 8px; padding: 0 6px; border-radius: 4px; }
+.bb-qc-text .cp-stroke-sw { width: 15px; height: 15px; }
+.bb-qc-text .cp-text-sample { font-size: 12px; }
+.bb-clock { display: flex; align-items: center; gap: 10px; color: var(--tx2); white-space: nowrap;
+            font-variant-numeric: tabular-nums; }
+.bb-times { display: flex; gap: 16px; }
+.bb-t b { color: var(--tx2); font-weight: normal; margin-right: 4px; }
+.bb-tz { background: transparent; border: none; color: var(--tx-dim); cursor: pointer; padding: 3px 6px;
+         border-radius: 4px; font-size: 12px; }
+.bb-tz:hover { background: var(--bd-soft); color: var(--tx); }
+.bb-max { background: transparent; border: none; color: var(--tx-dim); cursor: pointer; padding: 3px 6px;
+          border-radius: 4px; display: inline-flex; align-items: center; margin-left: 2px; }
+.bb-max:hover { background: var(--bd-soft); color: var(--tx); }
+.bb-max.active { color: var(--accent-ui); }
+.bb-max svg { display: block; }
+#tzPopover { position: fixed; display: none; flex-direction: column; gap: 8px; background: var(--panel);
+             border: 1px solid var(--bd); border-radius: 8px; padding: 10px; z-index: 90;
+             box-shadow: 0 8px 30px rgba(0,0,0,.5); min-width: 220px; }
+#tzPopover.open { display: flex; }
+.tz-head { font-size: 12px; color: var(--tx-dim); }
+#tzPopover input { width: 100%; box-sizing: border-box; }
+.tz-input { display: flex; gap: 6px; align-items: center; }
+.tz-input input { flex: 1; text-align: center; }
+/* hide the native spinner — use the −/+ buttons instead */
+.tz-input input::-webkit-inner-spin-button, .tz-input input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.tz-input input { -moz-appearance: textfield; }
+.tz-step { width: 32px; font-size: 15px; line-height: 1; }
+.tz-presets { display: flex; gap: 6px; }
+.tz-presets button { flex: 1; }

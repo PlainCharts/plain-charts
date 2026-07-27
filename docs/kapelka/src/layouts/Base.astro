@@ -1,0 +1,198 @@
+---
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+
+const buildDate = new Date().toLocaleDateString('en-US', {
+	month: 'short',
+	day: 'numeric',
+	year: 'numeric'
+});
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.0.4/index.css" />
+		<title>{title}</title>
+		<style is:global>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html {
+				font-family: 'Iosevka', monospace;
+				font-size: 16px;
+				line-height: 1.6;
+				color: #1a1a1a;
+				background: #fff;
+			}
+
+			body {
+				min-height: 100vh;
+				background: #f9f9f9;
+			}
+
+			a {
+				color: inherit;
+				text-decoration: underline;
+				text-underline-offset: 2px;
+			}
+
+			a:hover {
+				color: #666;
+			}
+
+			.frame {
+				max-width: 1078px;
+				margin: 0 auto;
+				border-left: 1px solid #e5e5e5;
+				border-right: 1px solid #e5e5e5;
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+				background: #fff;
+			}
+
+			.container {
+				padding: 0 2rem;
+			}
+
+			/* Header */
+			header {
+				border-bottom: 1px solid #e5e5e5;
+				padding: 1rem 0;
+			}
+
+			header .container {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.logo {
+				font-family: 'Iosevka', monospace;
+				font-weight: 400;
+				font-size: 1.75rem;
+				text-decoration: none;
+			}
+
+			nav {
+				display: flex;
+				gap: 2rem;
+				align-items: center;
+			}
+
+			nav a {
+				text-decoration: none;
+				color: #666;
+				font-size: 0.95rem;
+			}
+
+			nav a:hover {
+				color: #000;
+			}
+
+			nav .icon-link {
+				display: flex;
+				align-items: center;
+			}
+
+			nav .icon-link svg {
+				opacity: 0.6;
+				transition: opacity 0.2s;
+			}
+
+			nav .icon-link:hover svg {
+				opacity: 1;
+			}
+
+			nav a:not(.icon-link) + .icon-link {
+				margin-left: 1rem;
+			}
+
+			/* Main */
+			main {
+				padding: 4rem 0;
+				flex: 1;
+			}
+
+			/* Footer */
+			footer {
+				border-top: 1px solid #e5e5e5;
+				padding: 2rem 0;
+			}
+
+			footer .container {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				color: #666;
+				font-size: 0.9rem;
+			}
+
+			footer nav {
+				gap: 1.5rem;
+			}
+
+			footer .updated {
+				color: #999;
+			}
+
+			code {
+				font-family: 'Iosevka', monospace;
+				font-size: 0.9em;
+				background: #f5f5f5;
+				padding: 0.2em 0.4em;
+				border-radius: 3px;
+			}
+
+			pre {
+				font-family: 'Iosevka', monospace;
+				background: #1a1a1a;
+				color: #e5e5e5;
+				padding: 1rem;
+				border-radius: 6px;
+				overflow-x: auto;
+			}
+
+			pre code {
+				background: none;
+				padding: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="frame">
+			<header>
+				<div class="container">
+					<nav>
+						<a href="/docs">Docs</a>
+						<a href="/examples/studies.html" target="_blank">Examples</a>
+						<a href="/docs/changelog">Changelog</a>
+						<a href="https://github.com/ether-strannik/plain_charts_vanilla" target="_blank" class="icon-link" title="GitHub"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+					</nav>
+				</div>
+			</header>
+
+			<main>
+				<div class="container">
+					<slot />
+				</div>
+			</main>
+
+			<footer>
+				<div class="container">
+					<span>Kapelka</span>
+					<span class="updated">Updated {buildDate}</span>
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

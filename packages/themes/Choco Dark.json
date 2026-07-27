@@ -1,0 +1,31 @@
+{
+  "name": "Choco Dark",
+  "description": "A dark theme in warm chocolate browns.",
+  "palette": {
+    "bg": "#17120f",
+    "panel": "#241c17",
+    "field": "#2a221c",
+    "btn": "#2c241d",
+    "btnH": "#382e25",
+    "btnTx": "#ece2d4",
+    "accent": "#b07d52",
+    "accentH": "#9a6a44",
+    "accentTx": "#1a130d",
+    "hover": "#231b15",
+    "active": "rgba(176, 125, 82, 0.18)",
+    "bd": "#3a2f26",
+    "bdSoft": "#241c16",
+    "tx": "#efe6d8",
+    "txDim": "#9a8b78",
+    "tx2": "#c2b3a0",
+    "icon": "#b07d52",
+    "ctrl": "#2a221c",
+    "ctrlTx": "#c2b3a0",
+    "ctrlOn": "#b07d52",
+    "ctrlOnTx": "#1a130d",
+    "pos": "#5aa06a",
+    "neg": "#cc5a44",
+    "frameColor": "#b07d52",
+    "frameWidth": 1
+  }
+}

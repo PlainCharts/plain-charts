@@ -1,0 +1,26 @@
+# Skill: "Second person, present tense." / "Subject is the tool or the reader."
+extends: substitution
+message: "Address the reader — use '%s' instead of '%s'."
+level: suggestion
+ignorecase: true
+swap:
+  the user: you
+  the users: you
+  users: you
+  user's: your
+  users': your
+  one can: you can
+  one should: you should
+  one must: you must
+  one needs to: you need to
+  one may: you can
+  the reader: you
+  the operator: you
+  the developer: you
+  the author: you
+  the client: you
+  it is recommended: we recommend
+  it is suggested: we suggest
+  it is important to: make sure to
+  it is necessary to: you must
+  it is possible to: you can

@@ -1,0 +1,31 @@
+{
+  "name": "Yellow Dark",
+  "description": "A dark theme with warm yellow accents.",
+  "palette": {
+    "bg": "#0a0a0b",
+    "panel": "#141416",
+    "field": "#18181c",
+    "btn": "#1e1e22",
+    "btnH": "#2a2a30",
+    "btnTx": "#ece8dc",
+    "accent": "#e6b53c",
+    "accentH": "#d4a12a",
+    "accentTx": "#1a1500",
+    "hover": "#161619",
+    "active": "rgba(230, 181, 60, 0.16)",
+    "bd": "#2b2a30",
+    "bdSoft": "#1c1c20",
+    "tx": "#f2efe6",
+    "txDim": "#8a8578",
+    "tx2": "#b8b2a2",
+    "icon": "#e6b53c",
+    "ctrl": "#18181c",
+    "ctrlTx": "#c9c3b4",
+    "ctrlOn": "#e6b53c",
+    "ctrlOnTx": "#1a1500",
+    "pos": "#41cf8a",
+    "neg": "#f0544a",
+    "frameColor": "#e6b53c",
+    "frameWidth": 1
+  }
+}

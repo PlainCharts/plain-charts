@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kapelka — study board spike (chart-less oscillator / compare rows)</title>
+  <style>
+    :root { --bg:#0e0e11; --panel:#15151b; --tx:#dddddd; --dim:#8a8f9a; --bd:#2a2a33; --accent:#8b7fe8; }
+    * { box-sizing:border-box; }
+    html, body { height:100%; margin:0; background:var(--bg); color:var(--tx);
+                 font:13px -apple-system, BlinkMacSystemFont, Arial, sans-serif; }
+    .wrap { display:flex; flex-direction:column; height:100%; }
+    header { padding:10px 14px; border-bottom:1px solid var(--bd); }
+    header h1 { font-size:14px; font-weight:600; margin:0; }
+    header p { margin:4px 0 0; color:var(--dim); font-size:12px; }
+    /* the board = a vertical stack of full-width rows, each a CHART-LESS pane */
+    .board { flex:1; min-height:0; display:flex; flex-direction:column; }
+    .row { flex:1; min-height:0; display:flex; flex-direction:column; border-bottom:1px solid var(--bd); }
+    .row:last-child { border-bottom:none; }
+    .row-hd { display:flex; align-items:center; gap:8px; padding:5px 12px; font-size:12px; }
+    .row-sym { font-weight:600; }
+    .row-meta { color:var(--dim); }
+    .row-tag { margin-left:auto; color:var(--accent); font-size:11px; letter-spacing:.04em; text-transform:uppercase; }
+    .row-chart { flex:1; min-height:0; }
+    footer { padding:6px 14px; border-top:1px solid var(--bd); color:var(--dim); font-size:11px; }
+    code { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>kapelka — study board spike</h1>
+      <p>Each row is an independent mini-chart with <b>no candlestick plot</b> — the oscillator / compare line
+         is fed straight into pane&nbsp;0 (<code>addPlot(Line, cfg, 0)</code>) and fills the row. Different rows =
+         different "symbols" (separate charts, own scale/axis). This is the render proof for chart-less studies.</p>
+    </header>
+    <div class="board" id="board"></div>
+    <footer>Synthetic bars via <code>feed.js</code> (<code>generateBars</code> / <code>computeRSI</code>) — no network. Serve over http:// (ES modules).</footer>
+  </div>
+
+  <script type="module">
+    import { mountChart, Line } from '../index.js';
+    import { generateBars, computeRSI } from './feed.js';
+
+    // dark theme for mountChart (mirrors the app's Purple Dark-ish chrome)
+    const THEME = {
+      layout: { background: { color: '#0e0e11' }, textColor: '#8a8f9a' },
+      grid: { vertLines: { visible:false }, horzLines: { visible:false } },
+      cursor: { color:'#6a6d78', labelBg:'#15151b', labelText:'#ffffff', vertLine:{ style:1 }, horzLine:{ style:1 } },
+      timeAxis: { borderColor:'#2a2a33', timeVisible:true, indexBased:true },
+      rightPriceAxis: { borderColor:'#2a2a33' },
+      maxZoom: 3000,
+    };
+    const VISIBLE = 160;
+
+    // Three chart-less RSI windows on SYNTHETIC data (no broker, no symbols — generateBars is a seeded
+    // math series). Each row is its own mini-chart with a single RSI Line in pane 0 and NO candles.
+    const ROWS = [
+      { label:'Synthetic A · RSI 14', seed:42, price:100, build:(b)=>({ pts:computeRSI(b,14), color:'#8b7fe8' }) },
+      { label:'Synthetic B · RSI 7',  seed:7,  price:200, build:(b)=>({ pts:computeRSI(b,7),  color:'#26c6b8' }) },
+      { label:'Synthetic C · RSI 21', seed:99, price:80,  build:(b)=>({ pts:computeRSI(b,21), color:'#e6b53c' }) },
+    ];
+
+    const board = document.getElementById('board');
+    for (const r of ROWS) {
+      // row chrome
+      const row = document.createElement('div'); row.className = 'row';
+      const hd = document.createElement('div'); hd.className = 'row-hd';
+      hd.innerHTML = `<span class="row-sym">${r.label}</span><span class="row-tag">chart-less</span>`;
+      const chartEl = document.createElement('div'); chartEl.className = 'row-chart';
+      row.append(hd, chartEl); board.appendChild(row);
+
+      // the actual render: a chart with a SINGLE RSI line in pane 0 — NO candles at all.
+      // Only works because kapelka now lets a non-candle series own the x-domain (_ds()).
+      const bars = generateBars({ count:400, seed:r.seed, startPrice:r.price, step:300 });
+      const { pts, color } = r.build(bars);
+      const chart = mountChart(chartEl, THEME);
+      const line = chart.addPlot(Line, { color, lineWidth: 1.5 }, 0);
+      line.feed(pts);
+      line.addLevel({ price: 70, color:'#3a3a45', lineStyle: 2 });   // RSI overbought
+      line.addLevel({ price: 30, color:'#3a3a45', lineStyle: 2 });   // RSI oversold
+      chart.timeAxis().setBarWindow({ from: Math.max(0, pts.length - VISIBLE), to: pts.length - 1 + 4 });
+    }
+  </script>
+</body>
+</html>

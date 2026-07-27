@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Momentum Terrain — the ether</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #d1d4dc; overflow: hidden; }
+    #chart { height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script type="module">
+    // Stripped from the working examples/studies.html: mountChart + candles + StudyHost, with just ONE
+    // study -- the Momentum Terrain, a pseudo-3D surface drawn entirely from the ether's two marks
+    // (path + text). It rides its own pane under the candles; drag the candles and the visible window
+    // changes, so viewport:true re-derives the terrain over the new window -> it morphs. Theme from the
+    // demos' shared settings.json (the same one studies.html uses). Engine mirrored into public/ by
+    // scripts/mirror-engine.mjs, so these absolute imports resolve.
+    import { mountChart, Candles } from '/index.js';
+    import { StudyHost, Studies } from '/studies/index.js';
+    import { generateBars } from '/examples/feed.js';
+
+    window.Studies = Studies;                         // the study registers via the global (app convention)
+    await import('/demos/momentum-terrain.study.js'); // registers 'momentum_terrain'
+
+    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
+
+    const bars = generateBars({ count: 600, seed: 11, step: 300 });
+
+    const chart = mountChart(document.getElementById('chart'), {
+      layout: { background: { color: s.background || '#d1d4dc' }, textColor: s.textColor || '#50535e' },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+      cursor: { color: cx.color, labelBg: cx.labelBg, labelText: cx.labelText, vertLine: { style: cx.style }, horzLine: { style: cx.style } },
+      timeAxis: { borderColor: s.borderColor || '#b2b5be', timeVisible: true, indexBased: true },
+      rightPriceAxis: { borderColor: s.borderColor || '#b2b5be' },
+      maxZoom: 3000,
+    });
+
+    // the price chart you pan (drag it to morph the terrain)
+    const candles = chart.addPlot(Candles, s.candles || {
+      upColor: '#5b9c7b', downColor: '#2a2e39',
+      borderUpColor: '#3a3e48', borderDownColor: '#3a3e48',
+      wickUpColor: '#3a3e48', wickDownColor: '#3a3e48',
+    }, 0);
+    candles.feed(bars.map(({ volume, ...b }) => b));
+    chart.timeAxis().setBarWindow({ from: Math.max(0, bars.length - 160), to: bars.length - 1 + 4 });
+
+    const host = new StudyHost(chart, {
+      getBars: () => bars,
+      mainSeries: () => candles,
+      barTimes: () => bars.map((b) => b.time),
+    });
+    host.setData(bars);
+    host.add('momentum_terrain', { height: 80, depth: 70 });   // shorter peak + shallower depth to fit the sub-pane
+
+    // viewport: recompute over the visible window on pan/zoom -> the terrain morphs
+    const pushRange = () => { try { const r = chart.timeAxis().timeWindow(); if (r) host.setVisibleRange(r); } catch (_) {} };
+    chart.timeAxis().onTimeWindow(pushRange);
+    pushRange();
+  </script>
+</body>
+</html>

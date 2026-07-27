@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kapelka — studies (StudyHost + gallery)</title>
+  <style>
+    :root { --bg:#d1d4dc; --panel:#c7cad3; --tx:#2a2e39; --dim:#6b7280; --bd:#b2b5be; --on:#2962ff; }
+    * { box-sizing: border-box; }
+    html, body { height:100%; margin:0; background:var(--bg); color:var(--tx);
+                 font:13px -apple-system, BlinkMacSystemFont, Arial, sans-serif; }
+    .wrap { display:flex; flex-direction:column; height:100%; }
+    header { padding:9px 14px; border-bottom:1px solid var(--bd); display:flex; align-items:baseline; gap:12px; }
+    header h1 { font-size:14px; font-weight:600; margin:0; }
+    #status { display:none; }
+    /* when embedded in an iframe (e.g. the home-page sample), drop the header for a clean chart */
+    .embedded header { display:none; }
+    header h1.picker-btn { cursor:pointer; user-select:none; }
+    header h1.picker-btn::after { content:' ▾'; color:var(--dim); font-weight:400; }
+    header h1.picker-btn:hover { color:var(--on); }
+    header span { color:var(--dim); font-size:12px; }
+    #chart { flex:1; min-height:0; }
+    /* study picker (example-only demo dialog) */
+    .picker-bg { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; z-index:50; }
+    .picker-bg.open { display:flex; justify-content:center; }
+    .picker { margin-top:8vh; width:340px; max-height:70vh; background:var(--panel); border:1px solid var(--bd);
+              border-radius:8px; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.35); }
+    .picker-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px;
+                   border-bottom:1px solid var(--bd); font-weight:600; }
+    .picker-x { cursor:pointer; color:var(--dim); font-size:14px; }
+    .picker-x:hover { color:var(--tx); }
+    .picker-search { margin:8px 12px 4px; padding:6px 9px; border:1px solid var(--bd); border-radius:5px;
+                     background:var(--bg); color:var(--tx); font-size:13px; }
+    .picker-list { overflow:auto; padding:2px 0 8px; }
+    .picker-row { display:flex; align-items:center; gap:10px; padding:8px 14px; cursor:pointer; }
+    .picker-row:hover { background:rgba(41,98,255,0.12); }
+    .picker-check { width:12px; color:var(--on); font-size:12px; }
+    .picker-name { font-size:13px; }
+    .picker-row.added .picker-name { color:var(--on); }
+    footer { padding:6px 14px; border-top:1px solid var(--bd); color:var(--dim); font-size:11px; }
+    code { color:#7c7cff; }
+  </style>
+</head>
+<body>
+  <script>if (window.self !== window.top) document.documentElement.classList.add('embedded');</script>
+  <div class="wrap">
+    <header>
+      <h1 id="picker-btn" class="picker-btn" title="Add / remove studies">kapelka · studies</h1>
+      <span id="status">loading…</span>
+    </header>
+    <div id="chart"></div>
+  </div>
+
+  <script type="module">
+    import { mountChart, Candles } from '../index.js';
+    import { StudyHost } from '../studies/index.js';
+    import { createSkin } from '../skin/index.js';   // optional UI layer (legend, controls, config)
+    import '../studies/modules/index.js';   // registers the example gallery
+
+    // All config + theme lives in settings.json — this page is just a consumer. Edit the JSON, reload.
+    const settings = await fetch('./settings.json').then((r) => r.json()).catch(() => ({}));
+    const feed = settings.feed || {};
+    const API = feed.api || 'https://data-api.binance.vision/api/v3';   // Binance public data (no key, CORS)
+    const SYMBOL = feed.symbol || 'BTCUSDT';
+    const INTERVAL = feed.interval || '5m';
+    const COUNT = feed.count || 600;
+    const DEFAULT_STUDIES = settings.studies || ['bollinger', 'rsi', 'volume_delta'];
+    const theme = {
+      background: settings.background || '#d1d4dc', textColor: settings.textColor || '#50535e', borderColor: settings.borderColor || '#b2b5be',
+      crosshair: settings.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' },
+      candles: settings.candles || { upColor: '#5b9c7b', downColor: '#2a2e39', borderUpColor: '#3a3e48', borderDownColor: '#3a3e48', wickUpColor: '#3a3e48', wickDownColor: '#3a3e48' },
+    };
+
+    // klines row: [openTime_ms, open, high, low, close, volume, closeTime, ...]
+    const toBars = (k) => (Array.isArray(k) ? k : []).map((r) => ({
+      time: Math.floor(r[0] / 1000), open: +r[1], high: +r[2], low: +r[3], close: +r[4], volume: +r[5],
+    }));
+
+    async function loadMain() {
+      try {
+        const k = await fetch(`${API}/klines?symbol=${SYMBOL}&interval=${INTERVAL}&limit=${COUNT}`).then((r) => r.json());
+        const bars = toBars(k);
+        if (bars.length) return { bars, live: true };
+      } catch (_) {}
+      const d = await fetch('./MESU26-5m.json').then((r) => r.json()).catch(() => ({ bars: [] }));   // offline fallback
+      return { bars: (d.bars || []).map(([time, open, high, low, close, volume]) => ({ time, open, high, low, close, volume })), live: false };
+    }
+    // intrabar provider for the StudyHost: the most recent 1000 lower-tf bars up to toMs (Binance cap)
+    // intrabar provider for the StudyHost: the most recent 1000 lower-tf bars up to toMs (Binance cap).
+    // lowerTfId ('1m', '5m', '1h') is already a valid Binance interval.
+    async function intrabar(lowerTfId, fromMs, toMs) {
+      try {
+        const k = await fetch(`${API}/klines?symbol=${SYMBOL}&interval=${lowerTfId}&endTime=${Math.floor(toMs)}&limit=1000`).then((r) => r.json());
+        return toBars(k);
+      } catch (_) { return []; }
+    }
+
+    const { bars, live } = await loadMain();
+    document.getElementById('status').textContent =
+      (live ? `LIVE ${SYMBOL} · ${INTERVAL} · Binance` : 'snapshot (Binance unreachable)') + ` · ${bars.length} bars`;
+
+    const cx = theme.crosshair;
+    const chart = mountChart(document.getElementById('chart'), {
+      layout: { background: { color: theme.background }, textColor: theme.textColor },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+      cursor: { color: cx.color, labelBg: cx.labelBg, labelText: cx.labelText, vertLine: { style: cx.style }, horzLine: { style: cx.style } },
+      timeAxis: { borderColor: theme.borderColor, timeVisible: true, indexBased: true },
+      rightPriceAxis: { borderColor: theme.borderColor },
+      maxZoom: 3000,
+    });
+    const candles = chart.addPlot(Candles, theme.candles, 0);
+    candles.feed(bars.map(({ volume, ...b }) => b));
+    chart.timeAxis().setBarWindow({ from: Math.max(0, bars.length - 150), to: bars.length - 1 + 6 });
+
+    // ---- the library's StudyHost drives every study (no app, no DOM skin) ----
+    const host = new StudyHost(chart, {
+      getBars: () => bars,
+      mainSeries: () => candles,
+      barTimes: () => bars.map((b) => b.time),
+      intrabar,
+    });
+    host.setData(bars);
+
+    // kapelka/skin — the optional UI layer (legend, controls, config, price ticker). Batteries-included
+    // chrome. priceLegend supplies the PRODUCT metadata (symbol/tf/source) kapelka can't know; the OHLC
+    // readout comes from the library.
+    const skin = createSkin(host, {
+      chart, container: document.getElementById('chart'), textColor: theme.textColor,
+      priceLegend: { symbol: SYMBOL, timeframe: INTERVAL, source: live ? 'Binance' : 'snapshot' },
+    });
+
+    // ---- study picker (EXAMPLE-ONLY demo control) ----
+    // The "kapelka · studies" title is a button that opens a simple add/remove list. It replaces the old
+    // button row so the top stays clear for the OHLC ticker and the gallery can grow without cluttering
+    // the chart. This is page chrome for the demo — NOT a library capability; the app has its own study UI.
+    const GALLERY = [
+      { id: 'bollinger', label: 'Bollinger' },
+      { id: 'rsi', label: 'RSI' },
+      { id: 'volume_delta', label: 'Volume Δ-Sub' },
+      { id: 'volume_delta_candle', label: 'Volume Δ' },
+      { id: 'volume_profile', label: 'Volume Profile' },
+    ];
+    const idxOf = (id) => host.list().findIndex((s) => s.id === id);
+
+    const backdrop = document.createElement('div'); backdrop.className = 'picker-bg';
+    const panel = document.createElement('div'); panel.className = 'picker';
+    const phead = document.createElement('div'); phead.className = 'picker-head';
+    const ptitle = document.createElement('span'); ptitle.textContent = 'Indicators';
+    const pclose = document.createElement('span'); pclose.className = 'picker-x'; pclose.textContent = '✕';
+    phead.append(ptitle, pclose);
+    const psearch = document.createElement('input'); psearch.className = 'picker-search'; psearch.placeholder = 'Search…';
+    const plist = document.createElement('div'); plist.className = 'picker-list';
+    panel.append(phead, psearch, plist);
+    backdrop.appendChild(panel);
+    document.body.appendChild(backdrop);
+
+    const renderList = () => {
+      const q = psearch.value.trim().toLowerCase();
+      plist.innerHTML = '';
+      GALLERY.filter((g) => !q || g.label.toLowerCase().includes(q)).forEach((g) => {
+        const added = idxOf(g.id) >= 0;
+        const row = document.createElement('div'); row.className = 'picker-row' + (added ? ' added' : '');
+        const ck = document.createElement('span'); ck.className = 'picker-check'; ck.textContent = added ? '✓' : '';
+        const nm = document.createElement('span'); nm.className = 'picker-name'; nm.textContent = g.label;
+        row.append(ck, nm);
+        row.onclick = () => { const i = idxOf(g.id); if (i >= 0) host.remove(i); else host.add(g.id); renderList(); };
+        plist.appendChild(row);
+      });
+    };
+    const openPicker = () => { psearch.value = ''; renderList(); backdrop.classList.add('open'); psearch.focus(); };
+    const closePicker = () => backdrop.classList.remove('open');
+    document.getElementById('picker-btn').onclick = openPicker;
+    pclose.onclick = closePicker;
+    backdrop.onclick = (e) => { if (e.target === backdrop) closePicker(); };
+    psearch.oninput = renderList;
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePicker(); });
+    DEFAULT_STUDIES.forEach((id) => host.add(id));   // default view from settings.json ("studies")
+
+    // ---- live feed: stream the forming bar from Binance (WebSocket, no key) ----
+    if (live && feed.live !== false) {
+      let lastStudyMs = 0;
+      const onBar = (bar, closed) => {
+        const n = bars.length;
+        if (n && bars[n - 1].time === bar.time) bars[n - 1] = bar; else bars.push(bar);   // update or append
+        candles.feedBar({ time: bar.time, open: bar.open, high: bar.high, low: bar.low, close: bar.close });   // smooth price (the skin's price ticker follows on recompute)
+        const now = Date.now();
+        if (closed || now - lastStudyMs > 1000) { lastStudyMs = now; host.setData(bars); }   // recompute studies (throttled)
+      };
+      const connect = () => {
+        const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${SYMBOL.toLowerCase()}@kline_${INTERVAL}`);
+        ws.onopen = () => { document.getElementById('status').textContent = `LIVE ${SYMBOL} · ${INTERVAL} · Binance · streaming`; };
+        ws.onmessage = (ev) => {
+          try { const k = JSON.parse(ev.data).k; if (k) onBar({ time: Math.floor(k.t / 1000), open: +k.o, high: +k.h, low: +k.l, close: +k.c, volume: +k.v }, k.x); } catch (_) {}
+        };
+        ws.onclose = () => setTimeout(connect, 3000);   // auto-reconnect
+      };
+      connect();
+    }
+  </script>
+</body>
+</html>

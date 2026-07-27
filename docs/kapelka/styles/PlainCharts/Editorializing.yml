@@ -1,0 +1,35 @@
+# Skill: "Lead with the point." / "No filler." — cut throat-clearing openers.
+extends: existence
+message: "State the fact directly — drop '%s'."
+level: warning
+ignorecase: true
+tokens:
+  - it should be noted( that)?
+  - it is worth noting( that)?
+  - it is important to note( that)?
+  - note that
+  - please note( that)?
+  - needless to say
+  - as you can see
+  - as mentioned above
+  - as discussed above
+  - as stated above
+  - as described above
+  - as mentioned earlier
+  - as discussed earlier
+  - as stated earlier
+  - it is clear( that)?
+  - it is obvious( that)?
+  - it goes without saying
+  - it is interesting to note( that)?
+  - in fact
+  - basically
+  - essentially
+  - generally speaking
+  - in general
+  - to be clear
+  - to clarify
+  - for the record
+  - first of all
+  - at the end of the day
+  - needless to mention

@@ -1,0 +1,44 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.DS_Store
+
+# settings/ is dev-only runtime state (personal data + constant churn). Every consumer carries its own
+# code defaults (createStore), so a fresh clone regenerates it; the distro seeds settings.json from
+# packaging/seed-settings.json for a tidy first launch. Not committed.
+/settings/
+
+# cached historical bars (Settings > Data) — large, local-only, never commit
+/data/
+
+# internal design docs / scratch notes (adr, specs, references, private notes) — not part of the public repo
+.docs/
+
+# addon runtime output
+addons/**/*.log
+
+# cloned SDKs / scratch (never commit)
+.temp/
+
+logs/
+
+# user sound files (alert sound is referenced by path, so nothing here is needed by the app)
+/sounds/
+
+# LibreOffice lock files
+.~lock.*#
+
+# working changelogs (drafts folded into CHANGELOG.md at release; not part of the public repo)
+CHANGELOG-app.md
+CHANGELOG-kapelka.md
+
+# personal dev tooling (not part of the environment)
+.claude/
+.mcp.json
+.refactor_ignore
+CLAUDE.local.md
+CLAUDE.md
+Plain Charts.desktop
+launcher_electron.sh
+launcher_server.sh

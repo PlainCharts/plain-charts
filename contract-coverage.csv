@@ -1,0 +1,160 @@
+sep=,
+Section,Contract field,CQG,Schwab,OANDA,MT5,Note
+META,,,,,,
+,adapter id,cqg,schwab,oanda,mt5,
+,label,CQG,Schwab,OANDA,MT5,
+,capabilities.marketData,true,true,true,true,
+,capabilities.trading,true,true (reads only; exec deferred),true,true,Schwab: account reads wired; execution deferred (ADR 0003)
+,capabilities.depth,true,false,false,true,depth = CQG + MT5
+,,,,,,
+MARKET DATA,,,,,,
+,resolveSymbol.instrument.id,cm.contractId,echoes requested symbol,instrument name,symbol,
+,instrument.tickSize,cm.tickSize || scale,quote.tick || 10^-decimals fallback,10^-displayPrecision,SYMBOL_TRADE_TICK_SIZE,Schwab: real tick for futures (quote.tick); decimal-inference fallback for equities
+,instrument.priceDecimals,from cm.correctPriceScale,decimalsOf(quote) inferred,displayPrecision,SYMBOL_DIGITS,
+,instrument.tickValue,cm.tickValue || undefined,quote.tickAmount,-,SYMBOL_TRADE_TICK_VALUE,Schwab: futures only (=1.25 /MES)
+,instrument.minVolume,-,-,-,SYMBOL_VOLUME_MIN,
+,instrument.volumeStep,-,-,-,SYMBOL_VOLUME_STEP,
+,instrument.maxVolume,-,-,-,-,
+,instrument.contractSize,-,reference.futureMultiplier,-,SYMBOL_TRADE_CONTRACT_SIZE,Schwab: futures only (=5 /MES)
+,,,,,,
+QUOTE,,,,,,
+,bid,best-bid (type1) * scale,stream content[].1; REST quote.bidPrice,bids[0].price or closeoutBid,tick.bid,
+,ask,best-ask (type2) * scale,stream content[].2; REST quote.askPrice,asks[0].price or closeoutAsk,tick.ask,
+,last,trade (type0) * scale,stream content[].3; REST quote.lastPrice,(bid+ask)/2 midpoint,(bid+ask)/2,OANDA has no last -> midpoint
+,bidSize,dec(volume) type1,-,-,-,Schwab REST quote.bidSize / stream f4 available; not emitted
+,askSize,dec(volume) type2,-,-,-,Schwab REST quote.askSize / stream f5 available; not emitted
+,lastSize,dec(volume) type0,-,-,-,Schwab REST quote.lastSize available; not emitted
+,,,,,,
+BAR,,,,,,
+,time,(baseMs + barUtcTime)/1000,datetime/1000,parseFloat(candle.time),MqlRates.time,
+,open,scaledOpenPrice * scale,c.open,mid.o,MqlRates.open,
+,high,scaledHighPrice * scale,c.high,mid.h,MqlRates.high,
+,low,scaledLowPrice * scale,c.low,mid.l,MqlRates.low,
+,close,scaledClosePrice * scale,c.close,mid.c,MqlRates.close,
+,volume,dec(volume) ?? scaledVolume,c.volume,candle.volume,tick_volume,OANDA volume = tick count
+,extra,openInterest / tickVolume / settlement / exchangeClose,-,-,live (forming-bar flag),provider-specific extras
+,,,,,,
+DOM,,,,,,
+,bids,quotes type3 (desc),-,-,MarketBook (price/qty),depth = CQG + MT5
+,asks,quotes type4 (asc),-,-,MarketBook (price/qty),depth = CQG + MT5
+,,,,,,
+ORDER,,,,,,
+,id,os.orderId,-,orderCreate/Fill txn id,ORDER_TICKET,
+,symbol,symOf(contractId),-,o.instrument,ORDER_SYMBOL,
+,side,o.side==2?sell:buy,-,units<0?sell:buy,BUY|SELL,
+,type,orderType map (limit/stop/market),-,o.type lowercased,limit/stop (pending),
+,qty,dec(o.qty) || remainingQty,-,abs(units),ORDER_VOLUME_CURRENT,
+,price,scaledLimit/Stop * scale,-,o.price,-,
+,avgFillPrice,os.avgFillPriceCorrect,-,-,-,
+,tif,DURATION_TO_TIF map,-,- (not extracted),day (GTC),
+,status,OS_NAME map,-,o.state lowercased,working,
+,time (placed),submissionUtcTimestamp,-,-,ORDER_TIME_SETUP,
+,updateTime,statusUtcTimestamp,-,-,-,
+,accountId,o.accountId || tradeAccountId,-,-,acct.login,
+,limitPrice,scaledLimitPrice * scale,-,-,ORDER_PRICE_OPEN (limit),requested limit by type
+,stopPrice,scaledStopPrice * scale,-,-,ORDER_PRICE_OPEN (stop),requested stop by type
+,expiry,goodThruMsOf(o),-,-,-,GTD good-thru time
+,priceDecimals,decimalsFor(contractId),-,-,SYMBOL_DIGITS,
+,stopLoss,-,-,-,ORDER_SL,resting-order SL (MT5 only)
+,takeProfit,-,-,-,ORDER_TP,resting-order TP (MT5 only)
+,txns,transactionStatuses -> TX_NAME,-,-,-,per-transaction exec reports
+,rejectText,os.rejectMessage || null,-,-,-,populated on reject
+,,,,,,
+FILL,,,,,,
+,id,os.orderId,-,-,DEAL_TICKET,OANDA fills not separately queried
+,symbol,symOf(contractId),-,-,DEAL_SYMBOL,
+,side,o.side map,-,-,BUY|SELL,
+,qty,dec(os.fillQty),-,-,DEAL_VOLUME,
+,price,os.avgFillPriceCorrect,-,fill.price (placeOrder resp only),DEAL_PRICE,
+,time,fillUtcTimestamp,-,-,DEAL_TIME,
+,accountId,o.accountId || tradeAccountId,-,-,acct.login,
+,commission,fill_commission.commission,-,-,-(DEAL_COMMISSION + DEAL_SWAP),
+,commissionCurrency,fill_commission.commission_currency,-,-,acct.currency,
+,tickSize,tickSizeOf(contractId),-,-,SYMBOL_TRADE_TICK_SIZE,for realized-P&L math
+,tickValue,tickValueOf(contractId),-,-,SYMBOL_TRADE_TICK_VALUE,for realized-P&L math
+,realizedPnl,-,-,-,DEAL_PROFIT,broker-exact realized P&L (MT5 only)
+,positionId,-,-,-,DEAL_POSITION_ID,broker position-lifecycle id (MT5 only)
+,,,,,,
+POSITION,,,,,,
+,symbol,symOf(contractId),-,position.instrument,position.symbol,
+,qty,abs(net),-,abs(net units),abs(net),
+,side,net<0?short:long,-,net<0?short:long,net<0?short:long,
+,avgPrice,reconstructAvg (fills); pxw/tot fallback,-,-,vol-weighted avg,OANDA does not surface avg
+,accountId,ps.accountId || tradeAccountId,-,-,acct.login,
+,priceDecimals,decimalsFor(contractId),-,-,SYMBOL_DIGITS,
+,tickSize,tickSizeOf(contractId),-,-,SYMBOL_TRADE_TICK_SIZE,for currency P&L
+,tickValue,tickValueOf(contractId),-,-,SYMBOL_TRADE_TICK_VALUE,for currency P&L
+,swap,-,-,-,- (per-lot instead),overnight financing (forex/CFD)
+,ticket,-,-,-,POSITION_TICKET (single lot),broker position id (MT5 only)
+,,,,,,
+POSITION LOT,,,,,,
+,ticket,-,-,-,POSITION_TICKET,hedging lots (MT5 only); netting adapters emit none
+,symbol,-,-,-,POSITION_SYMBOL,
+,side,-,-,-,long/short,
+,qty,-,-,-,POSITION_VOLUME,0 => lot closed
+,avgPrice,-,-,-,POSITION_PRICE_OPEN,
+,price,-,-,-,POSITION_PRICE_CURRENT,current price
+,stopLoss,-,-,-,POSITION_SL,native position OCO
+,takeProfit,-,-,-,POSITION_TP,native position OCO
+,unrealizedPnl,-,-,-,POSITION_PROFIT,broker live P&L
+,accountId,-,-,-,acct.login,
+,priceDecimals,-,-,-,SYMBOL_DIGITS,
+,tickSize,-,-,-,SYMBOL_TRADE_TICK_SIZE,
+,tickValue,-,-,-,SYMBOL_TRADE_TICK_VALUE,
+,openTime,-,-,-,-,EA does not transmit openTime
+,,,,,,
+ACCOUNT,,,,,,
+,accountId,s.accountId,-,-,ACCOUNT_LOGIN,
+,currency,s.currency,-,account.currency,ACCOUNT_CURRENCY,
+,balance,s.currentBalance,-,account.balance,ACCOUNT_BALANCE,
+,equity,currentBalance + ote,-,account.NAV,ACCOUNT_EQUITY,
+,realizedPL,s.profitLoss,-,account.pl,-,MT5 derives downstream (equity-balance-unrealized)
+,unrealizedPL,unrealizedProfitLoss || ote,-,account.unrealizedPL,equity - balance,
+,marginUsed,s.totalMargin,-,account.marginUsed,ACCOUNT_MARGIN,
+,marginAvailable,s.purchasingPower,-,account.marginAvailable,ACCOUNT_MARGIN_FREE,
+,purchasingPower,s.purchasingPower,-,-,-,
+,positionMargin,s.positionMargin,-,-,-,
+,mvo,s.mvo,-,-,-,provider-specific (CQG)
+,mvf,s.mvf,-,-,-,provider-specific (CQG)
+,marginCredit,s.marginCredit,-,-,-,provider-specific (CQG)
+,cashExcess,s.cashExcess,-,-,-,provider-specific (CQG)
+,yesterdayBalance,s.yesterdayBalance,-,-,-,
+,workingOrders,s.totalWorkingOrders,-,-,-,
+,filledOrders,s.totalFilledOrders,-,-,-,
+,longQty (extra),dec(longOpenPositionsQty),-,-,-,provider-specific (CQG)
+,shortQty (extra),dec(shortOpenPositionsQty),-,-,-,provider-specific (CQG)
+,leverage (extra),-,-,round(1/marginRate),-,provider-specific (OANDA)
+,openPositions (extra),-,-,openPositionCount,-,provider-specific (OANDA)
+,openTrades (extra),-,-,openTradeCount,-,provider-specific (OANDA)
+,hedging (extra),-,-,-,ACCOUNT_MARGIN_MODE == HEDGING,provider-specific (MT5)
+,,,,,,
+REJECT,,,,,,
+,code,r.rejectCode,-,- (generic),-,
+,text,details.text (req); rejectMessage/txn (order),-,error / errorMessage,retcode via RETCODE table,
+,reason,= text (builder fallback; no CQG reason field),-,-,parsed from error string,
+,,,,,,
+METHODS,,,,,,
+,connect,yes,yes,yes,yes,
+,disconnect,yes,yes,yes,yes,
+,isConnected,yes,yes,yes,yes,
+,serverNow,yes,null,null,no,
+,resolveSymbol,yes,yes,yes,yes,
+,subscribeQuotes,yes,yes,yes,yes,
+,unsubscribeQuotes,yes,yes,yes,yes,
+,subscribeBars,yes,yes,yes,yes,
+,getBars,yes,yes,yes,yes,
+,drop,yes,yes,yes,yes,
+,searchSymbols,yes,yes,yes,no,
+,getMarketHours,yes,yes,yes,no,
+,subscribeDepth,yes,no,no,yes,depth = CQG + MT5
+,unsubscribeDepth,yes,no,no,yes,
+,subscribeTrade,yes,no,yes (pos+acct only),yes,
+,unsubscribeTrade,yes,no,yes,yes,
+,placeOrder,yes,no,yes,yes,
+,cancelOrder,yes,no,yes,yes,
+,modifyOrder,yes,no,no,yes,
+,closePosition,yes,no,yes,yes,
+,getOrders,yes,no,yes,yes,
+,getHistory,yes,no,no,yes,OANDA lacks history snapshot
+,getPositions,yes,no,yes,yes,
+,getAccount,yes,no,yes,yes,

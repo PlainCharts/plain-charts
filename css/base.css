@@ -1,0 +1,61 @@
+/* base: theme palette, resets, scrollbars, top toolbar strip, generic inputs/buttons.
+   Extracted verbatim from index.html; loaded first so the :root vars are defined before
+   every other sheet. theme.js overrides these vars at runtime on document.documentElement. */
+
+/* theme palette (dark default; theme.js overrides these vars at runtime) */
+:root {
+  --bg: #0e0e11; --panel: #15151b; --field: #16161c; --btn: #1c1c22; --btn-h: #2a2a33; --btn-tx: #ddd;
+  --accent: #2962ff; --accent-h: #1e53e5; --accent-tx: #fff; --accent-ui: #2962ff;
+  --hover: #23232b; --active: #1e2a4a; --bd: #333; --bd-soft: #222;
+  --tx: #ddd; --tx-dim: #888; --tx2: #aaa;
+  --pane-frame: #2962ff; --pane-frame-w: 1px;
+}
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--tx);
+             font-family: system-ui, sans-serif; font-size: 13px; }
+
+/* themed scrollbars, follow the theme vars. WebKit rules = Brave/Chromium; scrollbar-color = Floorp/Gecko */
+* { scrollbar-width: thin; scrollbar-color: var(--bd) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bd); border-radius: 6px;
+                            border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--tx-dim); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* ---- one consolidated toolbar strip ---- */
+#strip { height: 44px; box-sizing: border-box; display: flex; align-items: center;
+         gap: 6px; padding: 0 10px; border-bottom: 1px solid var(--bd-soft); }
+#strip input#sym { width: 84px; font-weight: 600; }
+.sep { width: 1px; height: 22px; background: var(--bd-soft); margin: 0 4px; }
+.spacer { flex: 1; }
+#tfbar { display: flex; gap: 2px; }
+#conn { color: var(--tx-dim); white-space: nowrap; font-size: 12px; }
+
+input, select { background: var(--field); color: var(--tx); border: 1px solid var(--bd);
+                border-radius: 5px; padding: 5px 8px; font-size: 13px; }
+/* native checkboxes/radios take the interface accent when checked */
+input[type=checkbox], input[type=radio] { accent-color: var(--accent-ui); }
+button { background: var(--btn); color: var(--btn-tx); border: 1px solid var(--bd); padding: 5px 9px;
+         border-radius: 5px; cursor: pointer; font-size: 13px; }
+button:hover { background: var(--btn-h); }
+.strip-ico { width: 15px; height: 15px; object-fit: contain; display: block; }
+#btnChartProject .strip-ico { width: 19px; height: 19px; }   /* the transfer artwork carries inner padding -- bump it or it reads tiny */
+/* flat icon buttons in the top strip (match the left toolbar) */
+.strip-btn { background: transparent; border: 1px solid transparent; color: var(--tx2);
+             padding: 6px 8px; border-radius: 6px; display: flex; align-items: center; gap: 4px; }
+.strip-btn:hover { background: var(--btn-h); color: var(--tx); border-color: transparent; }
+.strip-btn.active { background: var(--active); color: var(--tx); }
+.strip-btn:disabled { opacity: .3; cursor: default; pointer-events: none; }
+/* flat by default, subtle fill on hover (like the strip buttons), fill when selected -- no frame */
+button.tf { padding: 5px 7px; min-width: 30px; background: transparent;
+            border-color: transparent; color: var(--tx-dim); }
+button.tf:hover { background: var(--btn-h); border-color: transparent; color: var(--tx); }
+button.tf.active { background: var(--active); border-color: transparent; color: var(--tx); }
+#tfAdd { padding: 4px 8px; min-width: 26px; font-size: 16px; line-height: 1;
+         background: transparent; border-color: transparent; color: var(--tx-dim); }
+#tfAdd:hover { background: var(--btn-h); border-color: transparent; color: var(--tx); }
+/* icon "light up" on hover: text buttons brighten via color, but masked icons ignore the button's
+   color, so lift the icon itself with a brightness filter. Hover-only -- nothing is dimmed at rest. */
+.strip-btn:hover .app-icon, .strip-btn:hover .strip-ico, .strip-btn:hover svg,
+.tool-btn:hover .app-icon, .tool-btn:hover svg,
+.rail-btn:hover .app-icon, .rail-btn:hover svg { filter: brightness(1.35); }

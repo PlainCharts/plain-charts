@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Two panes, each its own window</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #d1d4dc; overflow: hidden; }
+    #chart { height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script type="module">
+    // Three panes in ONE chart, with NO candles behind any -- a mini study board. Each study claims a
+    // pane and stands on its own domain: the first oscillator OWNS pane 0 (the main pane is empty), each
+    // next study gets its own pane below. Each reads its own x from its bars' timestamps and its own y
+    // from its own values; they share the time axis but never a price scale. Theme from the demos' shared
+    // settings.json. Engine mirrored into public/ by scripts/mirror-engine.mjs.
+    import { mountChart } from '/index.js';
+    import { StudyHost, Studies } from '/studies/index.js';
+    import '/studies/modules/index.js';   // registers the gallery (rsi, volume_delta, ...)
+
+    window.Studies = Studies;                       // demo studies register via the global (app convention)
+    await import('/demos/volume-delta.study.js');   // theme-colored copy, overwrites the gallery 'volume_delta'
+    await import('/demos/volume-cvd.study.js');     // registers 'cvd' (copied from the app)
+
+    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
+    const cd = s.candles || {};   // match the light theme's candle colors
+    const upCol = cd.upColor || '#5b9c7b', downCol = cd.downColor || '#2a2e39';
+
+    const { generateBars } = await import('/examples/feed.js');
+    const bars = generateBars({ count: 400, seed: 7, step: 300 });
+    // synthetic 1m sub-bars so Volume Delta's intrabar provider has data
+    const subs = generateBars({ count: 2000, seed: 1007, step: 60, startTime: bars[0].time });
+
+    const chart = mountChart(document.getElementById('chart'), {
+      layout: { background: { color: s.background || '#d1d4dc' }, textColor: s.textColor || '#50535e' },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+      cursor: { color: cx.color, labelBg: cx.labelBg, labelText: cx.labelText, vertLine: { style: cx.style }, horzLine: { style: cx.style } },
+      timeAxis: { borderColor: s.borderColor || '#b2b5be', timeVisible: true, indexBased: true },
+      rightPriceAxis: { borderColor: s.borderColor || '#b2b5be' },
+      maxZoom: 3000,
+    });
+
+    const host = new StudyHost(chart, {
+      getBars: () => bars,
+      mainSeries: () => null,   // chart-less: there is no price series
+      barTimes: () => bars.map((b) => b.time),
+      intrabar: (tf, fromMs, toMs) => subs.filter((b) => b.time * 1000 >= fromMs && b.time * 1000 <= toMs),
+    });
+    host.setData(bars);
+    host.add('rsi', { length: 14 });                              // first oscillator -> owns pane 0 (main pane is empty)
+    host.add('volume_delta', { upColor: upCol, downColor: downCol }); // next study -> its own pane below
+    host.add('cvd', { upColor: upCol, downColor: downCol });          // third study -> its own pane below that
+
+    chart.timeAxis().setBarWindow({ from: Math.max(0, bars.length - 160), to: bars.length - 1 + 4 });
+  </script>
+</body>
+</html>

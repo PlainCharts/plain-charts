@@ -1,0 +1,31 @@
+{
+  "name": "Purple Light",
+  "description": "A light theme in soft purple.",
+  "palette": {
+    "bg": "#ffffff",
+    "panel": "#f4f2fb",
+    "field": "#eeeaf4",
+    "btn": "#eceaf6",
+    "btnH": "#e0dcf0",
+    "btnTx": "#160747",
+    "accent": "#647aff",
+    "accentH": "#5063e6",
+    "accentTx": "#ffffff",
+    "hover": "#f0edf8",
+    "active": "rgba(100, 122, 255, 0.14)",
+    "bd": "#ddd8ec",
+    "bdSoft": "#ebe7f4",
+    "tx": "#160747",
+    "txDim": "#7b7595",
+    "tx2": "#5a5478",
+    "icon": "#647aff",
+    "ctrl": "#f0eef8",
+    "ctrlTx": "#5a5478",
+    "ctrlOn": "#647aff",
+    "ctrlOnTx": "#ffffff",
+    "pos": "#2fae76",
+    "neg": "#e0485a",
+    "frameColor": "#647aff",
+    "frameWidth": 1
+  }
+}

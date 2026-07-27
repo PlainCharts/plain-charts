@@ -1,0 +1,164 @@
+/* right-panel contents: watchlist + object manager (drawing tree with layers), plus the
+   Trade Desk header filter dropdowns (account lens / History date range). */
+
+.obj-view, .wl-view { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+/* watchlist (right gutter reserves room for the hover ✕ so it never overlaps Chg%) */
+.wl-colhdr { display: flex; align-items: center; padding: 5px 22px 5px 10px; font-size: 10px; text-transform: uppercase;
+             letter-spacing: .04em; color: var(--tx-dim); border-bottom: 1px solid var(--bd-soft); }
+.wl-list { flex: 1; overflow-y: auto; }
+.wl-empty { padding: 16px 12px; font-size: 12px; color: var(--tx-dim); text-align: center; }
+.wl-row { display: flex; align-items: center; padding: 6px 22px 6px 10px; cursor: pointer; font-size: 12px; position: relative; }
+.wl-row:hover { background: var(--hover); }
+.wl-c-sym { flex: 1.4; min-width: 0; display: flex; flex-direction: column; }
+.wl-c-num { flex: 1; text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--tx); }
+.wl-colhdr .wl-c-sym { flex-direction: row; }
+.wl-sym { font-weight: 600; color: var(--tx); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-brk { font-size: 10px; color: var(--tx-dim); }
+.wl-c-num.up { color: var(--pos); }
+.wl-c-num.down { color: var(--neg); }
+.wl-del { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); color: var(--tx-dim);
+          cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 4px; visibility: hidden; background: var(--panel); }
+.wl-row:hover .wl-del { visibility: visible; }
+.wl-row.wl-drag { opacity: .4; }
+.wl-row.wl-drop-before { box-shadow: inset 0 2px 0 var(--pane-frame); }
+.wl-row.wl-drop-after { box-shadow: inset 0 -2px 0 var(--pane-frame); }
+.wl-section { display: flex; align-items: center; gap: 6px; padding: 6px 22px 6px 8px; position: relative;
+              font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--tx-dim);
+              border-top: 1px solid var(--bd-soft); user-select: none; }
+.wl-section.wl-drag { opacity: .4; }
+.wl-section.wl-drop-before { box-shadow: inset 0 2px 0 var(--pane-frame); }
+.wl-section.wl-drop-after { box-shadow: inset 0 -2px 0 var(--pane-frame); }
+.wl-sec-tw { width: 12px; text-align: center; cursor: pointer; font-size: 9px; }
+.wl-sec-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+.wl-sec-input { flex: 1; min-width: 0; font-size: 11px; padding: 2px 5px; background: var(--field);
+                border: 1px solid var(--bd); color: var(--tx); border-radius: 4px; text-transform: none; letter-spacing: 0; }
+.wl-sec-del { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); color: var(--tx-dim);
+              cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 4px; visibility: hidden; }
+.wl-section:hover .wl-sec-del { visibility: visible; }
+.wl-sec-del:hover { color: #e25; }
+.wl-del:hover { color: #e25; background: var(--btn-h); }
+.obj-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px;
+            border-bottom: 1px solid var(--bd-soft); font-size: 13px; font-weight: 600; color: var(--tx); }
+.obj-head .lib-x { cursor: pointer; color: var(--tx-dim); font-weight: 400; }
+.obj-bar { display: flex; gap: 4px; padding: 5px 8px; border-bottom: 1px solid var(--bd-soft); }
+.obj-bar-btn { background: transparent; border: none; color: var(--tx2); cursor: pointer; font-size: 18px; padding: 2px 5px; border-radius: 5px; }
+.obj-bar-btn:hover { background: var(--hover); color: var(--tx); }
+.obj-bar-sep { width: 1px; align-self: stretch; background: var(--bd-soft); margin: 2px 3px; }
+.obj-bar-btn img { width: 15px; height: 15px; object-fit: contain; display: block; }
+/* watchlist header dropdown: the active list's name + a popup to switch/create/remove (palette-style) */
+.wl-listbtn { flex: 1; min-width: 0; height: 26px; box-sizing: border-box; padding: 0 6px; margin-right: 8px;
+              border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--tx);
+              font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: flex;
+              align-items: center; justify-content: space-between; gap: 8px; }
+.wl-listbtn:hover { background: var(--hover); border-color: var(--bd-soft); }
+.wl-listbtn-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-listbtn-caret { flex: none; color: var(--tx-dim); font-size: 10px; font-weight: 400; }
+.wl-listmenu { position: fixed; z-index: 97; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px;
+               padding: 4px; box-shadow: 0 8px 30px rgba(0,0,0,.45); max-height: 300px; overflow-y: auto; }
+.wl-listmenu-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px; cursor: pointer;
+                   color: var(--tx); font-size: 13px; }
+.wl-listmenu-row:hover { background: var(--hover); }
+.wl-listmenu-row.sel { color: #42a5f5; }
+.wl-listmenu-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-listmenu-x { flex: none; background: none; border: none; color: var(--tx); font-size: 18px; line-height: 1;
+                 cursor: pointer; padding: 0 3px; }
+.wl-listmenu-x:hover { color: #f23645; }
+.wl-listmenu-edit { flex: none; background: none; border: none; color: var(--tx); font-size: 16px; line-height: 1;
+                    cursor: pointer; padding: 0 3px; }
+.wl-listmenu-edit:hover { color: #42a5f5; }
+.wl-listmenu-copy { flex: none; background: none; border: none; color: var(--tx); font-size: 16px; line-height: 1;
+                    cursor: pointer; padding: 0 3px; }
+.wl-listmenu-copy:hover { color: #42a5f5; }
+/* the "Add alert on the list" bell -- the row's primary action, so brighter + a touch larger than the edit/copy glyphs */
+.wl-listmenu-alert { display: inline-flex; align-items: center; color: var(--tx); padding: 0 3px; }
+.wl-listmenu-alert svg { width: 16px; height: 16px; }
+.wl-listmenu-alert:hover { color: #42a5f5; }
+/* Trade Desk header filter dropdowns (account lens + History date range), placed next to the gear */
+.hist-filter, .desk-filt { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; margin-right: 8px;
+               box-sizing: border-box; cursor: pointer; border: 1px solid var(--bd); border-radius: 6px;
+               background: var(--panel); color: var(--tx); font-size: 11px; white-space: nowrap; max-width: 180px; }
+.hist-filter:hover, .desk-filt:hover { background: var(--hover); border-color: var(--bd-soft); }
+.desk-filt-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-filter-caret, .desk-filt-caret { flex: none; color: var(--tx-dim); font-size: 9px; }
+.hist-filtermenu, .desk-filt-menu { min-width: 220px; padding: 6px; }
+.hist-custom, .desk-filt-custom { border-top: 1px solid var(--bd); margin-top: 6px; padding-top: 8px;
+               display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; }
+.hist-custom-lbl, .desk-filt-lbl { color: var(--tx-dim); font-size: 11px; }
+.hist-date, .desk-filt-date { background: var(--bg); border: 1px solid var(--bd); border-radius: 5px; color: var(--tx);
+             padding: 3px 6px; font-size: 11px; color-scheme: dark; }
+.hist-apply, .desk-filt-apply { grid-column: 1 / -1; margin-top: 4px; height: 26px; border: 1px solid transparent;
+              border-radius: 6px; background: var(--accent); color: var(--accent-tx); cursor: pointer; font-size: 11px; }
+.hist-apply:hover, .desk-filt-apply:hover { filter: brightness(1.12); }
+.wl-listmenu-new { cursor: default; }
+.wl-listmenu-input { width: 100%; box-sizing: border-box; }
+.wl-colsmenu-hdr { padding: 6px 8px 4px; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; color: var(--tx-dim); }
+.wl-colsrow { cursor: pointer; }
+.wl-colscb { margin: 0; flex: none; }
+.wl-colhead { cursor: grab; }
+.wl-colhead.wl-cdrag { opacity: .4; }
+.wl-cdrop-before { box-shadow: inset 2px 0 0 var(--pane-frame); }
+.wl-cdrop-after { box-shadow: inset -2px 0 0 var(--pane-frame); }
+.wl-sortable { cursor: pointer; user-select: none; }
+.wl-sortarrow { margin-left: 3px; font-size: 8px; color: var(--tx-dim); vertical-align: middle; }
+.obj-list { flex: 1; overflow-y: auto; }
+.obj-twirl { width: 12px; flex: none; text-align: center; color: var(--tx-dim); cursor: pointer; font-size: 9px; }
+.obj-folder .obj-name { font-weight: 600; }
+.obj-row.drop-into { box-shadow: inset 0 0 0 2px var(--pane-frame); }
+.obj-row.drop-before { box-shadow: inset 0 2px 0 var(--pane-frame); }
+.obj-row.drop-after { box-shadow: inset 0 -2px 0 var(--pane-frame); }
+.obj-empty { padding: 16px 12px; font-size: 12px; color: var(--tx-dim); text-align: center; }
+.obj-section { display: flex; align-items: center; gap: 6px; padding: 7px 10px; cursor: pointer; user-select: none;
+               font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--tx-dim);
+               border-top: 1px solid var(--bd-soft); }
+.obj-section:first-child { border-top: none; }
+.obj-section:hover { color: var(--tx2); }
+.obj-section-lbl { flex: 1; }
+.obj-ind-warn { color: #e0a030; }
+.obj-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer;
+           color: var(--tx); font-size: 13px; border-bottom: 1px solid var(--bd-soft); user-select: none; }
+.obj-row:hover { background: var(--hover); }
+.obj-row.sel { background: var(--active); }
+.obj-row.hidden { opacity: .5; }
+.obj-row.obj-inh-lock .obj-name { opacity: .7; font-style: italic; }   /* locked by an ancestor folder/layer */
+/* drawing layers: left-edge tabs | active layer's tree */
+.obj-layers { display: flex; align-items: stretch; }
+.obj-ltabs { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 4px; border-right: 1px solid var(--bd); }
+/* vertical tabs: an UPRIGHT state icon (hidden/locked) on top, then the name read bottom-to-top FACING IN
+   toward the tree (name span: vertical-rl + rotate(180deg); works in Gecko + Chromium, sideways-lr does not). */
+.obj-ltab { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 5px;
+            border-radius: 5px; cursor: pointer; font-size: 13px; color: var(--tx);
+            background: var(--field); border: 1px solid transparent; }
+.obj-ltab:hover { background: var(--btn-h); }
+.obj-ltab.active { border-color: var(--accent-ui); background: var(--active); }
+.obj-ltab.drop-layer { border-color: var(--accent-ui); box-shadow: inset 0 0 0 2px var(--accent-ui); background: var(--btn-h); }
+.obj-ltab.hidden .obj-ltab-name { opacity: .5; }
+.obj-ltab.locked .obj-ltab-name { font-style: italic; }
+.obj-ltab-state { flex: none; display: flex; align-items: center; }
+.obj-ltab-name { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); text-align: center;
+                 white-space: nowrap; max-height: 148px; overflow: hidden; text-overflow: ellipsis; }
+.obj-ltab .obj-name-in { width: 84px; box-sizing: border-box; }
+.obj-ltab-add { padding: 3px 9px; border: 1px dashed var(--bd); border-radius: 5px; background: none;
+                color: var(--tx-dim); cursor: pointer; font-size: 15px; line-height: 1; }
+.obj-ltab-add:hover { color: var(--tx); border-color: var(--tx-dim); }
+.obj-layer-tree { flex: 1; min-width: 0; }
+.obj-row.drag { opacity: .4; background: var(--hover); }
+.obj-ico { width: 18px; text-align: center; color: var(--tx2); flex: none; }
+.obj-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obj-name-in { flex: 1; min-width: 0; background: var(--field); border: 1px solid var(--bd); color: var(--tx);
+               border-radius: 4px; padding: 2px 5px; font-size: 13px; }
+.obj-acts { display: flex; align-items: center; gap: 2px; flex: none; }
+.obj-act { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+           background: transparent; border: none; border-radius: 4px; color: var(--tx-dim); cursor: pointer;
+           font-size: 13px; visibility: hidden; }
+.obj-row:hover .obj-act, .obj-row.sel .obj-act { visibility: visible; }
+.obj-pane-head:hover .obj-act { visibility: visible; }   /* sub-pane group header actions */
+.obj-act.shown { visibility: visible; color: var(--tx); }   /* active hide/lock state, always visible */
+.obj-act:hover { background: var(--btn-h); color: var(--tx); }
+.obj-act img { width: 14px; height: 14px; object-fit: contain; display: block; }
+/* interval-visibility eye: same crossed-eye shape, tinted orange (hidden for a
+   different reason than a manual hide) — masked so the PNG shape takes the color */
+.obj-eye-iv { width: 14px; height: 14px; flex: none; display: block; background-color: #f0a020;
+              -webkit-mask-image: url(/images/invisible.png); mask-image: url(/images/invisible.png);
+              -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+              -webkit-mask-position: center; mask-position: center;
+              -webkit-mask-size: contain; mask-size: contain; }

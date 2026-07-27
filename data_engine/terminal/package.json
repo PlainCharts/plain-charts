@@ -1,0 +1,30 @@
+{
+  "name": "engine-terminal",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Standalone TUI to drive the data engine (adapters, broker, orders, stores) directly, without the app. Its own session; the engine runs in-process (ROLE solo).",
+  "bin": { "engine-terminal": "./src/index.jsx" },
+  "scripts": {
+    "start": "node --import ./boot/register.mjs src/index.jsx",
+    "test": "node --import ./boot/register.mjs test/shell.test.jsx",
+    "test:engine": "node --import ./boot/register.mjs test/engine-boot.test.jsx",
+    "test:wired": "node --import ./boot/register.mjs test/wired.test.jsx",
+    "test:cmds": "node --import ./boot/register.mjs test/commands.test.jsx",
+    "test:proto": "node --import ./boot/register.mjs test/cqg-proto.test.jsx",
+    "test:quotes": "node --import ./boot/register.mjs test/quotes.test.jsx",
+    "test:orderworker": "node --import ./boot/register.mjs test/order-worker.test.jsx",
+    "test:mcp": "node --import ./boot/register.mjs test/mcp.test.jsx",
+    "preview": "node --import ./boot/register.mjs test/preview.jsx"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ink": "^7.1.1",
+    "react": "^19.2.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "ink-testing-library": "^4.0.0"
+  }
+}

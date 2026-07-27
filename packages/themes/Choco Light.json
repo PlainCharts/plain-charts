@@ -1,0 +1,31 @@
+{
+  "name": "Choco Light",
+  "description": "A light theme in warm chocolate browns.",
+  "palette": {
+    "bg": "#f5f1ea",
+    "panel": "#fbf8f3",
+    "field": "#ffffff",
+    "btn": "#ece5da",
+    "btnH": "#e0d7c8",
+    "btnTx": "#3a2e22",
+    "accent": "#6b4f3a",
+    "accentH": "#57402e",
+    "accentTx": "#ffffff",
+    "hover": "#efe9df",
+    "active": "rgba(107, 79, 58, 0.14)",
+    "bd": "#ddd3c4",
+    "bdSoft": "#eae3d8",
+    "tx": "#2e2419",
+    "txDim": "#8a7d6c",
+    "tx2": "#6b5f4e",
+    "icon": "#6b4f3a",
+    "ctrl": "#f0ebe2",
+    "ctrlTx": "#6b5f4e",
+    "ctrlOn": "#6b4f3a",
+    "ctrlOnTx": "#ffffff",
+    "pos": "#4f9d6a",
+    "neg": "#c25341",
+    "frameColor": "#6b4f3a",
+    "frameWidth": 1
+  }
+}

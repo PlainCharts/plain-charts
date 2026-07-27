@@ -1,0 +1,155 @@
+/* the reusable colour picker (src/ui/colorpicker.js): palette grid, custom-colour creator
+   (SV square + hue), stroke/line-style controls, and the line-style picker (src/ui/linestyle.js). */
+
+/* reusable color picker (src/ui/colorpicker.js) */
+.cp-swatch { width: 22px; height: 22px; padding: 0; border: 1px solid var(--bd); border-radius: 4px; cursor: pointer; overflow: hidden;
+             background-image: linear-gradient(45deg,#bbb 25%,transparent 25%),linear-gradient(-45deg,#bbb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#bbb 75%),linear-gradient(-45deg,transparent 75%,#bbb 75%);
+             background-size: 8px 8px; background-position: 0 0,0 4px,4px -4px,-4px 0; }
+.cp-swatch-c { display: block; width: 100%; height: 100%; }
+.cp-pop { position: fixed; z-index: 95; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px;
+          padding: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5);
+          display: flex; flex-direction: column; max-height: calc(100vh - 16px); }
+/* draggable title bar (spans the padded edges) + scrollable body */
+.cp-title { display: flex; align-items: center; justify-content: space-between; cursor: move; user-select: none;
+            margin: -10px -10px 8px; padding: 7px 10px; border-bottom: 1px solid var(--bd); }
+.cp-title-t { font-size: 11px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .04em; }
+.cp-title-x { background: none; border: none; color: var(--tx-dim); font-size: 17px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.cp-title-x:hover { color: var(--tx); }
+.cp-body { overflow-y: auto; overflow-x: hidden; min-height: 0; margin: 0 -10px -10px; padding: 0 10px 10px; }
+.cp-grid { display: flex; flex-direction: column; gap: 3px; }
+.cp-row { display: flex; gap: 3px; }
+.cp-sw { width: 18px; height: 18px; border-radius: 3px; border: 1px solid rgba(0,0,0,.15); cursor: pointer; padding: 0; }
+.cp-sw.sel { outline: 2px solid var(--tx); outline-offset: 1px; }
+.cp-custom { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 10px;
+             padding-top: 8px; border-top: 1px solid var(--bd); }
+.cp-csw { width: 20px; height: 20px; padding: 0; border: 1px solid var(--bd); border-radius: 4px; cursor: pointer; overflow: hidden;
+          background-image: linear-gradient(45deg,#bbb 25%,transparent 25%),linear-gradient(-45deg,#bbb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#bbb 75%),linear-gradient(-45deg,transparent 75%,#bbb 75%);
+          background-size: 8px 8px; background-position: 0 0,0 4px,4px -4px,-4px 0; }
+.cp-csw-c { display: block; width: 100%; height: 100%; }
+.cp-add { width: 20px; height: 20px; border: 1px dashed var(--bd); border-radius: 4px; color: var(--tx-dim);
+          background: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 0;
+          display: inline-flex; align-items: center; justify-content: center; }
+.cp-add:hover { color: var(--tx); border-color: var(--tx-dim); }
+/* palette selector + user-palette swatch grid */
+.cp-palhead { margin-bottom: 8px; }
+/* palette selector button + its popup menu (switch / create / remove a palette) */
+.cp-palbtn { width: 100%; height: 28px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--bd);
+             border-radius: 5px; background: var(--field); color: var(--tx); font-family: inherit; font-size: 12px;
+             cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cp-palbtn:hover { border-color: var(--tx-dim); }
+.cp-palbtn-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-palbtn-caret { flex: none; color: var(--tx-dim); font-size: 10px; }
+.cp-palmenu { position: fixed; z-index: 97; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px;
+              padding: 4px; box-shadow: 0 8px 30px rgba(0,0,0,.45); max-height: 260px; overflow-y: auto; }
+.cp-palmenu-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px; cursor: pointer;
+                  color: var(--tx); font-size: 13px; }
+.cp-palmenu-row:hover { background: var(--hover); }
+.cp-palmenu-row.sel { color: #42a5f5; }
+.cp-palmenu-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-palmenu-x { flex: none; background: none; border: none; color: var(--tx-dim); font-size: 15px; line-height: 1;
+                cursor: pointer; padding: 0 2px; }
+.cp-palmenu-x:hover { color: #f23645; }
+.cp-palmenu-new { cursor: default; }
+.cp-palmenu-input { width: 100%; box-sizing: border-box; }
+.cp-palgrid { display: flex; flex-direction: column; gap: 3px; }
+.cp-palrow { display: flex; align-items: center; gap: 3px; }   /* one sub-palette row (radio + colours) */
+/* radio: selects which row added colours land in (only one at a time) */
+.cp-palradio { width: 12px; height: 12px; flex: none; margin-right: 2px; padding: 0; border-radius: 50%;
+               border: 1px solid var(--tx-dim); background: none; cursor: pointer; position: relative; }
+.cp-palradio:hover { border-color: var(--tx); }
+.cp-palradio.on { border-color: var(--accent-ui); }
+.cp-palradio.on::after { content: ''; position: absolute; inset: 2px; border-radius: 50%; background: var(--accent-ui); }
+.cp-palctl { display: flex; gap: 3px; margin-top: 2px; } /* controls: add / new-row / remove */
+.cp-newrow { width: 20px; height: 20px; border: 1px dashed var(--bd); border-radius: 4px; color: var(--tx-dim);
+             background: none; cursor: pointer; font-size: 13px; line-height: 1; padding: 0;
+             display: inline-flex; align-items: center; justify-content: center; }
+.cp-newrow:hover { color: var(--tx); border-color: var(--tx-dim); }
+/* "x" remove button (twin of cp-add) + one-shot remove mode: hovering a swatch shows a red outline */
+.cp-del { width: 20px; height: 20px; border: 1px dashed var(--bd); border-radius: 4px; color: var(--tx-dim);
+          background: none; cursor: pointer; font-size: 15px; line-height: 1; padding: 0;
+          display: inline-flex; align-items: center; justify-content: center; }
+.cp-del:hover { color: #f23645; border-color: #f23645; }
+.cp-del.active { color: #f23645; border-color: #f23645; background: rgba(242,54,69,.12); }
+.cp-removing .cp-sw { cursor: pointer; }
+.cp-removing .cp-sw:hover { outline: 2px solid #f23645; outline-offset: 1px; }
+/* star = favorite button + favorite mode: favourited swatches get a yellow ring, hover previews it */
+.cp-fav { width: 20px; height: 20px; border: 1px dashed var(--bd); border-radius: 4px; color: var(--tx-dim);
+          background: none; cursor: pointer; font-size: 12px; line-height: 1; padding: 0;
+          display: inline-flex; align-items: center; justify-content: center; }
+.cp-fav:hover { color: #f5c518; border-color: #f5c518; }
+.cp-fav.active { color: #f5c518; border-color: #f5c518; background: rgba(245,197,24,.12); }
+.cp-sw.fav { box-shadow: 0 0 0 2px #f5c518; }
+.cp-favoriting .cp-sw { cursor: pointer; }
+.cp-favoriting .cp-sw:hover { outline: 2px solid #f5c518; outline-offset: 1px; }
+/* recent colours strip (fills as colours are used) */
+.cp-recent { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--bd); }
+.cp-recentstrip { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 5px; min-height: 20px; }
+.cp-empty { font-size: 11px; color: var(--tx-dim); }
+.cp-oprow { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.cp-oprow label { font-size: 11px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .04em; }
+.cp-row-controls { display: flex; align-items: center; gap: 8px; }
+.cp-opacity { flex: none; width: 132px; min-width: 0; margin: 0; }
+.cp-opnum { flex: none; width: 52px; text-align: center; box-sizing: border-box; }
+.cp-section { margin-top: 12px; }
+.cp-seclabel { font-size: 11px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+.cp-thick, .cp-lsrow { display: flex; gap: 6px; }
+.cp-thbtn, .cp-lsbtn { flex: 1; height: 30px; display: flex; align-items: center; justify-content: center;
+                       border: 1px solid var(--bd); border-radius: 5px; background: var(--field); color: var(--tx); cursor: pointer; }
+.cp-thbtn:hover, .cp-lsbtn:hover { background: var(--btn-h); }
+.cp-thbtn.sel, .cp-lsbtn.sel { border-color: var(--accent-ui); background: var(--active); }
+.cp-thline { display: inline-block; width: 28px; border-top: 1px solid currentColor; }
+/* text extras: size dropdown + Bold/Italic toggles (same look as the thickness/line-style rows) */
+.cp-textsize { width: 100%; height: 30px; border: 1px solid var(--bd); border-radius: 5px;
+               background: var(--field); color: var(--tx); font-family: inherit; font-size: 13px; }
+.cp-tstyle { display: flex; gap: 6px; }
+.cp-tsbtn { flex: 1; height: 30px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--bd); border-radius: 5px; background: var(--field); color: var(--tx);
+            cursor: pointer; font-size: 14px; line-height: 1; }
+.cp-tsbtn:hover { background: var(--btn-h); }
+.cp-tsbtn.sel { border-color: var(--accent-ui); background: var(--active); }
+/* combined stroke control (swatch + live line preview) */
+.cp-stroke { display: flex; align-items: center; gap: 10px; padding: 4px 8px; background: var(--field);
+             border: 1px solid var(--bd); border-radius: 5px; cursor: pointer; }
+.cp-stroke:hover { border-color: var(--tx-dim); }
+.cp-stroke-sw { width: 20px; height: 20px; flex: none; border: 1px solid var(--bd); border-radius: 4px; overflow: hidden;
+                background-image: linear-gradient(45deg,#bbb 25%,transparent 25%),linear-gradient(-45deg,#bbb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#bbb 75%),linear-gradient(-45deg,transparent 75%,#bbb 75%);
+                background-size: 8px 8px; background-position: 0 0,0 4px,4px -4px,-4px 0; }
+.cp-stroke-sw > span { display: block; width: 100%; height: 100%; }
+.cp-stroke-line { display: inline-block; width: 46px; height: 0; border-bottom: 2px solid #000; }
+/* custom colour creator (SV square + hue slider) */
+.cc-pop { position: fixed; z-index: 96; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px;
+          padding: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); width: max-content; }
+/* creator: left = SV square + hue slider; right column = preview swatch, hex field, action buttons */
+.cc-body { display: flex; gap: 10px; align-items: flex-start; }
+.cc-side { display: flex; flex-direction: column; gap: 6px; width: 80px; }
+.cc-preview { width: 100%; height: 30px; box-sizing: border-box; border: 1px solid var(--bd); border-radius: 5px; }
+.cc-hex { width: 100%; box-sizing: border-box; text-align: center; }
+.cc-paste, .cc-pick, .cc-add { padding: 6px 8px; background: var(--btn); border: 1px solid var(--bd); border-radius: 6px; color: var(--tx); cursor: pointer; text-align: center; }
+.cc-paste:hover, .cc-pick:hover, .cc-add:hover { background: var(--btn-h); }
+.cc-pick { border-color: var(--accent); }   /* Pick is the primary action (apply the colour) */
+.cc-sv { position: relative; width: 184px; height: 184px; border-radius: 6px; cursor: crosshair; --hue: #2962ff;
+         background: linear-gradient(to top, #000, rgba(0,0,0,0)), linear-gradient(to right, #fff, var(--hue)); }
+.cc-dot { position: absolute; width: 14px; height: 14px; border: 2px solid #fff; border-radius: 50%;
+          transform: translate(-50%,-50%); box-shadow: 0 0 0 1px rgba(0,0,0,.4); pointer-events: none; }
+.cc-hue { position: relative; width: 16px; height: 184px; border-radius: 6px; cursor: ns-resize;
+          background: linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%); }
+.cc-huedot { position: absolute; left: -2px; right: -2px; height: 6px; border: 2px solid #fff; border-radius: 4px;
+             transform: translateY(-50%); box-shadow: 0 0 0 1px rgba(0,0,0,.4); pointer-events: none; }
+.style-pop .style-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 2px; }
+.style-pop .style-row label { font-size: 12px; color: var(--tx-dim); }
+.style-pop input[type=color] { width: 38px; height: 22px; padding: 0; border: 1px solid var(--bd); border-radius: 4px; background: none; }
+.style-pop input[type=number] { width: 56px; }
+.style-empty { font-size: 12px; color: var(--tx-dim); padding: 4px; }
+/* line-style picker (src/ui/linestyle.js) */
+.ls-btn { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--field);
+          border: 1px solid var(--bd); border-radius: 5px; color: var(--tx); cursor: pointer; }
+.ls-caret { font-size: 9px; color: var(--tx-dim); }
+.ls-prev { display: inline-block; width: 40px; height: 0; border-top: 2px solid currentColor; vertical-align: middle; }
+.ls-prev.dashed { border-top-style: dashed; }
+.ls-prev.dotted { border-top-style: dotted; }
+.ls-menu { position: fixed; z-index: 96; background: var(--panel); border: 1px solid var(--bd); border-radius: 8px;
+           padding: 4px; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.ls-row { display: flex; align-items: center; gap: 12px; padding: 7px 12px; border-radius: 5px; cursor: pointer; color: var(--tx); }
+.ls-row:hover { background: var(--hover); }
+.ls-row.sel { background: var(--active); }
+.ls-name { font-size: 13px; }

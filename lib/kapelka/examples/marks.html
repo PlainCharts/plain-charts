@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>kapelka — the ether (marks) isolation test</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0e0e11; color: #ddd;
+      font: 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    #wrap { display: flex; flex-direction: column; height: 100vh; }
+    header { padding: 8px 12px; border-bottom: 1px solid #222; color: #aaa; }
+    header b { color: #ddd; }
+    #chart { flex: 1; min-height: 0; }
+    footer { padding: 6px 12px; border-top: 1px solid #222; color: #777; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <header><b>Phase 0 — the ether</b> &nbsp; one primitive, an open geometry vocabulary (marks). No shape catalog.</header>
+    <div id="chart"></div>
+    <footer>Everything drawn here is a <code>marks</code> array fed to <code>createMarkPrimitive</code> — a filled zone, a
+      pixel-sized triangle anchored to a bar, a data+pixel callout, a viewport-pinned line, a polyline, and text.</footer>
+  </div>
+
+  <script type="module">
+    import { mountChart, Candles } from '../index.js';
+    import { createMarkPrimitive } from '../studies/index.js';
+    import { generateBars } from './feed.js';
+
+    const bars = generateBars({ count: 600, step: 300 });
+    const chart = mountChart(document.getElementById('chart'), {
+      autoSize: true, ib: true,
+      layout: { background: { color: '#0e0e11' }, textColor: '#ddd' },
+      grid: { vertLines: { color: '#1a1a20' }, horzLines: { color: '#1a1a20' } },
+      cursor: { color: '#758696' },
+      timeAxis: { borderColor: '#333', timeVisible: true },
+      rightPriceAxis: { borderColor: '#333' },
+    });
+    const candles = chart.addPlot(Candles, {
+      upColor: '#26a69a', downColor: '#ef5350', wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+    }, 0);
+    candles.feed(bars);
+
+    const N = bars.length;
+    const VISIBLE = 120;
+    chart.timeAxis().setBarWindow({ from: N - VISIBLE, to: N - 1 + 6 });
+
+    const at = (i) => bars[i].time;                          // unix seconds -> vertex.t
+    const win = bars.slice(N - 55, N - 25);
+    const top = Math.max(...win.map((b) => b.high));
+    const bot = Math.min(...win.map((b) => b.low));
+
+    // The whole scene, described as DATA. No vline/box/triangle "types" — just anchored paths + text.
+    const marks = [
+      // 1) a translucent zone BEHIND the candles: a closed, filled path over a price/time region.
+      { back: true,
+        path: [ {t: at(N-55), p: top}, {t: at(N-25), p: top}, {t: at(N-25), p: bot}, {t: at(N-55), p: bot} ],
+        closed: true, fill: 'rgba(41,98,255,0.10)', stroke: '#2962ff', width: 1 },
+
+      // 2) a pixel-SIZED up-triangle anchored to a bar's low (data anchor + pixel geometry — fixed size at any zoom).
+      { path: [ {t: at(N-15), p: bars[N-15].low, dy: 14},
+                {t: at(N-15), p: bars[N-15].low, dx: -6, dy: 26},
+                {t: at(N-15), p: bars[N-15].low, dx: 6, dy: 26} ],
+        closed: true, fill: '#26a69a' },
+
+      // 3) a callout: tip pinned at a bar's high {t,p}, body held at a fixed pixel offset {t,p,dx,dy}.
+      { path: [ {t: at(N-40), p: bars[N-40].high}, {t: at(N-40), p: bars[N-40].high, dx: 26, dy: -42} ],
+        stroke: '#e0a030', width: 1.5 },
+      { text: 'swing high', at: {t: at(N-40), p: bars[N-40].high, dx: 30, dy: -54}, color: '#e0a030', size: 12 },
+
+      // 4) a polyline connecting a few closes (open geometry, not closed).
+      { path: [N-50, N-45, N-40, N-35, N-30].map((i) => ({t: at(i), p: bars[i].close})),
+        stroke: '#7e57c2', width: 2, dash: 'dashed' },
+
+      // 5) a VIEWPORT-anchored line across the top 12% of the pane (scrolls/zooms independent of price).
+      { path: [ {vpx: 0, vp: 0.12}, {vpx: 1, vp: 0.12} ], stroke: 'rgba(255,255,255,0.25)', width: 1, dash: 'dotted' },
+      { text: 'viewport-anchored', at: {vpx: 0, vp: 0.12, dx: 6, dy: 4}, color: 'rgba(255,255,255,0.5)', size: 11 },
+    ];
+
+    const prim = createMarkPrimitive(chart, () => bars.map((b) => b.time), () => candles, () => marks);
+    candles.addLayer(prim);
+    prim.repaint();
+  </script>
+</body>
+</html>

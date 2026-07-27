@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>order host</title></head>
+<body>
+  <!-- Hidden ORDER HOST (role=orders). The Order Worker: the SINGLE owner of all order BUSINESS LOGIC. Joins the
+       data bridge as a proxy consumer, so it reads the authoritative book (platform stores) and forwards LOW-LEVEL
+       order verbs (placeOrder/modifyOrder/cancel) to the data-host adapters over the existing channel. It never
+       touches a broker socket and is never shown. Separate from the data-host so a fault is always one or the other
+       (adapters/contracts = data-host; order logic = here). -->
+  <script>
+    window.addEventListener('error', (e) => console.error('[order-host]', e.message, e.filename, e.lineno));
+    window.addEventListener('unhandledrejection', (e) => console.error('[order-host] unhandled', (e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+  </script>
+  <script type="module">
+    import './src/assistant/exec-gate.js';    // install the app's assistant-order policy into the engine gate
+    import './data_engine/order-worker.js';   // the ENGINE's worker entry: book proxy + the Order Worker runtime
+    import './src/perf/sampler.js';           // publish this window's live perf sample (Performance Monitor addon reads it)
+  </script>
+</body>
+</html>

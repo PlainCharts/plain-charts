@@ -1,0 +1,31 @@
+{
+  "name": "Teal Dark",
+  "description": "A dark theme in cool teal.",
+  "palette": {
+    "bg": "#0a0c0c",
+    "panel": "#151818",
+    "field": "#181b1b",
+    "btn": "#202424",
+    "btnH": "#2b3030",
+    "btnTx": "#e6edec",
+    "accent": "#26c6b8",
+    "accentH": "#1fb3a6",
+    "accentTx": "#052623",
+    "hover": "#161a1a",
+    "active": "rgba(38, 198, 184, 0.16)",
+    "bd": "#283030",
+    "bdSoft": "#1a2020",
+    "tx": "#e8efee",
+    "txDim": "#6b7a78",
+    "tx2": "#9aa8a6",
+    "icon": "#26c6b8",
+    "ctrl": "#181b1b",
+    "ctrlTx": "#c4cfce",
+    "ctrlOn": "#26c6b8",
+    "ctrlOnTx": "#052623",
+    "pos": "#26c6a0",
+    "neg": "#f2555a",
+    "frameColor": "#26c6b8",
+    "frameWidth": 1
+  }
+}

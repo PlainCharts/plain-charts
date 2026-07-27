@@ -1,0 +1,786 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import { SIDEBAR } from '../docs-sidebar.js';
+
+interface SidebarLink {
+	href?: string;
+	label: string;
+	active?: boolean;
+	children?: { href: string; label: string; active?: boolean }[];
+}
+
+interface Props {
+	title: string;
+	sidebar?: { title: string; collapsible?: boolean; expanded?: boolean; links: SidebarLink[] }[];
+	toc?: { href: string; label: string; indent?: boolean }[];
+	issuesUrl?: string;
+	githubUrl?: string;
+}
+
+// Works as a normal layout (props) AND as a Markdown layout (fields arrive under `frontmatter`).
+const data = (Astro.props as any).frontmatter ?? Astro.props;
+const { title, sidebar = SIDEBAR, toc: tocProp = [], issuesUrl, githubUrl = 'https://github.com/ether-strannik/plain_charts_vanilla' } = data;
+const curPath = Astro.url.pathname.replace(/\/+$/, '');   // current page, trailing slash stripped, for active link
+// Right-side "On this page" list. A Markdown page passes no explicit toc, so build it from the page's OWN
+// headings (h2/h3) that Astro extracts -> every `##` / `###` section shows on the right automatically.
+const headings = (Astro.props as any).headings ?? [];
+const toc = (tocProp && tocProp.length) ? tocProp : headings
+	.filter((h: any) => h.depth >= 2 && h.depth <= 3)
+	.map((h: any) => ({ href: '#' + h.slug, label: h.text, indent: h.depth > 2 }));
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/iosevka@5.0.4/index.css" />
+		<title>{title}</title>
+		<ViewTransitions />
+		<style is:global>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			html {
+				font-family: 'Iosevka', monospace;
+				font-size: 16px;
+				line-height: 1.6;
+				color: #1a1a1a;
+				background: #fff;
+			}
+
+			body {
+				min-height: 100vh;
+			}
+
+			a {
+				color: inherit;
+				text-decoration: underline;
+				text-underline-offset: 2px;
+			}
+
+			a:hover {
+				color: #666;
+			}
+
+			code {
+				font-family: 'Iosevka', monospace;
+				font-size: 0.9em;
+				background: #f5f5f5;
+				padding: 0.2em 0.4em;
+				border-radius: 3px;
+			}
+
+			/* Header */
+			.docs-header {
+				border-bottom: 1px solid #e5e5e5;
+				padding: 1rem 2rem;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				position: sticky;
+				top: 0;
+				background: #fff;
+				z-index: 100;
+			}
+
+			.logo {
+				font-family: 'Iosevka', monospace;
+				font-weight: 400;
+				font-size: 1.75rem;
+				text-decoration: none;
+				flex-shrink: 0;
+			}
+
+			.header-nav {
+				display: flex;
+				gap: 1.25rem;
+				align-items: center;
+			}
+
+			.header-nav a {
+				text-decoration: none;
+				color: #666;
+				font-size: 0.95rem;
+			}
+
+			.header-nav a:hover {
+				color: #000;
+			}
+
+			.header-nav .icon-link {
+				display: flex;
+				align-items: center;
+			}
+
+			.header-nav .icon-link svg {
+				opacity: 0.6;
+				transition: opacity 0.2s;
+			}
+
+			.header-nav .icon-link:hover svg {
+				opacity: 1;
+			}
+
+			.header-nav .nav-icons {
+				display: flex;
+				gap: 1.25rem;
+				margin-left: 1rem;
+			}
+
+			/* Search */
+			.search-btn {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.4rem 0.75rem;
+				border: 1px solid #e5e5e5;
+				border-radius: 4px;
+				background: #fff;
+				color: #999;
+				font-size: 0.9rem;
+				cursor: pointer;
+				font-family: inherit;
+			}
+
+			.search-btn:hover {
+				border-color: #ccc;
+			}
+
+			.search-btn kbd {
+				font-family: inherit;
+				font-size: 0.8rem;
+				color: #999;
+			}
+
+			/* Search Modal */
+			.search-modal {
+				display: none;
+				position: fixed;
+				inset: 0;
+				background: rgba(0,0,0,0.5);
+				z-index: 200;
+				justify-content: center;
+				padding-top: 10vh;
+			}
+
+			.search-modal.open {
+				display: flex;
+			}
+
+			.search-container {
+				background: #fff;
+				border-radius: 8px;
+				width: 100%;
+				max-width: 600px;
+				max-height: 70vh;
+				overflow: hidden;
+				display: flex;
+				flex-direction: column;
+				box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+			}
+
+			.search-input-wrap {
+				padding: 1rem;
+				border-bottom: 1px solid #e5e5e5;
+			}
+
+			.search-input {
+				width: 100%;
+				padding: 0.75rem;
+				border: 1px solid #e5e5e5;
+				border-radius: 4px;
+				font-size: 1rem;
+				font-family: inherit;
+				outline: none;
+			}
+
+			.search-input:focus {
+				border-color: #000;
+			}
+
+			.search-results {
+				flex: 1;
+				overflow-y: auto;
+				padding: 0.5rem;
+			}
+
+			.search-result {
+				display: block;
+				padding: 0.75rem 1rem;
+				text-decoration: none;
+				color: #333;
+				border-radius: 4px;
+			}
+
+			.search-result:hover {
+				background: #f5f5f5;
+				color: #000;
+			}
+
+			.search-result-title {
+				font-weight: 500;
+				margin-bottom: 0.25rem;
+			}
+
+			.search-result-excerpt {
+				font-size: 0.85rem;
+				color: #666;
+			}
+
+			.search-empty {
+				padding: 2rem;
+				text-align: center;
+				color: #999;
+			}
+
+			/* Issue link */
+			.issue-link {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.5rem;
+				margin-top: 3rem;
+				padding-top: 1.5rem;
+				border-top: 1px solid #e5e5e5;
+				color: #666;
+				font-size: 0.9rem;
+				text-decoration: none;
+			}
+
+			.issue-link:hover {
+				color: #000;
+			}
+
+			.issue-link svg {
+				width: 16px;
+				height: 16px;
+			}
+
+			/* Layout */
+			.docs-layout {
+				display: grid;
+				/* sidebar | content (capped) | TOC | filler -- the filler absorbs the extra width on wide
+				   screens so content + TOC stay grouped on the left (TOC not pinned to the far right). */
+				grid-template-columns: 260px minmax(0, 1000px) 220px 1fr;
+				min-height: calc(100vh - 60px);
+			}
+
+			/* Sidebar */
+			.sidebar {
+				border-right: 1px solid #e5e5e5;
+				padding: 2rem 1.5rem;
+				position: sticky;
+				top: 60px;
+				height: calc(100vh - 60px);
+				overflow-y: auto;
+			}
+
+			.sidebar-section {
+				margin-bottom: 0.25rem;
+			}
+
+			.sidebar-title {
+				font-size: 0.95rem;
+				font-weight: 600;
+				color: #000;
+				margin-bottom: 0.5rem;
+			}
+
+			.sidebar-nav {
+				list-style: none;
+			}
+
+			.sidebar-nav li {
+				padding: 0.3rem 0;
+			}
+
+			.sidebar-nav a {
+				text-decoration: none;
+				font-size: 0.95rem;
+			}
+
+			.sidebar-nav a {
+				color: #666;
+			}
+
+			.sidebar-nav a:hover {
+				color: #000;
+			}
+
+			.sidebar-nav a.active {
+				color: #000;
+				font-weight: 500;
+			}
+
+			.sidebar-nav .subsection {
+				margin: 0.25rem 0;
+			}
+
+			.sidebar-nav .subsection-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				cursor: pointer;
+				user-select: none;
+				padding: 0.3rem 0;
+			}
+
+			.sidebar-nav .subsection-label {
+				color: #666;
+				font-size: 0.95rem;
+			}
+
+			.sidebar-nav .subsection-header:hover .subsection-label {
+				color: #000;
+			}
+
+			.sidebar-nav .subsection-toggle {
+				color: #999;
+				font-size: 0.7rem;
+				transition: transform 0.2s;
+			}
+
+			.sidebar-nav .subsection.collapsed .subsection-toggle {
+				transform: rotate(-90deg);
+			}
+
+			.sidebar-nav .subsection.collapsed .subsection-children {
+				display: none;
+			}
+
+			.sidebar-nav .subsection-children {
+				list-style: none;
+				padding-left: 0.75rem;
+			}
+
+			.sidebar-nav .subsection-children li {
+				padding: 0.25rem 0;
+			}
+
+			/* Collapsible sections */
+			.sidebar-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				cursor: pointer;
+				user-select: none;
+				padding: 0.25rem 0;
+			}
+
+			.sidebar-header:hover .sidebar-title {
+				color: #666;
+			}
+
+			.sidebar-toggle {
+				color: #999;
+				font-size: 0.8rem;
+				transition: transform 0.2s;
+			}
+
+			.sidebar-section:not(.collapsed) .sidebar-toggle {
+				transform: rotate(90deg);
+			}
+
+			.sidebar-section.collapsed .sidebar-nav {
+				display: none;
+			}
+
+			/* Content */
+			.docs-content {
+				padding: 2rem 3.5rem;
+				max-width: 1000px;
+			}
+
+			/* Markdown typography */
+			.docs-content h1 {
+				font-size: 2rem;
+				font-weight: 600;
+				letter-spacing: -0.02em;
+				margin: 0 0 1.5rem;
+			}
+			.docs-content h2 {
+				font-size: 1.4rem;
+				font-weight: 600;
+				margin: 2.75rem 0 1.1rem;
+			}
+			.docs-content h3 {
+				font-size: 1.1rem;
+				font-weight: 600;
+				margin: 2rem 0 0.75rem;
+			}
+			.docs-content p {
+				margin: 0 0 1rem;
+				line-height: 1.7;
+				color: #333;
+				text-align: justify;
+			}
+			.docs-content ul,
+			.docs-content ol {
+				margin: 0 0 1rem;
+				padding-left: 1.5rem;
+				line-height: 1.7;
+			}
+			.docs-content li {
+				margin-bottom: 0.35rem;
+			}
+			.docs-content a {
+				color: #2563eb;
+				text-decoration: none;
+			}
+			.docs-content a:hover {
+				text-decoration: underline;
+			}
+			.docs-content code {
+				font-family: monospace;
+				font-size: 0.9em;
+				background: #f4f4f5;
+				padding: 0.1rem 0.35rem;
+				border-radius: 4px;
+			}
+			.docs-content pre {
+				background: #f4f4f5;
+				padding: 1rem 1.25rem;
+				border-radius: 6px;
+				overflow-x: auto;
+				margin: 0 0 1.25rem;
+			}
+			.docs-content pre code {
+				background: none;
+				padding: 0;
+			}
+			.docs-content strong {
+				font-weight: 600;
+			}
+			/* live example embed */
+			.docs-content .demo {
+				margin: 1.75rem 0;
+			}
+			.docs-content .demo iframe {
+				display: block;
+				width: 100%;
+				height: 540px;
+				border: 1px solid #000;
+				border-radius: 8px;
+				background: #d1d4dc;
+			}
+			.docs-content .demo.dark iframe {
+				background: #0e0f16;
+			}
+			.docs-content .demo.short iframe {
+				height: 270px;
+			}
+			.docs-content .demo figcaption {
+				margin-top: 0.6rem;
+				font-size: 0.85rem;
+				color: #666;
+				text-align: center;
+			}
+
+			/* Table of Contents (right) */
+			.toc {
+				padding: 2rem 1.5rem;
+				position: sticky;
+				top: 60px;
+				height: calc(100vh - 60px);
+				overflow-y: auto;
+			}
+
+			.toc-title {
+				font-size: 0.8rem;
+				font-weight: 600;
+				color: #999;
+				margin-bottom: 0.75rem;
+			}
+
+			.toc-nav {
+				list-style: none;
+			}
+
+			.toc-nav li {
+				padding: 0.25rem 0;
+			}
+
+			.toc-nav li.indent {
+				padding-left: 1rem;
+			}
+
+			.toc-nav a {
+				color: #666;
+				text-decoration: none;
+				font-size: 0.9rem;
+			}
+
+			.toc-nav a:hover {
+				color: #000;
+			}
+
+			@media (max-width: 1024px) {
+				.docs-layout {
+					grid-template-columns: 260px 1fr;
+				}
+
+				.toc {
+					display: none;
+				}
+			}
+
+			@media (max-width: 768px) {
+				.docs-layout {
+					grid-template-columns: 1fr;
+				}
+
+				.sidebar {
+					position: relative;
+					top: 0;
+					height: auto;
+					border-right: none;
+					border-bottom: 1px solid #e5e5e5;
+				}
+			}
+
+			/* Lightbox */
+			.lightbox {
+				display: none;
+				position: fixed;
+				inset: 0;
+				background: rgba(0,0,0,0.9);
+				z-index: 300;
+				cursor: zoom-out;
+				justify-content: center;
+				align-items: center;
+			}
+
+			.lightbox.open {
+				display: flex;
+			}
+
+			.lightbox img {
+				max-width: 90%;
+				max-height: 90%;
+				border-radius: 4px;
+			}
+
+			.docs-content a img { cursor: pointer; }
+			.docs-content img {
+				cursor: zoom-in;
+			}
+		</style>
+	</head>
+	<body>
+		<header class="docs-header">
+			<a href="/" class="logo">kapelka</a>
+			<nav class="header-nav">
+				<a href="/examples/studies.html" target="_blank">Examples</a>
+				<a href="/docs/changelog">Changelog</a>
+				<a href={githubUrl} target="_blank" class="icon-link" title="GitHub"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+				<button class="search-btn" id="searchBtn">
+					Search <kbd>Ctrl K</kbd>
+				</button>
+			</nav>
+		</header>
+
+		<div class="lightbox" id="lightbox">
+			<img id="lightboxImg" src="" alt="" />
+		</div>
+
+		<div class="search-modal" id="searchModal">
+			<div class="search-container">
+				<div class="search-input-wrap">
+					<input type="text" class="search-input" id="searchInput" placeholder="Search docs..." autocomplete="off" />
+				</div>
+				<div class="search-results" id="searchResults">
+					<div class="search-empty">Type to search...</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="docs-layout">
+			<aside class="sidebar" transition:persist>
+				{sidebar.map(section => (
+					<div class={`sidebar-section ${section.collapsible ? 'collapsed' : ''}`} data-collapsible={section.collapsible ? 'true' : undefined}>
+						{section.title && (
+							section.collapsible ? (
+								<div class="sidebar-header">
+									<div class="sidebar-title">{section.title}</div>
+									<span class="sidebar-toggle">&gt;</span>
+								</div>
+							) : (
+								<div class="sidebar-title">{section.title}</div>
+							)
+						)}
+						<ul class="sidebar-nav">
+							{section.links.map(link => (
+								<li><a href={link.href} class={(link.active || (link.href && link.href.replace(/\/+$/, '') === curPath)) ? 'active' : ''}>{link.label}</a></li>
+							))}
+						</ul>
+					</div>
+				))}
+			</aside>
+
+			<main class="docs-content">
+				<slot />
+
+				{issuesUrl && (
+					<a href={issuesUrl} class="issue-link" target="_blank">
+						<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+						Spot something off? Open an issue
+					</a>
+				)}
+			</main>
+
+			{toc.length > 0 && (
+				<aside class="toc">
+					<div class="toc-title">ON THIS PAGE</div>
+					<ul class="toc-nav">
+						{toc.map(item => (
+							<li class={item.indent ? 'indent' : ''}><a href={item.href}>{item.label}</a></li>
+						))}
+					</ul>
+				</aside>
+			)}
+		</div>
+
+		<script>
+			// Collapsible sidebar — persist open/closed per section across reloads, and always
+			// open the section that holds the current page.
+			document.querySelectorAll('.sidebar-section[data-collapsible]').forEach(section => {
+				const header = section.querySelector('.sidebar-header');
+				const titleEl = section.querySelector('.sidebar-title');
+				const key = 'sidebar:' + (titleEl ? titleEl.textContent.trim() : '');
+				const hasActive = !!section.querySelector('a.active');
+				const stored = localStorage.getItem(key);
+				// open if the active page lives here, else follow the stored choice (default: collapsed)
+				if (hasActive || stored === 'open') section.classList.remove('collapsed');
+				else if (stored === 'closed') section.classList.add('collapsed');
+				if (header) {
+					header.addEventListener('click', () => {
+						section.classList.toggle('collapsed');
+						localStorage.setItem(key, section.classList.contains('collapsed') ? 'closed' : 'open');
+					});
+				}
+			});
+
+			// Collapsible subsections
+			document.querySelectorAll('.subsection[data-subsection]').forEach(subsection => {
+				const header = subsection.querySelector('.subsection-header');
+				if (header) {
+					header.addEventListener('click', () => {
+						subsection.classList.toggle('collapsed');
+					});
+				}
+			});
+
+			// Search
+			const searchBtn = document.getElementById('searchBtn');
+			const searchModal = document.getElementById('searchModal');
+			const searchInput = document.getElementById('searchInput');
+			const searchResults = document.getElementById('searchResults');
+
+			let pagefind = null;
+
+			async function loadPagefind() {
+				if (pagefind) return pagefind;
+
+				try {
+					// Load pagefind at runtime to avoid build-time resolution
+					pagefind = await new Function('return import("/pagefind/pagefind.js")')();
+					await pagefind.init();
+					return pagefind;
+				} catch (e) {
+					// Pagefind not available in dev mode
+					return null;
+				}
+			}
+
+			function openSearch() {
+				searchModal.classList.add('open');
+				searchInput.focus();
+				loadPagefind();
+			}
+
+			function closeSearch() {
+				searchModal.classList.remove('open');
+				searchInput.value = '';
+				searchResults.innerHTML = '<div class="search-empty">Type to search...</div>';
+			}
+
+			searchBtn.addEventListener('click', openSearch);
+
+			searchModal.addEventListener('click', (e) => {
+				if (e.target === searchModal) closeSearch();
+			});
+
+			document.addEventListener('keydown', (e) => {
+				if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+					e.preventDefault();
+					openSearch();
+				}
+				if (e.key === 'Escape') closeSearch();
+			});
+
+			let searchTimeout;
+			searchInput.addEventListener('input', async () => {
+				clearTimeout(searchTimeout);
+				const query = searchInput.value.trim();
+
+				if (!query) {
+					searchResults.innerHTML = '<div class="search-empty">Type to search...</div>';
+					return;
+				}
+
+				searchTimeout = setTimeout(async () => {
+					const pf = await loadPagefind();
+					if (!pf) {
+						searchResults.innerHTML = '<div class="search-empty">Search not available</div>';
+						return;
+					}
+
+					const results = await pf.search(query);
+
+					if (results.results.length === 0) {
+						searchResults.innerHTML = '<div class="search-empty">No results found</div>';
+						return;
+					}
+
+					const html = await Promise.all(
+						results.results.slice(0, 10).map(async (r) => {
+							const data = await r.data();
+							return `
+								<a href="${data.url}" class="search-result">
+									<div class="search-result-title">${data.meta?.title || data.url}</div>
+									<div class="search-result-excerpt">${data.excerpt}</div>
+								</a>
+							`;
+						})
+					);
+
+					searchResults.innerHTML = html.join('');
+				}, 200);
+			});
+
+			// Lightbox
+			const lightbox = document.getElementById('lightbox');
+			const lightboxImg = document.getElementById('lightboxImg');
+
+			document.querySelectorAll('.docs-content img').forEach(img => {
+				if (img.closest('a')) return;   // a linked image is a link, not a lightbox target
+				img.addEventListener('click', () => {
+					lightboxImg.src = img.src;
+					lightboxImg.alt = img.alt;
+					lightbox.classList.add('open');
+				});
+			});
+
+			lightbox.addEventListener('click', () => {
+				lightbox.classList.remove('open');
+			});
+
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape') lightbox.classList.remove('open');
+			});
+		</script>
+	</body>
+</html>

@@ -1,0 +1,336 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="kapelka: Declarative, Reactive Charting Engine in JavaScript">
+	<style>
+		.hero {
+			padding: 0.5rem 0;
+		}
+
+		.hero h1 {
+			font-size: 2.2rem;
+			font-weight: 600;
+			margin-bottom: 1rem;
+			letter-spacing: -0.02em;
+		}
+
+		.hero p {
+			color: #666;
+			font-size: 1.4rem;
+			margin-bottom: 2.5rem;
+			white-space: nowrap;
+		}
+
+		.actions {
+			display: flex;
+			gap: 1rem;
+			align-items: center;
+			margin-bottom: 3rem;
+		}
+
+		.btn {
+			display: inline-block;
+			padding: 0.7rem 1.4rem;
+			font-size: 0.95rem;
+			text-decoration: none;
+			border-radius: 4px;
+		}
+
+		.btn-primary {
+			background: #000;
+			color: #fff;
+		}
+
+		.btn-primary:hover {
+			background: #333;
+			color: #fff;
+		}
+
+		.btn-secondary {
+			color: #666;
+		}
+
+		.app-header {
+			display: flex;
+			gap: 1.5rem;
+			align-items: flex-start;
+			margin-bottom: 1.5rem;
+		}
+
+		.app-icon {
+			width: 105px;
+			height: 105px;
+		}
+
+		.app-title {
+			font-size: 1.4rem;
+			font-weight: 600;
+			margin-bottom: 0.5rem;
+		}
+
+		.app-desc {
+			color: #333;
+			font-size: 1.1rem;
+			font-weight: 500;
+			margin-bottom: 0;
+		}
+
+		.feature-intro {
+			font-size: 1.2rem;
+			font-weight: 500;
+			color: #000;
+			margin-bottom: 1rem;
+		}
+
+		.feature-list {
+			list-style: none;
+			margin-bottom: 2rem;
+		}
+
+		.feature-list li {
+			padding: 0.4rem 0;
+			color: #333;
+		}
+
+		.feature-list li::before {
+			content: '[*]';
+			color: #999;
+			margin-right: 0.75rem;
+			font-size: 0.85rem;
+		}
+
+		.feature-list strong {
+			color: #000;
+			margin-right: 1rem;
+		}
+
+		.btn-docs {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			background: #000;
+			color: #fff;
+			padding: 0.6rem 1.2rem;
+			font-size: 0.9rem;
+			text-decoration: none;
+			border-radius: 4px;
+		}
+
+		.btn-docs:hover {
+			background: #333;
+			color: #fff;
+		}
+
+		.btn-row {
+			display: flex;
+			gap: 1rem;
+			align-items: center;
+		}
+
+		/* Flat cards: rounded border, no shadow, border goes blue on hover */
+		.card-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+			gap: 1rem;
+			margin-top: 2.5rem;
+		}
+
+		.card {
+			display: block;
+			padding: 1.25rem 1.5rem;
+			border: 1px solid #000;
+			border-radius: 8px;
+			background: none;
+			color: inherit;
+			text-decoration: none;
+			transition: border-color 0.15s ease;
+		}
+
+		.card:hover {
+			border-color: #2563eb;
+		}
+
+		.card h3 {
+			margin: 0 0 0.4rem;
+			font-size: 1rem;
+			font-weight: 600;
+		}
+
+		.card p {
+			margin: 0;
+			font-size: 0.9rem;
+			color: #666;
+			line-height: 1.5;
+		}
+
+		.overview {
+			max-width: 46rem;
+			margin: 2rem 0 0;
+			font-size: 1.05rem;
+			line-height: 1.7;
+			color: #444;
+		}
+
+		/* top row: intro text on the left, molecule nav on the right */
+		.top {
+			display: flex;
+			gap: 2rem;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+		}
+		.top-left {
+			flex: 1 1 440px;
+			min-width: 300px;
+		}
+		.top-right {
+			flex: 0 1 440px;
+		}
+		.top-right .h2o-nav {
+			margin: 0;
+			max-width: 440px;
+		}
+
+		/* full live sample of the library, embedded on the home page */
+		.sample {
+			margin: 2.5rem 0 0;
+		}
+		.sample iframe {
+			display: block;
+			width: 100%;
+			height: 640px;
+			border: 1px solid #000;
+			border-radius: 8px;
+			background: #0e0e11;
+		}
+		.sample figcaption {
+			margin-top: 0.75rem;
+			text-align: right;
+			font-size: 0.9rem;
+		}
+		.sample figcaption a {
+			color: #666;
+			text-decoration: none;
+		}
+		.sample figcaption a:hover {
+			color: #2563eb;
+		}
+
+		/* H2O molecule navigation: three atoms are three links, flat black/white, invert on hover */
+		.h2o-nav {
+			display: block;
+			width: 100%;
+			max-width: 480px;
+			height: auto;
+			margin: 1.5rem 0 0;
+		}
+		.h2o-nav .bond {
+			stroke: #000;
+			stroke-width: 12;
+		}
+		.h2o-nav .atom {
+			cursor: pointer;
+		}
+		.h2o-nav .atom circle {
+			fill: #fff;
+			stroke: #000;
+			stroke-width: 2.5;
+			transition: fill 0.15s ease;
+		}
+		.h2o-nav .atom text {
+			fill: #000;
+			font-family: inherit;
+			font-weight: 600;
+			pointer-events: none;
+			transition: fill 0.15s ease;
+		}
+		.h2o-nav .atom:hover circle {
+			fill: #000;
+		}
+		.h2o-nav .atom:hover text {
+			fill: #fff;
+		}
+		.h2o-nav .droplet {
+			fill: none;
+			stroke: #000;
+			stroke-width: 1.4;
+			opacity: 0.45;
+		}
+		.h2o-nav .h2o-mark {
+			fill: #000;
+			opacity: 0.3;
+			font-size: 20px;
+			font-weight: 600;
+		}
+
+	</style>
+
+	<div class="top">
+		<div class="top-left">
+			<div class="hero">
+				<h1>kapelka</h1>
+				<p>Declarative, Reactive Charting Engine in JavaScript</p>
+			</div>
+
+			<p class="overview">
+				kapelka is an open source declarative, reactive charting engine written in vanilla JavaScript. Its simple API, built on an open geometry of paths and text, lets you describe charts and annotations as data.
+			</p>
+		</div>
+
+		<div class="top-right">
+			<svg class="h2o-nav" viewBox="0 0 520 420" role="navigation" aria-label="Documentation">
+		<!-- scattered droplets (decorative) -->
+		<g>
+			<circle class="droplet" cx="360" cy="70" r="7" />
+			<circle class="droplet" cx="398" cy="98" r="4" />
+			<circle class="droplet" cx="332" cy="112" r="3" />
+			<circle class="droplet" cx="250" cy="55" r="4" />
+			<circle class="droplet" cx="70" cy="88" r="5" />
+			<circle class="droplet" cx="102" cy="58" r="3" />
+			<circle class="droplet" cx="60" cy="205" r="4" />
+			<circle class="droplet" cx="440" cy="140" r="3" />
+			<circle class="droplet" cx="452" cy="210" r="6" />
+			<circle class="droplet" cx="486" cy="250" r="3" />
+			<circle class="droplet" cx="175" cy="255" r="4" />
+			<circle class="droplet" cx="140" cy="300" r="6" />
+			<circle class="droplet" cx="110" cy="340" r="3" />
+			<circle class="droplet" cx="360" cy="368" r="5" />
+			<circle class="droplet" cx="392" cy="338" r="3" />
+			<circle class="droplet" cx="300" cy="392" r="4" />
+		</g>
+
+		<!-- bonds (behind atoms; the white-filled circles clip them to a neck) -->
+		<line class="bond" x1="290" y1="215" x2="130" y2="135" />
+		<line class="bond" x1="290" y1="215" x2="245" y2="355" />
+
+		<!-- O: Docs -->
+		<a href="/docs/overview" class="atom">
+			<circle cx="290" cy="215" r="82" />
+			<text x="290" y="215" text-anchor="middle" dominant-baseline="central" font-size="26">Docs</text>
+		</a>
+
+		<!-- H: Getting started -->
+		<a href="/docs/getting-started" class="atom">
+			<circle cx="130" cy="135" r="54" />
+			<text x="130" y="127" text-anchor="middle" dominant-baseline="central" font-size="14">Getting</text>
+			<text x="130" y="145" text-anchor="middle" dominant-baseline="central" font-size="14">started</text>
+		</a>
+
+		<!-- H: API Reference -->
+		<a href="/docs/api" class="atom">
+			<circle cx="245" cy="355" r="54" />
+			<text x="245" y="347" text-anchor="middle" dominant-baseline="central" font-size="14">API</text>
+			<text x="245" y="365" text-anchor="middle" dominant-baseline="central" font-size="12">Reference</text>
+		</a>
+
+		<text x="415" y="300" text-anchor="middle" class="h2o-mark">H₂O</text>
+			</svg>
+		</div>
+	</div>
+
+	<figure class="sample">
+		<iframe src="/examples/studies.html" title="Live sample — candles with studies, streaming from Binance" loading="lazy"></iframe>
+		<figcaption><a href="/examples/studies.html" target="_blank" rel="noopener">View in full page mode →</a></figcaption>
+	</figure>
+</Base>

@@ -1,0 +1,83 @@
+{
+  "name": "plain-charts",
+  "productName": "Plain Charts",
+  "version": "0.1.0",
+  "description": "Self-hosted trading charts on the kapelka charting engine + a zero-dependency Node server. Electron is a thin portable wrapper around that same server.",
+  "license": "AGPL-3.0-or-later",
+  "author": "ether-strannik",
+  "main": "electron/main.js",
+  "scripts": {
+    "server": "node server.js",
+    "start": "electron .",
+    "dist": "electron-builder --dir",
+    "package:linux": "electron-builder --dir --linux",
+    "package:win": "electron-builder --dir --win",
+    "typecheck": "tsc --noEmit",
+    "parity": "node scripts/parity.mjs",
+    "lint": "eslint src data_engine addons",
+    "i18n": "node scripts/i18n-extract.js",
+    "catalog-index": "node scripts/catalog-index.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "eslint": "^10.7.0",
+    "eslint-plugin-import-x": "^4.17.1",
+    "typescript": "^5.9.3"
+  },
+  "build": {
+    "appId": "com.etherstrannik.plaincharts",
+    "productName": "Plain Charts",
+    "asar": false,
+    "icon": "icon.png",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**",
+      "icon.png",
+      "server.js",
+      "server/**",
+      "addon-host.js",
+      "index.html",
+      "data-host.html",
+      "order-host.html",
+      "order-ticket.html",
+      "addon-host.html",
+      "alert-host.html",
+      "src/**",
+      "data_engine/**",
+      "!data_engine/terminal/**",
+      "!data_engine/adapters/*/**",
+      "lib/**",
+      "!lib/kapelka/docs/**",
+      "!lib/kapelka/examples/**",
+      "css/**",
+      "images/**",
+      "packages/themes/Black and White Dark.json",
+      "packages/themes/Choco Light.json",
+      "packages/chart-themes/Halo Dark.json",
+      "packages/chart-themes/Halo Light.json",
+      "LICENSE",
+      "package.json"
+    ],
+    "extraFiles": [
+      { "from": "packaging/seed-settings.json", "to": "resources/app/settings/settings.json" }
+    ],
+    "linux": {
+      "target": "dir",
+      "executableName": "plaincharts"
+    },
+    "win": {
+      "target": "dir"
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0",
+    "nodemailer": "^9.0.3"
+  }
+}

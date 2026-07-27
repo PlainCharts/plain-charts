@@ -1,0 +1,16 @@
+# Backup Exclusions
+# Lines starting with # are comments
+# Add files/folders to exclude (one per line)
+
+# Common excludes:
+# node_modules
+# __pycache__
+# .git
+# *.tmp
+# *.log
+
+.astro/
+.git/
+.vscode/
+dist/
+node_modules/

@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>alert host</title></head>
+<body>
+  <!-- Hidden ALERT HOST (role=alerts). The Alert engine: the SINGLE owner of all alert BUSINESS LOGIC
+       (evaluation, firing, cadence, actions). An APP-LAYER service. Joins the data bridge as a proxy
+       consumer (via the desktop preload -> DESKTOP=true -> ROLE proxy, so the sealed data_engine needs
+       no edit), and CONSUMES market data through the engine's public facade only. It never touches a
+       broker socket, never couples into data_engine, and is never shown. Separate from the data-host /
+       order-host so a fault is isolated to alerts. -->
+  <script>
+    window.addEventListener('error', (e) => console.error('[alert-host]', e.message, e.filename, e.lineno));
+    window.addEventListener('unhandledrejection', (e) => console.error('[alert-host] unhandled', (e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+  </script>
+  <script type="module">
+    import './data_engine/index.js';   // proxy role: market data via the existing bridge (the engine's public entry) — CONSUME only
+    import './src/alerts/host.js';      // the app-layer Alert engine runtime
+    import './src/perf/sampler.js';     // publish this window's live perf sample (Performance Monitor addon reads it)
+  </script>
+</body>
+</html>

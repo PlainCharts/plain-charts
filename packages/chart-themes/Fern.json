@@ -1,0 +1,42 @@
+{
+  "name": "Fern",
+  "description": "A light chart theme with fern-green candles on soft slate.",
+  "candles": {
+    "bodyVisible": true,
+    "upColor": "#619a8d",
+    "downColor": "#3f3f40",
+    "borderVisible": true,
+    "borderUpColor": "#3f3f40",
+    "borderDownColor": "#3f3f40",
+    "wickVisible": true,
+    "wickUpColor": "#3f3f40",
+    "wickDownColor": "#3f3f40"
+  },
+  "canvas": {
+    "background": "#d2d4dc",
+    "gridMode": "none",
+    "gridColor": "#1a1a20",
+    "gridStyle": 0,
+    "crosshairColor": "rgba(26, 27, 30, 0.33)",
+    "crosshairWidth": 1,
+    "crosshairStyle": 1,
+    "scaleTextColor": "#474747",
+    "scaleFontSize": 12,
+    "scaleFontFamily": "Helvetica, Arial, sans-serif",
+    "scaleLineColor": "#818181"
+  },
+  "lines": {
+    "priceLine": false,
+    "priceLineColor": "#9aa0aa",
+    "priceLineWidth": 1,
+    "priceLineDash": "dotted",
+    "bidLine": false,
+    "bidLineColor": "#6bbf9a",
+    "bidLineWidth": 1,
+    "bidLineDash": "dotted",
+    "askLine": false,
+    "askLineColor": "#a283d8",
+    "askLineWidth": 1,
+    "askLineDash": "dotted"
+  }
+}

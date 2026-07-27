@@ -1,0 +1,40 @@
+{
+  "name": "kapelka",
+  "version": "0.1.0",
+  "description": "Zero-dependency, framework-free canvas charting engine — the render core of trading-vue-js. No build step required.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "main": "./index.js",
+  "module": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "core/",
+    "examples/",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "charts",
+    "candlestick",
+    "trading",
+    "canvas",
+    "financial",
+    "trading-vue-js",
+    "vanilla",
+    "zero-dependency"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "author": "PlainCharts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PlainCharts/kapelka"
+  },
+  "homepage": "https://plaincharts.github.io/kapelka/examples/"
+}

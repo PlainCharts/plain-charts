@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>addon host</title></head>
+<body>
+  <!-- Hidden, Node-enabled addon host. Joins the data bridge as a proxy consumer (role=addon)
+       so addons get full broker DATA over the existing channel, and full Node (require) for
+       external work. Never shown. -->
+  <script>
+    window.addEventListener('error', (e) => console.error('[addon-host]', e.message, e.filename, e.lineno));
+    window.addEventListener('unhandledrejection', (e) => console.error('[addon-host] unhandled', (e.reason && (e.reason.stack || e.reason.message)) || e.reason));
+  </script>
+  <script type="module">
+    import './data_engine/index.js';       // proxy role: data access via the existing bridge (the engine's public entry)
+    import './src/addons/runtime.js';      // discover + run addons (Node via nodeIntegration)
+    import './src/assistant/mcp-server.js'; // expose the app to AI over MCP (gated by the Assistant policy)
+    import './src/perf/sampler.js';        // publish this window's live perf sample (Performance Monitor addon reads it)
+  </script>
+</body>
+</html>
