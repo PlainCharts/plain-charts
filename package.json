@@ -58,12 +58,12 @@
       "packages/themes/Black and White Dark.json",
       "packages/themes/Choco Light.json",
       "packages/chart-themes/Halo Dark.json",
-      "packages/chart-themes/Halo Light.json",
+      "packages/chart-themes/Fern.json",
       "LICENSE",
       "package.json"
     ],
     "extraFiles": [
-      { "from": "packaging/seed-settings.json", "to": "resources/app/settings/settings.json" }
+      { "from": "packaging/settings", "to": "resources/app/settings" }
     ],
     "linux": {
       "target": "dir",

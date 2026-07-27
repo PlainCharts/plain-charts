@@ -38,5 +38,10 @@
     "askLineColor": "#a283d8",
     "askLineWidth": 1,
     "askLineDash": "dotted"
+  },
+  "statusLine": {
+    "color": "#474747",
+    "fontSize": 13,
+    "bgColor": "#d2d4dc"
   }
 }

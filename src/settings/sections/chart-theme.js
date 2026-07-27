@@ -27,6 +27,7 @@ export function render(ctx) {
   const { content, draft, pane, preview, section, row, inlineRow, labeled, renderContent } = ctx;
   const c = draft.canvas;
   const cd = draft.candles;
+  const sl = draft.statusLine || (draft.statusLine = {});
 
   // autosave the selected theme (debounced) whenever a colour changes; a no-op until a theme exists
   /** @type {ReturnType<typeof setTimeout> | null} */
@@ -114,6 +115,12 @@ export function render(ctx) {
   content.appendChild(row('Text', textPicker(c, 'scaleTextColor', 'scaleFontSize')));
   content.appendChild(row('Font', selectControl(c, 'scaleFontFamily', FONTS)));
   content.appendChild(row('Borders', colorPicker(c, 'scaleLineColor')));
+
+  // status line: the on-chart instrument/values readout -- its text (colour + size) and background.
+  // Same controls as Settings > Status; captured into the theme so they travel with it.
+  section('STATUS');
+  content.appendChild(row('Text', textPicker(sl, 'color', 'fontSize')));
+  content.appendChild(row('Background', colorPicker(sl, 'bgColor')));
 
   // price / bid / ask lines: visibility + stroke. These are LIVE on pane.settings (not the draft), so
   // they apply immediately; scheduleSave persists them into the theme file.

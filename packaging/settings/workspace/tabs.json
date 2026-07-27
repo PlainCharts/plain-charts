@@ -1,0 +1,19 @@
+{
+  "tabs": [
+    {
+      "id": "tms3lmuw8paiq",
+      "name": "",
+      "ws": {
+        "layout": "1",
+        "panes": [],
+        "sync": {
+          "syncSymbol": true,
+          "syncInterval": false,
+          "syncCrosshair": false
+        }
+      },
+      "wsId": "ws_ms3lmuw8c5zk0"
+    }
+  ],
+  "active": "tms3lmuw8paiq"
+}

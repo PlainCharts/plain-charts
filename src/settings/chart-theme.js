@@ -13,8 +13,9 @@ import { getJSON, postJSON } from '../api.js';
 import { getSetting, setSetting } from './settings.js';
 
 /**
- * A chart theme: candle appearance + a subset of canvas colours / fonts + the price/bid/ask line styles.
- * @typedef {{ name: string, description?: string, candles?: any, canvas?: Record<string, any>, lines?: Record<string, any> }} ChartTheme
+ * A chart theme: candle appearance + a subset of canvas colours / fonts + the price/bid/ask line styles
+ * + the status line's text and background colours.
+ * @typedef {{ name: string, description?: string, candles?: any, canvas?: Record<string, any>, lines?: Record<string, any>, statusLine?: Record<string, any> }} ChartTheme
  */
 
 // The ONLY canvas keys a chart theme owns. Everything else on canvas (margins, zoom, nav buttons,
@@ -33,6 +34,11 @@ export const THEME_LINE_KEYS = [
   'bidLine', 'bidLineColor', 'bidLineWidth', 'bidLineDash',
   'askLine', 'askLineColor', 'askLineWidth', 'askLineDash',
 ];
+
+// The status-line keys a chart theme owns: the on-chart status text (colour + size) and its background
+// colour. These live on pane.settings.statusLine (the draft's statusLine in the dialog). Visibility
+// toggles, market-status colours and the indicator legend stay out -- they are display prefs, not theme.
+export const THEME_STATUS_KEYS = ['color', 'fontSize', 'bgColor'];
 
 /** @type {ChartTheme[]} */
 let themes = [];
@@ -65,7 +71,7 @@ export function saveChartTheme(name, theme) {
   if (!name) return;
   const prev = themes.find((t) => t.name === name);
   const description = prev && prev.description;
-  const body = { candles: theme.candles, canvas: theme.canvas, lines: theme.lines };
+  const body = { candles: theme.candles, canvas: theme.canvas, lines: theme.lines, statusLine: theme.statusLine };
   const rec = { name, ...(description ? { description } : {}), ...body };
   themes = [...themes.filter((t) => t.name !== name), rec];
   currentName = name;
@@ -93,7 +99,7 @@ export function importChartTheme(obj) {
 /** @param {any} obj @returns {boolean} */
 export function isChartTheme(obj) {
   if (!obj || typeof obj !== 'object') return false;
-  return !!obj.candles || (!!obj.canvas && typeof obj.canvas === 'object') || (!!obj.lines && typeof obj.lines === 'object');
+  return !!obj.candles || (!!obj.canvas && typeof obj.canvas === 'object') || (!!obj.lines && typeof obj.lines === 'object') || (!!obj.statusLine && typeof obj.statusLine === 'object');
 }
 
 // ---- draft bridge: the dialog edits candles/canvas in an uncommitted draft, while the price/bid/ask
@@ -115,6 +121,7 @@ export function themeFromDraft(draft, pane) {
     candles: structuredClone(draft.candles),
     canvas: structuredClone(pick(draft.canvas || {}, THEME_CANVAS_KEYS)),
     lines: structuredClone(pick(pane ? pane.getLineSettings() : {}, THEME_LINE_KEYS)),
+    statusLine: structuredClone(pick(draft.statusLine || {}, THEME_STATUS_KEYS)),
   };
 }
 
@@ -126,4 +133,5 @@ export function mergeThemeIntoDraft(draft, pane, theme) {
   if (theme.candles) draft.candles = structuredClone(theme.candles);
   if (theme.canvas) draft.canvas = { ...draft.canvas, ...structuredClone(pick(theme.canvas, THEME_CANVAS_KEYS)) };
   if (theme.lines && pane) pane.applyLineSettings(structuredClone(pick(theme.lines, THEME_LINE_KEYS)));
+  if (theme.statusLine) draft.statusLine = { ...draft.statusLine, ...structuredClone(pick(theme.statusLine, THEME_STATUS_KEYS)) };
 }

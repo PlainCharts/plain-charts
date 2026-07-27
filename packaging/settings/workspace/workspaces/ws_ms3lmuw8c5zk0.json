@@ -1,0 +1,154 @@
+{
+  "id": "ws_ms3lmuw8c5zk0",
+  "name": "Untitled",
+  "createdMs": 1785179267089,
+  "updatedMs": 1785179267089,
+  "ws": {
+    "layout": "1",
+    "sizes": {
+      "cols": [
+        1
+      ],
+      "rows": [
+        1
+      ]
+    },
+    "panes": [
+      {
+        "symbol": "EP",
+        "tfId": "5m",
+        "range": null,
+        "settings": {
+          "priceLine": false,
+          "bidLine": false,
+          "askLine": false,
+          "lastPriceLabel": true,
+          "bidLabel": true,
+          "askLabel": true,
+          "countdown": false,
+          "noOverlapLabels": true,
+          "countdownColor": "#e8e8e8",
+          "countdownBg": "#363a45",
+          "spreadMeter": false,
+          "spreadColor": "#363a45",
+          "spreadMax": 0,
+          "spreadMaxColor": "#ef5350",
+          "tsDayOfWeek": false,
+          "tsDowAxis": false,
+          "tsDateFmt": "%b %-d",
+          "tsHours24": true,
+          "tsLabelGap": 48,
+          "scaleLeft": false,
+          "priceScale": true,
+          "timeScale": true,
+          "priceScaleMode": 0,
+          "invertScale": false,
+          "plusButton": false,
+          "plusDefaultAction": "hline",
+          "priceLineColor": "#9aa0aa",
+          "priceLineWidth": 1,
+          "priceLineDash": "dotted",
+          "bidLineColor": "#6bbf9a",
+          "bidLineWidth": 1,
+          "bidLineDash": "dotted",
+          "askLineColor": "#a283d8",
+          "askLineWidth": 1,
+          "askLineDash": "dotted",
+          "alertColor": "#f5a623",
+          "alertWidth": 1,
+          "alertDash": "dashed",
+          "alertLabel": true,
+          "candles": {
+            "bodyVisible": true,
+            "upColor": "#619a8d",
+            "downColor": "#3f3f40",
+            "borderVisible": true,
+            "borderUpColor": "#3f3f40",
+            "borderDownColor": "#3f3f40",
+            "wickVisible": true,
+            "wickUpColor": "#3f3f40",
+            "wickDownColor": "#3f3f40"
+          },
+          "canvas": {
+            "background": "#d2d4dc",
+            "gridMode": "none",
+            "gridColor": "#1a1a20",
+            "gridStyle": 0,
+            "crosshairColor": "rgba(26, 27, 30, 0.33)",
+            "crosshairOpacity": 100,
+            "crosshairWidth": 1,
+            "crosshairStyle": 1,
+            "crosshairTimeLabel": true,
+            "crosshairPriceLabel": true,
+            "crosshairLabelBg": "#9598a1",
+            "scaleTextColor": "#474747",
+            "scaleFontSize": 12,
+            "scaleFontFamily": "Helvetica, Arial, sans-serif",
+            "scaleLineColor": "#818181",
+            "scaleLineOpacity": 100,
+            "navButtons": "hover",
+            "paneButtons": "hover",
+            "marginTop": 10,
+            "marginBottom": 10,
+            "marginRight": 10,
+            "shiftEnd": true,
+            "autoScroll": true,
+            "maxZoom": 700,
+            "maxVZoom": 3,
+            "candleWidthPct": 70
+          },
+          "statusLine": {
+            "title": true,
+            "chartValues": false,
+            "color": "#474747",
+            "fontSize": 13,
+            "bgColor": "#d2d4dc",
+            "bgOpacity": 70,
+            "marketStatus": true,
+            "marketColors": {
+              "open": "#26a69a",
+              "maintenance": "#f0b90b",
+              "closed": "#ef5350"
+            }
+          },
+          "indicators": {
+            "title": true,
+            "inputs": true,
+            "values": true,
+            "bg": true,
+            "bgOpacity": 60
+          },
+          "trades": {
+            "visible": false,
+            "buyColor": "#26a69a",
+            "sellColor": "#ef5350",
+            "thickness": 2,
+            "style": "dot",
+            "projBars": 5,
+            "projHeightPct": 20,
+            "showOrders": true
+          },
+          "chartType": "candles",
+          "line": {
+            "source": "close",
+            "color": "#2962ff",
+            "lineWidth": 2,
+            "lineStyle": "solid",
+            "highColor": "#26a69a",
+            "lowColor": "#ef5350"
+          }
+        },
+        "broker": null
+      }
+    ],
+    "sync": {
+      "syncSymbol": true,
+      "syncInterval": false,
+      "syncCrosshair": false,
+      "syncRange": false
+    },
+    "synced": {},
+    "layers": {},
+    "maximizedPane": null
+  }
+}

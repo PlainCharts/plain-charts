@@ -1,0 +1,18 @@
+{
+  "autoRestore": true,
+  "windows": [
+    {
+      "bounds": {
+        "x": 179,
+        "y": 52,
+        "width": 1480,
+        "height": 920
+      },
+      "tabIds": [
+        "tms3lmuw8paiq"
+      ],
+      "activeId": "tms3lmuw8paiq"
+    }
+  ],
+  "orderTicket": null
+}
