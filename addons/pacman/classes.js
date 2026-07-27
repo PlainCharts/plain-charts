@@ -60,7 +60,7 @@ export const LOCAL = {
 // Folder classes: pick a folder, copy the whole tree into the library.
 export const INSTALL_EP = /** @type {Record<string,string>} */ ({ studies: '/api/user-studies/package', addons: '/api/addons/package', tools: '/api/user-tools/package', adapters: '/api/adapters/package', primitives: '/api/user-order-primitives/package' });
 // Single-file classes: pick one file, save it via the folder-library endpoint ({name, data}).
-export const INSTALL_FILE_EP = /** @type {Record<string,{url:string,accept:string}>} */ ({ themes: { url: '/api/themes/save', accept: '.json' }, 'chart-themes': { url: '/api/chart-themes/save', accept: '.json' } });
+export const INSTALL_FILE_EP = /** @type {Record<string,{url:string,accept:string}>} */ ({ themes: { url: '/api/themes/save', accept: '.json' }, 'chart-themes': { url: '/api/chart-themes/save', accept: '.json' }, vocab: { url: '/api/vocab/save', accept: '.json' } });
 export const UNINSTALL_EP = /** @type {Record<string,{url:string,field:string}>} */ ({
   studies: { url: '/api/user-studies/delete', field: 'name' },
   addons: { url: '/api/addons/delete', field: 'id' },
@@ -69,4 +69,5 @@ export const UNINSTALL_EP = /** @type {Record<string,{url:string,field:string}>}
   primitives: { url: '/api/user-order-primitives/delete', field: 'id' },
   themes: { url: '/api/themes/delete', field: 'name' },
   'chart-themes': { url: '/api/chart-themes/delete', field: 'name' },
+  vocab: { url: '/api/vocab/delete', field: 'name' },
 });

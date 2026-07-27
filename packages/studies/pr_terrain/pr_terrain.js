@@ -83,8 +83,6 @@ function movingAverage(series, type, len, volumes) {
 
 Studies.register({
   id: 'pr_terrain',
-  name: '%R Terrain 3D (ether demo)',
-  description: 'A study that renders Williams %R as a 3D terrain heatmap.',
   overlay: false,
   viewport: true,
   inputs: [

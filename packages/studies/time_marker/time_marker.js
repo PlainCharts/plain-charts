@@ -105,8 +105,6 @@ function markerDays(refNow, off, past, back, future, fwd) {
 
 Studies.register({
   id: 'time_marker',
-  name: 'Time marker',
-  description: 'A study that marks specific times of day on the chart.',
   overlay: true,
   inputs,
   calc(bars, p) {

@@ -178,8 +178,6 @@ function withAlpha(col, a) {
 
 Studies.register({
   id: 'pr_trend_exhaustion',
-  name: '%R Trend Exhaustion',
-  description: 'A study that flags trend exhaustion using Williams %R.',
   overlay: false,   // oscillator: its own sub-pane below price
   inputs: [
     { key: 'source', name: 'Source', type: 'source', default: 'close' },

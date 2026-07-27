@@ -98,8 +98,6 @@ SDEF.forEach((d, i) => {
 
 Studies.register({
   id: 'session_marker',
-  name: 'Session Marker',
-  description: 'A study that helps you keep track of multiple market sessions.',
   overlay: true,
   inputs,
   /**

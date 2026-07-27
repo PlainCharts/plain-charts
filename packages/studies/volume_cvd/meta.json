@@ -1,0 +1,6 @@
+{
+  "name": "Cumulative Volume Delta",
+  "description": "A study that tracks the running sum of buy minus sell volume.",
+  "author": "",
+  "icon": ""
+}

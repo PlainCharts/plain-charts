@@ -1,7 +1,6 @@
 {
   "name": "SMA Cross",
-  "description": "Fast and slow simple moving averages on the price pane. A minimal demo package for Pacman.",
+  "description": "Fast and slow simple moving averages on the price pane.",
   "author": "ether",
-  "version": "1.0.0",
-  "homepage": "https://github.com/ether-strannik/pacman/tree/main/packages/studies/sma_cross"
+  "icon": ""
 }

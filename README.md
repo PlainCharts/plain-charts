@@ -24,13 +24,13 @@
 
 ## Concept
 
-The core contains only the infrastructure required to build on. Everything else is a module.
+The core holds only the essential infrastructure needed for building. Everything else exists as a module.
 
-That hands architectural choices back to you — systems composed by the user, not prescribed.
+This design gives full architectural control back to you. Systems are composed by the user rather than prescribed by the platform.
 
-APIs, modules, scripts, and AI agents extend it without touching the core. So it can adopt new technologies as they arrive, instead of preserving old constraints.
+APIs, modules, scripts, and AI agents extend functionality without touching the core, which allows the system to adapt to new technologies as they emerge instead of keeping legacy constraints.
 
-Build what you want on a foundation that stays out of your way.
+You can build what you want on a foundation that stays out of your way.
 
 
 ## Architecture

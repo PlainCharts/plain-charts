@@ -51,6 +51,20 @@ const CLASSES = {
   'chart-themes':      { root: 'packages/chart-themes',  kind: 'file' },
 };
 
+// A folder package's file manifest, relative to the package folder, forward-slashed and sorted. raw
+// can't list a folder, so the catalog carries the list -- the client fetches each file on install.
+function listFilesRel(root) {
+  const out = [];
+  const walk = (d, prefix) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(path.join(d, e.name), prefix + e.name + '/');
+      else out.push(prefix + e.name);
+    }
+  };
+  walk(root, '');
+  return out.sort();
+}
+
 /** @type {any[]} */
 const packages = [];
 
@@ -85,6 +99,7 @@ for (const [cls, cfg] of Object.entries(CLASSES)) {
       info: fs.existsSync(path.join(dir, id, INFO_FILE)) ? INFO_FILE : '',
       path: cfg.root + '/' + id,
       runtime,
+      files: listFilesRel(path.join(dir, id)),
     });
   }
 }

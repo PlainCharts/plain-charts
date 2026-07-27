@@ -122,8 +122,6 @@ DEF.forEach((d, i) => {
 
 Studies.register({
   id: 'ma_ribbon',
-  name: 'MA Ribbon',
-  description: 'A study that displays multiple moving averages on the chart.',
   overlay: true,
   requires: { bars: true },
   inputs,

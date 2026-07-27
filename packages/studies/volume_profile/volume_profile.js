@@ -9,8 +9,6 @@
 // is up or down by bar polarity (close >= open); wick volume is split 50/50 up/down.
 Studies.register({
   id: 'volume_profile',
-  name: 'Volume Profile',
-  description: 'A study that shows volume traded at each price level.',
   overlay: true,
   inputs: [
     { key: 'lookback', type: 'number', name: 'Number of bars', default: 150, min: 20, max: 500, legend: false },

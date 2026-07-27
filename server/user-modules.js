@@ -10,19 +10,9 @@ const { ROOT, sendJson, readBody, openFolder, sanitizeModName } = require('./uti
 // meta.json. The folder is the shareable unit (drop a folder in and it loads). A study folder
 // is one that holds <id>.js, so loose reference dirs (archive/, examples/) are skipped.
 const STUDIES_DIR = path.join(ROOT, 'packages', 'studies');
-// Scrape a single-line string field from a module file WITHOUT executing it (`key: '...'` or "..."). The
-// package's registration object is the one source of truth; the package manager reads name/description/icon
-// from it this way. Anchored (studies/tools: `.register(`; adapters: `const adapter`) so a nested `name:` on
-// a field/option above it isn't picked up.
-function scrapeField(file, key, anchor = '.register(') {
-  try {
-    let src = fs.readFileSync(file, 'utf-8');
-    const i = anchor ? src.indexOf(anchor) : -1;
-    if (i >= 0) src = src.slice(i);
-    const m = new RegExp('\\b' + key + '\\s*:\\s*([\'"])(.*?)\\1').exec(src);
-    return m ? m[2] : '';
-  } catch (_) { return ''; }
-}
+// Package metadata (name/description) is NOT read from the module source. It comes from a package's
+// meta.json (wired separately). Discovery here reports the folder id + file-based facts (icon/vocab
+// presence) only, so nothing is scraped from the code.
 function handleUserStudies(req, res, urlPath, query) {
   if (urlPath === '/api/user-studies' && req.method === 'GET') {
     const studies = [];
@@ -30,9 +20,9 @@ function handleUserStudies(req, res, urlPath, query) {
       for (const e of fs.readdirSync(STUDIES_DIR, { withFileTypes: true })) {
         if (!e.isDirectory()) continue;
         if (!fs.existsSync(path.join(STUDIES_DIR, e.name, e.name + '.js'))) continue;
-        const file = path.join(STUDIES_DIR, e.name, e.name + '.js');
         const icon = fs.existsSync(path.join(STUDIES_DIR, e.name, 'icon.png')) ? '/packages/studies/' + e.name + '/icon.png' : '';
-        studies.push({ id: e.name, name: scrapeField(file, 'name') || e.name, description: scrapeField(file, 'description'), icon });
+        // name/description are NOT scraped from the module -- they come from meta.json (pending). Blank/id until then.
+        studies.push({ id: e.name, name: e.name, description: '', icon });
       }
     } catch (_) {}
     return sendJson(res, 200, { studies });
@@ -96,7 +86,8 @@ function handleUserTools(req, res, urlPath, query) {
         const hasVocab = fs.existsSync(path.join(f, 'vocab.json'));
         if (hasIcon) icons.push(e.name);
         const toolFile = path.join(f, e.name + '.js');
-        if (fs.existsSync(toolFile)) tools.push({ folder: e.name, name: scrapeField(toolFile, 'name') || e.name, description: scrapeField(toolFile, 'description'), icon: scrapeField(toolFile, 'icon'), hasIcon, hasVocab });
+        // name/description NOT scraped from the module -- they come from meta.json (pending). icon by file convention.
+        if (fs.existsSync(toolFile)) tools.push({ folder: e.name, name: e.name, description: '', icon: hasIcon ? 'icon.png' : '', hasIcon, hasVocab });
       }
     } catch (_) {}
     return sendJson(res, 200, { tools, icons });
@@ -174,4 +165,4 @@ function handleToolIcon(req, res) {
   });
 }
 
-module.exports = { handleUserStudies, handleUserTools, handleToolIcon, scrapeField };
+module.exports = { handleUserStudies, handleUserTools, handleToolIcon };

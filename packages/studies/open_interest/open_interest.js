@@ -8,8 +8,6 @@
 // which is the honest picture. The first consumer of the widened data feed.
 Studies.register({
   id: 'open_interest',
-  name: 'Open Interest',
-  description: 'A study that plots the number of open contracts over time.',
   overlay: false,   // its own sub-pane (OI is on a different scale from price)
   requires: { bars: true },
   inputs: [

@@ -19,18 +19,8 @@ const STATUS_FILE = path.join(ROOT, 'settings', 'addons', 'addons-status.json');
 
 const sanitizeId = (n) => String(n || '').replace(/\.js$/i, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60);
 
-// Scrape a single-line string field from index.js WITHOUT executing it (`key: '...'` or "..."), anchored to
-// module.exports so a nested field above it isn't picked up. The export object is the one source of truth;
-// the package manager reads name/description from it this way.
-function scrapeField(id, key) {
-  try {
-    let src = fs.readFileSync(path.join(ADDONS_DIR, id, 'index.js'), 'utf8');
-    const ex = src.indexOf('module.exports');
-    if (ex >= 0) src = src.slice(ex);
-    const m = new RegExp('\\b' + key + '\\s*:\\s*([\'"])(.*?)\\1').exec(src);
-    return m ? m[2] : '';
-  } catch (_) { return ''; }
-}
+// Addon metadata (name/description) is NOT scraped from index.js. It comes from a package's meta.json
+// (wired separately); discovery reports the folder id + file-based facts (icon/locales) only.
 
 function readState() { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch (_) { return {}; } }
 function writeState(s) { try { fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true }); fs.writeFileSync(STATE_FILE, JSON.stringify(s, null, 2)); } catch (_) {} }
@@ -74,7 +64,7 @@ module.exports = {
       const dir = path.join(ADDONS_DIR, id);
       const hasIcon = fs.existsSync(path.join(dir, 'icon.png'));
       const locales = readAddonLocales(dir);
-      return { id, name: scrapeField(id, 'name') || id, description: scrapeField(id, 'description'), enabled: state[id] === true, running: !!st.running, error: st.error || null, logs: (st.logs || []).slice(-200), inputs: st.inputs || [], config: st.config || {}, hasIcon, locales };
+      return { id, name: id, description: '', enabled: state[id] === true, running: !!st.running, error: st.error || null, logs: (st.logs || []).slice(-200), inputs: st.inputs || [], config: st.config || {}, hasIcon, locales };
     });
   },
   toggle(id, enabled) { const s = readState(); s[id] = !!enabled; writeState(s); return { ok: true }; },

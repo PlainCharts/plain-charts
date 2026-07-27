@@ -2,7 +2,7 @@
 // Loads indicator packages from packages/studies/<id>/<id>.js by dynamic ES-module
 // import (no build step). Each module runs Studies.register(); we diff the registry
 // to map the new study id(s) back to their package folder (for edit/delete/reload).
-import { setRegisterHook } from './registry.js';
+import { setRegisterHook, getStudy } from './registry.js';
 import { bus } from '../bus.js';
 import { log } from '../dom.js';
 import { IPC } from '../ipc-contract.js';
@@ -32,6 +32,10 @@ async function importFile(folder) {
   try { await import('/packages/studies/' + folder + '/' + folder + '.js?t=' + Date.now()); }   // cache-bust so edits reload
   finally { setRegisterHook(null); }
   ids.forEach((id) => fileOf.set(id, folder));
+  // Name/description come ONLY from the package's meta.json -- never the code. No meta -> blank.
+  let meta = null;
+  try { const r = await fetch('/packages/studies/' + folder + '/meta.json', { cache: 'no-store' }); if (r.ok) meta = await r.json(); } catch (_) {}
+  for (const id of ids) { const st = getStudy(id); if (st) { st.name = (meta && meta.name) || ''; st.description = (meta && meta.description) || ''; } }
 }
 
 export async function loadUserStudies() {

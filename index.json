@@ -8,7 +8,39 @@
       "icon": "",
       "info": "info.md",
       "path": "data_engine/adapters/cqg",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "images/app-connection.png",
+        "index.js",
+        "info.md",
+        "proto/ReadMe.txt",
+        "proto/WebAPI/account_authorization_2.proto",
+        "proto/WebAPI/api_limit_2.proto",
+        "proto/WebAPI/economic_calendar_2.proto",
+        "proto/WebAPI/historical_2.proto",
+        "proto/WebAPI/instrument_definition_2.proto",
+        "proto/WebAPI/market_data_2.proto",
+        "proto/WebAPI/metadata_2.proto",
+        "proto/WebAPI/metadata_admin_2.proto",
+        "proto/WebAPI/order_2.proto",
+        "proto/WebAPI/otc_1.proto",
+        "proto/WebAPI/rules_1.proto",
+        "proto/WebAPI/strategy_2.proto",
+        "proto/WebAPI/strategy_definition_2.proto",
+        "proto/WebAPI/symbol_browsing_2.proto",
+        "proto/WebAPI/trade_routing_2.proto",
+        "proto/WebAPI/trading_account_2.proto",
+        "proto/WebAPI/trading_session_2.proto",
+        "proto/WebAPI/user_attribute_2.proto",
+        "proto/WebAPI/user_session_2.proto",
+        "proto/WebAPI/webapi_2.proto",
+        "proto/common/decimal.proto",
+        "proto/common/shared_1.proto",
+        "proto/google/protobuf/timestamp.proto",
+        "protocol.js",
+        "trade.js",
+        "transport.js"
+      ]
     },
     {
       "class": "adapters",
@@ -18,7 +50,16 @@
       "icon": "",
       "info": "info.md",
       "path": "data_engine/adapters/mt5",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "MT5_Bridge.mq5",
+        "images/app-connection-vm.png",
+        "images/app-connection.png",
+        "images/ea-inputs.png",
+        "images/options-experts.png",
+        "index.js",
+        "info.md"
+      ]
     },
     {
       "class": "adapters",
@@ -28,7 +69,11 @@
       "icon": "",
       "info": "",
       "path": "data_engine/adapters/oanda",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "index.js",
+        "server.js"
+      ]
     },
     {
       "class": "adapters",
@@ -38,7 +83,17 @@
       "icon": "",
       "info": "info.md",
       "path": "data_engine/adapters/schwab",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "common.js",
+        "history.js",
+        "images/app-connection.png",
+        "index.js",
+        "info.md",
+        "server.js",
+        "streamer.js",
+        "trader.js"
+      ]
     },
     {
       "class": "addons",
@@ -48,7 +103,13 @@
       "icon": "icon.png",
       "info": "",
       "path": "addons/data-interceptor",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "icon.png",
+        "index.js",
+        "locales/en.json",
+        "locales/es.json"
+      ]
     },
     {
       "class": "addons",
@@ -58,7 +119,25 @@
       "icon": "icon.png",
       "info": "",
       "path": "addons/pacman",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "actions.js",
+        "classes.js",
+        "flags/es.svg",
+        "flags/us.svg",
+        "icon.png",
+        "images/brand-github.png",
+        "images/circle-minus.png",
+        "images/device-desktop.png",
+        "images/external-link.png",
+        "images/info-circle.png",
+        "images/refresh.png",
+        "images/settings.png",
+        "index.js",
+        "lang.js",
+        "languages.csv",
+        "ui.js"
+      ]
     },
     {
       "class": "addons",
@@ -68,7 +147,13 @@
       "icon": "icon.png",
       "info": "",
       "path": "addons/perf-monitor",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "icon.png",
+        "index.js",
+        "locales/en.json",
+        "locales/es.json"
+      ]
     },
     {
       "class": "addons",
@@ -78,7 +163,21 @@
       "icon": "icon.png",
       "info": "",
       "path": "addons/position-manager",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "auto.js",
+        "config.json",
+        "entry.js",
+        "icon.png",
+        "index.js",
+        "kernel.js",
+        "locales/en.json",
+        "locales/es.json",
+        "market-data.js",
+        "plan-bridge.js",
+        "shell.js",
+        "trade-feed.js"
+      ]
     },
     {
       "class": "addons",
@@ -88,7 +187,13 @@
       "icon": "icon.png",
       "info": "",
       "path": "addons/screenshot",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "icon.png",
+        "index.js",
+        "locales/en.json",
+        "locales/es.json"
+      ]
     },
     {
       "class": "chart-themes",
@@ -170,7 +275,10 @@
       "icon": "",
       "info": "",
       "path": "packages/primitives/string-beads",
-      "runtime": "index.js"
+      "runtime": "index.js",
+      "files": [
+        "index.js"
+      ]
     },
     {
       "class": "studies",
@@ -180,7 +288,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/bollinger",
-      "runtime": "bollinger.js"
+      "runtime": "bollinger.js",
+      "files": [
+        "bollinger.js"
+      ]
     },
     {
       "class": "studies",
@@ -190,7 +301,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/day_marker",
-      "runtime": "day_marker.js"
+      "runtime": "day_marker.js",
+      "files": [
+        "day_marker.js"
+      ]
     },
     {
       "class": "studies",
@@ -200,7 +314,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/fvg",
-      "runtime": "fvg.js"
+      "runtime": "fvg.js",
+      "files": [
+        "fvg.js"
+      ]
     },
     {
       "class": "studies",
@@ -210,7 +327,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/ma_ribbon",
-      "runtime": "ma_ribbon.js"
+      "runtime": "ma_ribbon.js",
+      "files": [
+        "ma_ribbon.js"
+      ]
     },
     {
       "class": "studies",
@@ -220,7 +340,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/open_interest",
-      "runtime": "open_interest.js"
+      "runtime": "open_interest.js",
+      "files": [
+        "open_interest.js"
+      ]
     },
     {
       "class": "studies",
@@ -230,7 +353,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/pr_terrain",
-      "runtime": "pr_terrain.js"
+      "runtime": "pr_terrain.js",
+      "files": [
+        "pr_terrain.js"
+      ]
     },
     {
       "class": "studies",
@@ -240,7 +366,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/pr_trend_exhaustion",
-      "runtime": "pr_trend_exhaustion.js"
+      "runtime": "pr_trend_exhaustion.js",
+      "files": [
+        "pr_trend_exhaustion.js"
+      ]
     },
     {
       "class": "studies",
@@ -250,7 +379,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/rsi",
-      "runtime": "rsi.js"
+      "runtime": "rsi.js",
+      "files": [
+        "rsi.js"
+      ]
     },
     {
       "class": "studies",
@@ -260,7 +392,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/session_marker",
-      "runtime": "session_marker.js"
+      "runtime": "session_marker.js",
+      "files": [
+        "session_marker.js"
+      ]
     },
     {
       "class": "studies",
@@ -270,7 +405,11 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/sma_cross",
-      "runtime": "sma_cross.js"
+      "runtime": "sma_cross.js",
+      "files": [
+        "meta.json",
+        "sma_cross.js"
+      ]
     },
     {
       "class": "studies",
@@ -280,7 +419,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/time_marker",
-      "runtime": "time_marker.js"
+      "runtime": "time_marker.js",
+      "files": [
+        "time_marker.js"
+      ]
     },
     {
       "class": "studies",
@@ -290,7 +432,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/volume",
-      "runtime": "volume.js"
+      "runtime": "volume.js",
+      "files": [
+        "volume.js"
+      ]
     },
     {
       "class": "studies",
@@ -300,7 +445,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/volume_cvd",
-      "runtime": "volume_cvd.js"
+      "runtime": "volume_cvd.js",
+      "files": [
+        "volume_cvd.js"
+      ]
     },
     {
       "class": "studies",
@@ -310,7 +458,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/volume_delta_candle",
-      "runtime": "volume_delta_candle.js"
+      "runtime": "volume_delta_candle.js",
+      "files": [
+        "volume_delta_candle.js"
+      ]
     },
     {
       "class": "studies",
@@ -320,7 +471,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/volume_profile",
-      "runtime": "volume_profile.js"
+      "runtime": "volume_profile.js",
+      "files": [
+        "volume_profile.js"
+      ]
     },
     {
       "class": "studies",
@@ -330,7 +484,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/volume_up_down_absorption",
-      "runtime": "volume_up_down_absorption.js"
+      "runtime": "volume_up_down_absorption.js",
+      "files": [
+        "volume_up_down_absorption.js"
+      ]
     },
     {
       "class": "studies",
@@ -340,7 +497,10 @@
       "icon": "",
       "info": "",
       "path": "packages/studies/vwap",
-      "runtime": "vwap.js"
+      "runtime": "vwap.js",
+      "files": [
+        "vwap.js"
+      ]
     },
     {
       "class": "themes",
@@ -431,7 +591,11 @@
       "icon": "arrow.png",
       "info": "",
       "path": "packages/tools/arrow",
-      "runtime": "arrow.js"
+      "runtime": "arrow.js",
+      "files": [
+        "arrow.js",
+        "arrow.png"
+      ]
     },
     {
       "class": "tools",
@@ -441,7 +605,13 @@
       "icon": "callout.png",
       "info": "",
       "path": "packages/tools/callout",
-      "runtime": "callout.js"
+      "runtime": "callout.js",
+      "files": [
+        "callout.js",
+        "callout.png",
+        "pin.js",
+        "text-box.js"
+      ]
     },
     {
       "class": "tools",
@@ -451,7 +621,11 @@
       "icon": "cursor.png",
       "info": "",
       "path": "packages/tools/cursor",
-      "runtime": "cursor.js"
+      "runtime": "cursor.js",
+      "files": [
+        "cursor.js",
+        "cursor.png"
+      ]
     },
     {
       "class": "tools",
@@ -461,7 +635,11 @@
       "icon": "fib.png",
       "info": "",
       "path": "packages/tools/fib",
-      "runtime": "fib.js"
+      "runtime": "fib.js",
+      "files": [
+        "fib.js",
+        "fib.png"
+      ]
     },
     {
       "class": "tools",
@@ -471,7 +649,11 @@
       "icon": "hline.png",
       "info": "",
       "path": "packages/tools/hline",
-      "runtime": "hline.js"
+      "runtime": "hline.js",
+      "files": [
+        "hline.js",
+        "hline.png"
+      ]
     },
     {
       "class": "tools",
@@ -481,7 +663,11 @@
       "icon": "hray.png",
       "info": "",
       "path": "packages/tools/hray",
-      "runtime": "hray.js"
+      "runtime": "hray.js",
+      "files": [
+        "hray.js",
+        "hray.png"
+      ]
     },
     {
       "class": "tools",
@@ -491,7 +677,11 @@
       "icon": "levelray.png",
       "info": "",
       "path": "packages/tools/levelray",
-      "runtime": "levelray.js"
+      "runtime": "levelray.js",
+      "files": [
+        "levelray.js",
+        "levelray.png"
+      ]
     },
     {
       "class": "tools",
@@ -501,7 +691,11 @@
       "icon": "path.png",
       "info": "",
       "path": "packages/tools/path",
-      "runtime": "path.js"
+      "runtime": "path.js",
+      "files": [
+        "path.js",
+        "path.png"
+      ]
     },
     {
       "class": "tools",
@@ -511,7 +705,12 @@
       "icon": "priceRange.png",
       "info": "",
       "path": "packages/tools/range",
-      "runtime": "range.js"
+      "runtime": "range.js",
+      "files": [
+        "dateRange.png",
+        "priceRange.png",
+        "range.js"
+      ]
     },
     {
       "class": "tools",
@@ -521,7 +720,12 @@
       "icon": "rect.png",
       "info": "",
       "path": "packages/tools/rect",
-      "runtime": "rect.js"
+      "runtime": "rect.js",
+      "files": [
+        "pin.js",
+        "rect.js",
+        "rect.png"
+      ]
     },
     {
       "class": "tools",
@@ -531,7 +735,12 @@
       "icon": "symbol.png",
       "info": "",
       "path": "packages/tools/symbol",
-      "runtime": "symbol.js"
+      "runtime": "symbol.js",
+      "files": [
+        "symbol-picker.js",
+        "symbol.js",
+        "symbol.png"
+      ]
     },
     {
       "class": "tools",
@@ -541,7 +750,13 @@
       "icon": "text.png",
       "info": "",
       "path": "packages/tools/text",
-      "runtime": "text.js"
+      "runtime": "text.js",
+      "files": [
+        "pin.js",
+        "text-box.js",
+        "text.js",
+        "text.png"
+      ]
     },
     {
       "class": "tools",
@@ -551,7 +766,11 @@
       "icon": "trendline.png",
       "info": "",
       "path": "packages/tools/trendline",
-      "runtime": "trendline.js"
+      "runtime": "trendline.js",
+      "files": [
+        "trendline.js",
+        "trendline.png"
+      ]
     },
     {
       "class": "tools",
@@ -561,7 +780,11 @@
       "icon": "vline.png",
       "info": "",
       "path": "packages/tools/vline",
-      "runtime": "vline.js"
+      "runtime": "vline.js",
+      "files": [
+        "vline.js",
+        "vline.png"
+      ]
     },
     {
       "class": "tools",
@@ -571,7 +794,11 @@
       "icon": "zoom.png",
       "info": "",
       "path": "packages/tools/zoom",
-      "runtime": "zoom.js"
+      "runtime": "zoom.js",
+      "files": [
+        "zoom.js",
+        "zoom.png"
+      ]
     },
     {
       "class": "vocab",

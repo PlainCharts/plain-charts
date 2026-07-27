@@ -3,8 +3,6 @@
 // own sub-pane below the chart, with overbought/oversold band lines at 70/30.
 Studies.register({
   id: 'rsi',
-  name: 'Relative Strength Index (RSI)',
-  description: 'A momentum oscillator that measures the speed of price changes.',
   overlay: false,   // → own pane below the price chart
   requires: { bars: true },
   // line appearance lives on the Style tab — see the plot defaults below.

@@ -25,7 +25,7 @@ const { sendJson, readBody, openFolder, sanitizeModName } = require('./server/ut
 const { handleSettings } = require('./server/settings-api.js');
 const { mountAdapterHooks, handleAdapterHooks } = require('./server/adapter-hooks.js');
 const { handleCache } = require('./server/cache.js');
-const { handleUserStudies, handleUserTools, handleToolIcon, scrapeField } = require('./server/user-modules.js');
+const { handleUserStudies, handleUserTools, handleToolIcon } = require('./server/user-modules.js');
 
 // Addons run unrestricted Node code — keep the server alive if one misbehaves.
 // (Per-addon child-process isolation is the next hardening step.)
@@ -98,7 +98,7 @@ const server = http.createServer((req, res) => {
   // write one in and it loads.
   if (urlPath === '/api/adapters' && req.method === 'GET') {
     const dir = path.join(ROOT, 'data_engine', 'adapters'); const adapters = [];
-    try { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (e.isDirectory() && fs.existsSync(path.join(dir, e.name, 'index.js'))) { const f = path.join(dir, e.name, 'index.js'); adapters.push({ id: e.name, name: scrapeField(f, 'name', 'const adapter') || e.name, description: scrapeField(f, 'description', 'const adapter'), url: '/data_engine/adapters/' + e.name + '/index.js', icon: fs.existsSync(path.join(dir, e.name, 'icon.png')) ? '/data_engine/adapters/' + e.name + '/icon.png' : '' }); } } } catch (_) {}
+    try { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (e.isDirectory() && fs.existsSync(path.join(dir, e.name, 'index.js'))) { adapters.push({ id: e.name, name: e.name, description: '', url: '/data_engine/adapters/' + e.name + '/index.js', icon: fs.existsSync(path.join(dir, e.name, 'icon.png')) ? '/data_engine/adapters/' + e.name + '/icon.png' : '' }); } } } catch (_) {}
     return sendJson(res, 200, { adapters });
   }
   if (urlPath === '/api/adapters/open' && req.method === 'POST') { openFolder(path.join(ROOT, 'data_engine', 'adapters')); return sendJson(res, 200, { ok: true }); }
@@ -131,7 +131,7 @@ const server = http.createServer((req, res) => {
   // way as adapters. Drop or write one in and it loads; absent = the chart falls back to pill.
   if (urlPath === '/api/user-order-primitives' && req.method === 'GET') {
     const dir = path.join(ROOT, 'packages', 'primitives'); const primitives = [];
-    try { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (e.isDirectory() && fs.existsSync(path.join(dir, e.name, 'index.js'))) { const f = path.join(dir, e.name, 'index.js'); primitives.push({ id: e.name, name: scrapeField(f, 'name', 'registerPrimitive(') || e.name, description: scrapeField(f, 'description', 'registerPrimitive('), url: '/packages/primitives/' + e.name + '/index.js', icon: fs.existsSync(path.join(dir, e.name, 'icon.png')) ? '/packages/primitives/' + e.name + '/icon.png' : '' }); } } } catch (_) {}
+    try { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (e.isDirectory() && fs.existsSync(path.join(dir, e.name, 'index.js'))) { primitives.push({ id: e.name, name: e.name, description: '', url: '/packages/primitives/' + e.name + '/index.js', icon: fs.existsSync(path.join(dir, e.name, 'icon.png')) ? '/packages/primitives/' + e.name + '/icon.png' : '' }); } } } catch (_) {}
     return sendJson(res, 200, { primitives });
   }
   if (urlPath === '/api/user-order-primitives/open' && req.method === 'POST') { openFolder(path.join(ROOT, 'packages', 'primitives')); return sendJson(res, 200, { ok: true }); }

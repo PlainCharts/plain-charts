@@ -50,8 +50,6 @@ const inputs = [
 
 Studies.register({
   id: 'fvg',
-  name: 'Fair Value Gap',
-  description: 'A study that highlights market imbalances.',
   overlay: true,
   inputs,
   /**

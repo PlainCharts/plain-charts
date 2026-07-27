@@ -8,8 +8,6 @@
 // in the highlight colour. Both thresholds are user inputs. Copy of volume_up_down.js with the highlight.
 Studies.register({
   id: 'volume_stack_absorption',
-  name: 'Up/Down Volume + Absorption',
-  description: 'A study that splits volume into buying and selling and flags absorption.',
   overlay: false,
   intrabar: true,   // real up/down needs sub-bars
   requires: { bars: true, intrabars: true },

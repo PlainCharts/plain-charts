@@ -5,8 +5,6 @@
 // it, not just volume. Height and up/down colors are configurable like any indicator.
 Studies.register({
   id: 'volume',
-  name: 'Volume',
-  description: 'A study that plots total traded volume as a histogram.',
   overlay: true,        // draws on the price pane (not its own sub-pane)
   inputs: [
     { key: 'height', type: 'number', name: 'Height %', default: 20, min: 5, max: 60, legend: false },

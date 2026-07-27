@@ -167,8 +167,6 @@ const weekdayNum = (name) => { const i = WEEKDAYS.indexOf(name); return i < 0 ? 
 
 Studies.register({
   id: 'day_marker',
-  name: 'Day Marker',
-  description: 'Vertical lines marking each new day, session, and time boundary.',
   overlay: true,
   inputs,
   /**

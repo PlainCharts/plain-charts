@@ -15,8 +15,6 @@ import { getOffsetMin } from '../../../src/workspace/timezone.js';
 
 Studies.register({
   id: 'cvd',
-  name: 'Cumulative Volume Delta',
-  description: 'A study that tracks the running sum of buy minus sell volume.',
   overlay: false,      // its own sub-pane (the cumulative swings above/below zero)
   intrabar: true,      // needs lower-timeframe sub-bars for the buy/sell split
   requires: { bars: true, intrabars: true },

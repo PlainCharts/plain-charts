@@ -28,8 +28,6 @@ function withAlpha(col, a) {
 
 Studies.register({
   id: 'vwap',
-  name: 'VWAP',
-  description: 'A study that plots the volume-weighted average price.',
   overlay: true,   // on the price pane
   requires: { bars: true },
   inputs: [

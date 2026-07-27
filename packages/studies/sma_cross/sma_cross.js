@@ -3,8 +3,6 @@
 // self-contained (no imports), so installing it into any packages/studies/ folder just works.
 Studies.register({
   id: 'sma_cross',
-  name: 'SMA Cross',
-  description: 'Fast and slow simple moving averages on the price pane.',
   overlay: true,
   requires: { bars: true },
   inputs: [

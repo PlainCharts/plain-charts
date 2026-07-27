@@ -13,8 +13,6 @@
 // the true up/down sums, so the hollow is the real opposing volume, not a path-dependent excursion.
 Studies.register({
   id: 'volume_delta_candle',
-  name: 'Volume Delta x-axis',
-  description: 'A study that plots per-bar buy minus sell volume along the time axis.',
   overlay: true,        // draws on the price pane, pinned to the bottom band (its own overlay scale)
   intrabar: true,       // needs lower-timeframe sub-bars for real up/down volume
   requires: { bars: true, intrabars: true },

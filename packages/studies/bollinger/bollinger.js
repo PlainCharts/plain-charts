@@ -5,8 +5,6 @@
 // keys to fill between and the host paints the polygon (see band-primitive.js).
 Studies.register({
   id: 'bollinger',
-  name: 'Bollinger Bands',
-  description: 'A moving average with standard-deviation bands above and below.',
   overlay: true,
   requires: { bars: true },
   inputs: [
