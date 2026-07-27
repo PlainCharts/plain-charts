@@ -48,7 +48,7 @@ const CLASSES = {
   adapters:          { root: 'data_engine/adapters',    kind: 'folder', runtime: () => 'index.js',    anchor: 'const adapter' },
   primitives:        { root: 'packages/primitives',     kind: 'folder', runtime: () => 'index.js',    anchor: 'registerPrimitive(' },
   themes:            { root: 'packages/themes',         kind: 'file' },
-  'chart-templates': { root: 'packages/chart-templates', kind: 'file' },
+  'chart-themes':      { root: 'packages/chart-themes',  kind: 'file' },
 };
 
 /** @type {any[]} */

@@ -91,6 +91,78 @@
       "runtime": "index.js"
     },
     {
+      "class": "chart-themes",
+      "id": "Chalk",
+      "name": "Chalk",
+      "description": "A dark chart theme with chalk-white and slate-blue candles.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Chalk.json"
+    },
+    {
+      "class": "chart-themes",
+      "id": "Daybreak",
+      "name": "Daybreak",
+      "description": "A clean white chart theme in grayscale.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Daybreak.json"
+    },
+    {
+      "class": "chart-themes",
+      "id": "Fern",
+      "name": "Fern",
+      "description": "A light chart theme with fern-green candles on soft slate.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Fern.json"
+    },
+    {
+      "class": "chart-themes",
+      "id": "Frost",
+      "name": "Frost",
+      "description": "A light chart theme with gray and icy-blue candles.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Frost.json"
+    },
+    {
+      "class": "chart-themes",
+      "id": "Graphite",
+      "name": "Graphite",
+      "description": "A muted light chart theme in neutral grays.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Graphite.json"
+    },
+    {
+      "class": "chart-themes",
+      "id": "Halo Dark",
+      "name": "Halo Dark",
+      "description": "A dark chart theme with translucent, glowing candles.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Halo Dark.json"
+    },
+    {
+      "class": "chart-themes",
+      "id": "Halo Light",
+      "name": "Halo Light",
+      "description": "A light chart theme with translucent, glowing candles.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Halo Light.json"
+    },
+    {
+      "class": "chart-themes",
+      "id": "Sepia",
+      "name": "Sepia",
+      "description": "A light chart theme in warm sepia browns.",
+      "icon": "",
+      "path": "packages/chart-themes",
+      "runtime": "Sepia.json"
+    },
+    {
       "class": "primitives",
       "id": "string-beads",
       "name": "String and beads",
@@ -500,6 +572,24 @@
       "info": "",
       "path": "packages/tools/zoom",
       "runtime": "zoom.js"
+    },
+    {
+      "class": "vocab",
+      "id": "en",
+      "name": "",
+      "description": "",
+      "icon": "",
+      "path": "static/locale",
+      "runtime": "en.json"
+    },
+    {
+      "class": "vocab",
+      "id": "es",
+      "name": "",
+      "description": "",
+      "icon": "",
+      "path": "static/locale",
+      "runtime": "es.json"
     }
   ]
 }

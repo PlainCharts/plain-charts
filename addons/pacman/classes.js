@@ -6,7 +6,7 @@ import { langLabel } from './lang.js';
 
 export const CATEGORIES = [
   { key: 'studies', name: 'Studies' }, { key: 'addons', name: 'Addons' }, { key: 'tools', name: 'Tools' }, { key: 'adapters', name: 'Adapters' },
-  { key: 'themes', name: 'App Themes' }, { key: 'chart-templates', name: 'Chart Themes' }, { key: 'vocab', name: 'Vocabulary' }, { key: 'primitives', name: 'Primitives' },
+  { key: 'themes', name: 'App Themes' }, { key: 'chart-themes', name: 'Chart Themes' }, { key: 'vocab', name: 'Vocabulary' }, { key: 'primitives', name: 'Primitives' },
 ];
 
 // Local discovery: what's installed on THIS system, per class. Each returns [{id, name}]. Only classes with a
@@ -23,9 +23,9 @@ export const LOCAL = {
     return (r.themes || []).map((/** @type {any} */ th) => ({ id: th.name, name: th.name, description: th.description || '' }));
   },
   /** @returns {Promise<{id:string,name:string}[]>} */
-  'chart-templates': async () => {
-    const r = await fetch('/api/chart-templates', { cache: 'no-store' }).then((x) => x.json());
-    return (r.templates || []).map((/** @type {any} */ tp) => ({ id: tp.name, name: tp.name, description: tp.description || '' }));
+  'chart-themes': async () => {
+    const r = await fetch('/api/chart-themes', { cache: 'no-store' }).then((x) => x.json());
+    return (r.themes || []).map((/** @type {any} */ th) => ({ id: th.name, name: th.name, description: th.description || '' }));
   },
   /** @returns {Promise<{id:string,name:string}[]>} */
   async tools() {
@@ -60,7 +60,7 @@ export const LOCAL = {
 // Folder classes: pick a folder, copy the whole tree into the library.
 export const INSTALL_EP = /** @type {Record<string,string>} */ ({ studies: '/api/user-studies/package', addons: '/api/addons/package', tools: '/api/user-tools/package', adapters: '/api/adapters/package', primitives: '/api/user-order-primitives/package' });
 // Single-file classes: pick one file, save it via the folder-library endpoint ({name, data}).
-export const INSTALL_FILE_EP = /** @type {Record<string,{url:string,accept:string}>} */ ({ themes: { url: '/api/themes/save', accept: '.json' }, 'chart-templates': { url: '/api/chart-templates/save', accept: '.json' } });
+export const INSTALL_FILE_EP = /** @type {Record<string,{url:string,accept:string}>} */ ({ themes: { url: '/api/themes/save', accept: '.json' }, 'chart-themes': { url: '/api/chart-themes/save', accept: '.json' } });
 export const UNINSTALL_EP = /** @type {Record<string,{url:string,field:string}>} */ ({
   studies: { url: '/api/user-studies/delete', field: 'name' },
   addons: { url: '/api/addons/delete', field: 'id' },
@@ -68,5 +68,5 @@ export const UNINSTALL_EP = /** @type {Record<string,{url:string,field:string}>}
   adapters: { url: '/api/adapters/delete', field: 'id' },
   primitives: { url: '/api/user-order-primitives/delete', field: 'id' },
   themes: { url: '/api/themes/delete', field: 'name' },
-  'chart-templates': { url: '/api/chart-templates/delete', field: 'name' },
+  'chart-themes': { url: '/api/chart-themes/delete', field: 'name' },
 });
