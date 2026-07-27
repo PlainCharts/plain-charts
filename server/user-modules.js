@@ -4,7 +4,7 @@
 // icon.png + vocab.json) and the tool-icon upload.
 const fs = require('fs');
 const path = require('path');
-const { ROOT, sendJson, readBody, openFolder, sanitizeModName } = require('./util.js');
+const { ROOT, sendJson, readBody, openFolder, sanitizeModName, readMeta } = require('./util.js');
 
 // Studies are FOLDER PACKAGES under packages/studies/<id>/ : <id>.js (the module) + optional
 // meta.json. The folder is the shareable unit (drop a folder in and it loads). A study folder
@@ -20,9 +20,9 @@ function handleUserStudies(req, res, urlPath, query) {
       for (const e of fs.readdirSync(STUDIES_DIR, { withFileTypes: true })) {
         if (!e.isDirectory()) continue;
         if (!fs.existsSync(path.join(STUDIES_DIR, e.name, e.name + '.js'))) continue;
-        const icon = fs.existsSync(path.join(STUDIES_DIR, e.name, 'icon.png')) ? '/packages/studies/' + e.name + '/icon.png' : '';
-        // name/description are NOT scraped from the module -- they come from meta.json (pending). Blank/id until then.
-        studies.push({ id: e.name, name: e.name, description: '', icon });
+        const meta = readMeta(path.join(STUDIES_DIR, e.name));
+        const icon = meta.icon ? '/packages/studies/' + e.name + '/' + meta.icon : '';
+        studies.push({ id: e.name, name: meta.name || '', description: meta.description || '', icon });
       }
     } catch (_) {}
     return sendJson(res, 200, { studies });
@@ -86,8 +86,8 @@ function handleUserTools(req, res, urlPath, query) {
         const hasVocab = fs.existsSync(path.join(f, 'vocab.json'));
         if (hasIcon) icons.push(e.name);
         const toolFile = path.join(f, e.name + '.js');
-        // name/description NOT scraped from the module -- they come from meta.json (pending). icon by file convention.
-        if (fs.existsSync(toolFile)) tools.push({ folder: e.name, name: e.name, description: '', icon: hasIcon ? 'icon.png' : '', hasIcon, hasVocab });
+        const meta = readMeta(f);
+        if (fs.existsSync(toolFile)) tools.push({ folder: e.name, name: meta.name || '', description: meta.description || '', icon: meta.icon || '', hasIcon, hasVocab });
       }
     } catch (_) {}
     return sendJson(res, 200, { tools, icons });

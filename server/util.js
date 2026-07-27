@@ -49,6 +49,13 @@ const fileSlug = (n) => String(n || '').replace(/[\/\\:*?"<>|\x00-\x1f]/g, '-').
 // Names sanitized to [a-z0-9_-] (no traversal).
 const sanitizeModName = (n) => String(n || '').replace(/\.js$/i, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60);
 
+// Read a folder package's meta.json (name/description/author/icon). The single source of package
+// metadata -- never scraped from the code. Returns {} if the file is absent or invalid.
+function readMeta(dir) {
+  try { return JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf-8')) || {}; }
+  catch (_) { return {}; }
+}
+
 // minimal promise wrapper over https.request -> { status, body:string }
 function httpsRequest(method, urlStr, { headers = {}, body = null } = {}) {
   return new Promise((resolve, reject) => {
@@ -80,4 +87,4 @@ function httpsRequest(method, urlStr, { headers = {}, body = null } = {}) {
   });
 }
 
-module.exports = { ROOT, SETTINGS_DIR, readSettingsFile, writeSettingsFile, sendJson, readBody, openFolder, fileSlug, sanitizeModName, httpsRequest };
+module.exports = { ROOT, SETTINGS_DIR, readSettingsFile, writeSettingsFile, sendJson, readBody, openFolder, fileSlug, sanitizeModName, httpsRequest, readMeta };

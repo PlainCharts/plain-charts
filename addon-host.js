@@ -19,8 +19,12 @@ const STATUS_FILE = path.join(ROOT, 'settings', 'addons', 'addons-status.json');
 
 const sanitizeId = (n) => String(n || '').replace(/\.js$/i, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60);
 
-// Addon metadata (name/description) is NOT scraped from index.js. It comes from a package's meta.json
-// (wired separately); discovery reports the folder id + file-based facts (icon/locales) only.
+// Addon metadata (name/description/icon) comes from the package's meta.json -- never scraped from
+// index.js. Returns {} when absent/invalid.
+function readMeta(id) {
+  try { return JSON.parse(fs.readFileSync(path.join(ADDONS_DIR, id, 'meta.json'), 'utf8')) || {}; }
+  catch (_) { return {}; }
+}
 
 function readState() { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch (_) { return {}; } }
 function writeState(s) { try { fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true }); fs.writeFileSync(STATE_FILE, JSON.stringify(s, null, 2)); } catch (_) {} }
@@ -64,7 +68,8 @@ module.exports = {
       const dir = path.join(ADDONS_DIR, id);
       const hasIcon = fs.existsSync(path.join(dir, 'icon.png'));
       const locales = readAddonLocales(dir);
-      return { id, name: id, description: '', enabled: state[id] === true, running: !!st.running, error: st.error || null, logs: (st.logs || []).slice(-200), inputs: st.inputs || [], config: st.config || {}, hasIcon, locales };
+      const meta = readMeta(id);
+      return { id, name: meta.name || '', description: meta.description || '', enabled: state[id] === true, running: !!st.running, error: st.error || null, logs: (st.logs || []).slice(-200), inputs: st.inputs || [], config: st.config || {}, hasIcon, locales };
     });
   },
   toggle(id, enabled) { const s = readState(); s[id] = !!enabled; writeState(s); return { ok: true }; },

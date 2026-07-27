@@ -26,24 +26,11 @@
 
 The core holds only the essential infrastructure needed for building. Everything else exists as a module.
 
-This design gives full architectural control back to you. Systems are composed by the user rather than prescribed by the platform.
+This gives full architectural control back to you. Systems are composed by the user rather than prescribed by the platform.
 
 APIs, modules, scripts, and AI agents extend functionality without touching the core, which allows the system to adapt to new technologies as they emerge instead of keeping legacy constraints.
 
-You can build what you want on a foundation that stays out of your way.
-
-
-## Architecture
-
-Plain Charts splits into independent pieces.
-
-The data engine and the chart renderer each run on their own.
-
-Stack them together and you get a blank platform that ships empty.
-
-Everything past that — adapters, studies, tools, themes — is content you add.
-
-Take only the pieces you need.
+You build what you want on a foundation that stays out of your way.
 
 ## Features
 
@@ -76,10 +63,9 @@ Take only the pieces you need.
 
 Prebuilt desktop builds for Windows, macOS, and Linux are on the [Releases](https://github.com/ether-strannik/plain_charts_vanilla/releases) page. Download and run.
 
-From source — it's an Electron app, two commands:
+From source:
 
     git clone https://github.com/ether-strannik/plain_charts_vanilla.git
-    cd plain_charts_vanilla
     npm install
     npm start
 
