@@ -1,5 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
+// Served under a base (import.meta.env.BASE_URL). Prefix root-absolute links so they resolve.
+const B = import.meta.env.BASE_URL.replace(/\/$/, '');
+const withBase = (h) => (h && h.startsWith('/') && !h.startsWith(B + '/') && h !== B ? B + h : h);
 ---
 
 <Base title="kapelka: Declarative, Reactive Charting Engine in JavaScript">
@@ -305,20 +308,20 @@ import Base from '../layouts/Base.astro';
 		<line class="bond" x1="290" y1="215" x2="245" y2="355" />
 
 		<!-- O: Docs -->
-		<a href="/docs/overview" class="atom">
+		<a href={withBase('/docs/overview')} class="atom">
 			<circle cx="290" cy="215" r="82" />
 			<text x="290" y="215" text-anchor="middle" dominant-baseline="central" font-size="26">Docs</text>
 		</a>
 
 		<!-- H: Getting started -->
-		<a href="/docs/getting-started" class="atom">
+		<a href={withBase('/docs/getting-started')} class="atom">
 			<circle cx="130" cy="135" r="54" />
 			<text x="130" y="127" text-anchor="middle" dominant-baseline="central" font-size="14">Getting</text>
 			<text x="130" y="145" text-anchor="middle" dominant-baseline="central" font-size="14">started</text>
 		</a>
 
 		<!-- H: API Reference -->
-		<a href="/docs/api" class="atom">
+		<a href={withBase('/docs/api')} class="atom">
 			<circle cx="245" cy="355" r="54" />
 			<text x="245" y="347" text-anchor="middle" dominant-baseline="central" font-size="14">API</text>
 			<text x="245" y="365" text-anchor="middle" dominant-baseline="central" font-size="12">Reference</text>
@@ -330,7 +333,7 @@ import Base from '../layouts/Base.astro';
 	</div>
 
 	<figure class="sample">
-		<iframe src="/examples/studies.html" title="Live sample — candles with studies, streaming from Binance" loading="lazy"></iframe>
-		<figcaption><a href="/examples/studies.html" target="_blank" rel="noopener">View in full page mode →</a></figcaption>
+		<iframe src={withBase('/examples/studies.html')} title="Live sample — candles with studies, streaming from Binance" loading="lazy"></iframe>
+		<figcaption><a href={withBase('/examples/studies.html')} target="_blank" rel="noopener">View in full page mode →</a></figcaption>
 	</figure>
 </Base>

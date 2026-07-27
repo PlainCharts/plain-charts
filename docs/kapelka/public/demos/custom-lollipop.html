@@ -16,14 +16,14 @@
     // the caller through addCustomPlot. None of the seven built-in types draw this; the renderer lives
     // here, and the engine feeds it data, places it in the pane, auto-scales it (via priceValues) and
     // reports it under the crosshair, exactly like a built-in. Theme from the demos' shared settings.json.
-    import { mountChart } from '/index.js';
+    import { mountChart } from '../index.js';
 
-    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const s = await fetch('../examples/settings.json').then((r) => r.json()).catch(() => ({}));
     const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
     const cd = s.candles || {};
     const upCol = cd.upColor || '#5b9c7b', downCol = cd.downColor || '#2a2e39';
 
-    const { generateBars } = await import('/examples/feed.js');
+    const { generateBars } = await import('../examples/feed.js');
     const bars = generateBars({ count: 400, seed: 7, step: 300 });
     // momentum: percent change of close over a lookback -> the lollipop values (swings above/below zero)
     const LB = 10;

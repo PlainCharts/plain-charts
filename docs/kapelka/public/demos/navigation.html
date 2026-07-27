@@ -15,13 +15,13 @@
     // A live playground for the engine's navigation and zoom gestures: candles on the main pane and an
     // RSI on a sub-pane, so every gesture applies -- pan, wheel/Ctrl+wheel zoom, price-axis drag/reset,
     // and dragging the pane separator to resize. Theme from the demos' shared settings.json.
-    import { mountChart, Candles, Line } from '/index.js';
+    import { mountChart, Candles, Line } from '../index.js';
 
-    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const s = await fetch('../examples/settings.json').then((r) => r.json()).catch(() => ({}));
     const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
     const rsiCfg = s.rsi || { period: 14, color: '#ff8800' };
 
-    const { generateBars, computeRSI } = await import('/examples/feed.js');
+    const { generateBars, computeRSI } = await import('../examples/feed.js');
     const bars = generateBars({ count: 500, seed: 7, step: 300 });
 
     const chart = mountChart(document.getElementById('chart'), {

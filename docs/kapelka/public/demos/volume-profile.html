@@ -16,14 +16,14 @@
     // study buckets the visible range into price rows, splits each row into up/down segments, and feeds
     // them as horizontal bars the engine draws against the price (Y) axis. Theme from the demos' shared
     // settings.json (the same one studies.html uses). Engine mirrored into public/ by mirror-engine.mjs.
-    import { mountChart, Candles } from '/index.js';
-    import { StudyHost } from '/studies/index.js';
-    import '/studies/modules/index.js';   // registers the gallery, including volume_profile
+    import { mountChart, Candles } from '../index.js';
+    import { StudyHost } from '../studies/index.js';
+    import '../studies/modules/index.js';   // registers the gallery, including volume_profile
 
-    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const s = await fetch('../examples/settings.json').then((r) => r.json()).catch(() => ({}));
     const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
 
-    const { generateBars } = await import('/examples/feed.js');
+    const { generateBars } = await import('../examples/feed.js');
     const bars = generateBars({ count: 400, seed: 7, step: 300 });
 
     const chart = mountChart(document.getElementById('chart'), {

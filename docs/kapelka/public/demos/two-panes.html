@@ -17,20 +17,20 @@
     // next study gets its own pane below. Each reads its own x from its bars' timestamps and its own y
     // from its own values; they share the time axis but never a price scale. Theme from the demos' shared
     // settings.json. Engine mirrored into public/ by scripts/mirror-engine.mjs.
-    import { mountChart } from '/index.js';
-    import { StudyHost, Studies } from '/studies/index.js';
-    import '/studies/modules/index.js';   // registers the gallery (rsi, volume_delta, ...)
+    import { mountChart } from '../index.js';
+    import { StudyHost, Studies } from '../studies/index.js';
+    import '../studies/modules/index.js';   // registers the gallery (rsi, volume_delta, ...)
 
     window.Studies = Studies;                       // demo studies register via the global (app convention)
-    await import('/demos/volume-delta.study.js');   // theme-colored copy, overwrites the gallery 'volume_delta'
-    await import('/demos/volume-cvd.study.js');     // registers 'cvd' (copied from the app)
+    await import('../demos/volume-delta.study.js');   // theme-colored copy, overwrites the gallery 'volume_delta'
+    await import('../demos/volume-cvd.study.js');     // registers 'cvd' (copied from the app)
 
-    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const s = await fetch('../examples/settings.json').then((r) => r.json()).catch(() => ({}));
     const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
     const cd = s.candles || {};   // match the light theme's candle colors
     const upCol = cd.upColor || '#5b9c7b', downCol = cd.downColor || '#2a2e39';
 
-    const { generateBars } = await import('/examples/feed.js');
+    const { generateBars } = await import('../examples/feed.js');
     const bars = generateBars({ count: 400, seed: 7, step: 300 });
     // synthetic 1m sub-bars so Volume Delta's intrabar provider has data
     const subs = generateBars({ count: 2000, seed: 1007, step: 60, startTime: bars[0].time });

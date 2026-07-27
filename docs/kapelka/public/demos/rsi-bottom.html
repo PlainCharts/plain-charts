@@ -15,10 +15,10 @@
     // An RSI placed on the BOTTOM of the price pane, on its own overlay scale (axisId + margins) -- the
     // same mechanism the volume region uses, open to any study. Theme is taken from the demos' shared
     // settings.json (the same one studies.html uses).
-    import { mountChart, Candles, Line } from '/index.js';
-    import { generateBars, computeRSI } from '/examples/feed.js';
+    import { mountChart, Candles, Line } from '../index.js';
+    import { generateBars, computeRSI } from '../examples/feed.js';
 
-    const s = await fetch('/examples/settings.json').then((r) => r.json()).catch(() => ({}));
+    const s = await fetch('../examples/settings.json').then((r) => r.json()).catch(() => ({}));
     const cx = s.crosshair || { color: '#6a6d78', style: 1, labelBg: '#2a2e39', labelText: '#ffffff' };
     const rsiCfg = s.rsi || { period: 14, color: '#ff8800', overbought: 70, oversold: 30, guideColor: '#b2b5be' };
 
