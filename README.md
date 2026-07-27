@@ -16,8 +16,8 @@
 </div>
 
 <div align="center">
-    <a href="">Website</a> |
-    <a href="">Kapelka Charting Library</a>
+    <a href="https://plaincharts.github.io" target="_blank" rel="noopener">Website</a> |
+    <a href="https://plaincharts.github.io/kapelka/" target="_blank" rel="noopener">Kapelka Charting Library</a>
 </div>
 
 <br></br>
