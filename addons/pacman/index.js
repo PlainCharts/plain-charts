@@ -12,19 +12,14 @@
 
 const DEFAULT_REPO = 'https://raw.githubusercontent.com/PlainCharts/plain-charts/main';
 
-// The addon is eval'd with require() shimmed, so siblings load via dynamic import — kicked off at load,
-// awaited in openModal. lang.js = language identity for vocab packs (Weblate DB + flag mapping);
-// classes.js = the per-class capability tables (CATEGORIES, LOCAL discovery, install/uninstall endpoints);
-// ui.js = the presentation layer (el, header drag, the injected stylesheet); actions.js = the install /
-// uninstall actions (everything that writes to the library) + ghUrl.
-// Server-absolute paths: in the browser the addon is eval'd via new Function inside addons.js, so a
-// relative import would resolve against /src/panels/, not here -- '/addons/pacman/..' is the only base
-// that works there. (The Node addon-host loads addons as real ES modules where this fails; that's a
-// loader mismatch to fix in the addon-host, not by breaking the browser UI.)
-const langP = import('/addons/pacman/lang.js');
-const classesP = import('/addons/pacman/classes.js');
-const uiP = import('/addons/pacman/ui.js');
-const actionsP = import('/addons/pacman/actions.js');
+// Siblings are dynamic-imported INSIDE openModal (below), never at module top level, so they load only in
+// the browser when the dialog opens -- not in the Node addon-host, which merely require()s this file to run
+// start(). (Top-level imports fired in BOTH contexts and threw ERR_MODULE_NOT_FOUND in Node.) Paths are
+// server-absolute: the browser evals the addon via new Function inside src/panels/addons.js, so a relative
+// specifier would resolve against /src/panels/, not here -- '/addons/pacman/..' is the base that works.
+// lang.js = language identity for vocab packs; classes.js = per-class capability tables (CATEGORIES, LOCAL,
+// install/uninstall endpoints); ui.js = presentation layer (el, header drag, injected CSS); actions.js =
+// install / uninstall actions + ghUrl.
 
 const cfg = {
   get repo() { return (localStorage.getItem('pacman.repo') || DEFAULT_REPO).replace(/\/+$/, ''); },
@@ -38,7 +33,9 @@ function closeModal() { if (overlay) { overlay.remove(); overlay = null; } }
 /** @param {import('../../src/panels/addons.js').AddonApi} api */
 async function openModal(api) {
   const t = api && api.t ? api.t : (/** @type {string} */ s) => s;
-  const [{ loadLangs, langLabel }, { CATEGORIES, LOCAL }, { el, makeDraggable, injectCss }, { ghUrl, createActions }] = await Promise.all([langP, classesP, uiP, actionsP]);
+  const [{ loadLangs, langLabel }, { CATEGORIES, LOCAL }, { el, makeDraggable, injectCss }, { ghUrl, createActions }] = await Promise.all([
+    import('/addons/pacman/lang.js'), import('/addons/pacman/classes.js'), import('/addons/pacman/ui.js'), import('/addons/pacman/actions.js'),
+  ]);
   injectCss();
   closeModal();
   overlay = el('div', 'modal open'); overlay.style.zIndex = '90';
