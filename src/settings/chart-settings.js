@@ -11,6 +11,7 @@ const MENU = [
     { label: 'Symbol last price label', key: 'lastPriceLabel' },
     { label: 'Bid label', key: 'bidLabel' },
     { label: 'Ask label', key: 'askLabel' },
+    { label: 'Bid/Ask tags', key: 'priceTags' },
     { label: 'Countdown to bar close', key: 'countdown' },
   ] },
   { label: 'Lines', items: [

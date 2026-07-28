@@ -59,6 +59,7 @@ export function render(ctx) {
   content.appendChild(liveCheck('Symbol last price label', 'lastPriceLabel'));
   content.appendChild(liveCheck('Bid label', 'bidLabel'));
   content.appendChild(liveCheck('Ask label', 'askLabel'));
+  content.appendChild(liveCheck('Bid/Ask tags', 'priceTags'));
   content.appendChild(liveCheck('No overlapping labels', 'noOverlapLabels'));
 
   section('OTHER');

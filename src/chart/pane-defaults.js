@@ -132,7 +132,7 @@ export function readableText(bg) {
 // Exported so chart templates can capture and restore them too.
 export const LINE_DEFAULTS = {
   priceLine: true, bidLine: false, askLine: false,
-  lastPriceLabel: true, bidLabel: true, askLabel: true, countdown: false,
+  lastPriceLabel: true, bidLabel: true, askLabel: true, priceTags: true, countdown: false,
   noOverlapLabels: true,   // push price-axis labels apart so they don't overlap (lines stay put)
   countdownColor: '#e8e8e8', countdownBg: '#363a45',   // font / background of the countdown box
   // spread meter: live ask-bid shown on the price scale, above the countdown. Normal color,

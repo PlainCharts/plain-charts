@@ -11,7 +11,7 @@ import { dashToStroke } from '../pane-defaults.js';
 /**
  * @typedef {Object} PriceLineSettings
  * @property {boolean} [bidLine] @property {boolean} [askLine]
- * @property {boolean} [bidLabel] @property {boolean} [askLabel]
+ * @property {boolean} [bidLabel] @property {boolean} [askLabel] @property {boolean} [priceTags]
  * @property {string} [bidLineColor] @property {string} [askLineColor]
  * @property {number} [bidLineWidth] @property {number} [askLineWidth]
  * @property {string} [bidLineDash] @property {string} [askLineDash]
@@ -47,11 +47,11 @@ export const priceLineMethods = {
   /** @this {PriceLineCtx} */
   updateLines() {
     const s = this.settings;
-    // the axis chip shows the side and, when the feed carries it, the size at that price ("Bid x12").
-    /** @param {number|null} n */
-    const sz = (n) => (n == null ? '' : ' x' + (Number.isInteger(n) ? n : +n.toFixed(2)));
-    this.bidLineObj = this.lineFor('bidLineObj', s.bidLine, s.bidLabel, this.bid, s.bidLineColor || '#26a69a', 'Bid' + sz(this.bidSize), s.bidLineWidth, s.bidLineDash);
-    this.askLineObj = this.lineFor('askLineObj', s.askLine, s.askLabel, this.ask, s.askLineColor || '#ef5350', 'Ask' + sz(this.askSize), s.askLineWidth, s.askLineDash);
+    // the side chip ("Bid" / "Ask") is the tag that pokes out of the scale; priceTags off drops the chip
+    // and leaves only the price on the axis. (undefined -> shown, so old settings keep the chip.)
+    const tag = (/** @type {string} */ side) => (s.priceTags !== false ? side : '');
+    this.bidLineObj = this.lineFor('bidLineObj', s.bidLine, s.bidLabel, this.bid, s.bidLineColor || '#26a69a', tag('Bid'), s.bidLineWidth, s.bidLineDash);
+    this.askLineObj = this.lineFor('askLineObj', s.askLine, s.askLabel, this.ask, s.askLineColor || '#ef5350', tag('Ask'), s.askLineWidth, s.askLineDash);
   },
   // line and label are independent: keep the price line if either is wanted,
   // and toggle the line vs the axis tag separately.
