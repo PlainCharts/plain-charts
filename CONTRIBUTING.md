@@ -16,7 +16,7 @@ Help customize the platform by creating chart or application themes.
 
 ## Add a translation
 
-Translations are always welcome. We use Weblate so contributing is painless. Just click the badge above to jump in.
+Translations are always welcome. We use [Weblate](https://weblate.org) so contributing is painless. [Jump in on Weblate](https://hosted.weblate.org/engage/plain-charts/) to start.
 
 ## Improve Documentation
 

@@ -7,7 +7,7 @@
 <h1 align="center">Plain Charts</h1>
 
 <h4 align="center">
-    A modular trading platform built on your terms.
+    A modular, open-source trading and charting platform built on your terms.
 </h4>
 
 <div align="center">
@@ -82,6 +82,10 @@ From source:
 If this idea resonates with you, and you derive value from it and want it to continue evolving, you're welcome to contribute to this project. Just pick what feels right (CONTRIBUTING.md).
 
 [Report a bug](CONTRIBUTING.md#report-a-bug) &bull; [Build a piece](CONTRIBUTING.md#build-a-piece) &bull; [Create Themes](CONTRIBUTING.md#create-themes) &bull; [Add a translation](CONTRIBUTING.md#add-a-translation) &bull; [Improve Documentation](CONTRIBUTING.md#improve-documentation) &bull; [Propose a feature](CONTRIBUTING.md#propose-a-feature)
+
+Help translate the interface into your language with [Weblate](https://weblate.org):
+
+[![Translation status](https://hosted.weblate.org/widget/plain-charts/svg-badge.svg)](https://hosted.weblate.org/engage/plain-charts/)
 
 ## Attributions
 
