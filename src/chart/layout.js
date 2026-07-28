@@ -78,7 +78,7 @@ import { initLayoutMenu, applyGrid, addRecentLayout } from './layout-menu.js';
 export function defaultWorkspace() {
   const sync = { syncSymbol: true, syncInterval: false, syncCrosshair: false };
   const tset = defaultPaneSettings();
-  const mkPane = () => ({ symbol: 'EP', settings: tset ? structuredClone(tset) : {} });
+  const mkPane = () => ({ symbol: '', settings: tset ? structuredClone(tset) : {} });
   const dl = getSetting('defaultLayout');
   if (dl && dl.areas && dl.count) return { layout: 'custom', grid: dl, panes: Array.from({ length: dl.count }, mkPane), sync };
   return { layout: '1', panes: [mkPane()], sync };
@@ -420,7 +420,7 @@ function buildPanes(saved, maxIdx) {
   for (let i = 0; i < def.count; i++) {
     const cfg = (Array.isArray(saved) && saved[i]) || {};
     const p = new Pane({
-      symbol: cfg.symbol || 'EP',
+      symbol: cfg.symbol || '',
       tfId: byId(cfg.tfId) ? (/** @type {import('../workspace/timeframes.js').Interval} */ (byId(cfg.tfId))).id : firstTf(),   // canonicalize (60m -> 1h)
       range: cfg.range || null,
       settings: cfg.settings || {},
@@ -511,7 +511,7 @@ export function applyCustomLayout(def) {
 
 // fresh single-pane workspace (keeps current sync prefs)
 export function newWorkspace() {
-  applyWorkspace({ layout: '1', panes: [{ symbol: 'EP', tfId: firstTf() }], sync: { ...sync } });
+  applyWorkspace({ layout: '1', panes: [{ symbol: '', tfId: firstTf() }], sync: { ...sync } });
 }
 
 /** @param {Workspace} ws */

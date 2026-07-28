@@ -129,7 +129,7 @@ export class Pane {
    * @param {{ symbol?: string, tfId?: string|null, range?: { from: number, to: number }|null,
    *           settings?: Partial<PaneSettings>, broker?: any }} [opts]
    */
-  constructor({ symbol = 'EP', tfId = null, range = null, settings = {}, broker: brokerId = null } = {}) {
+  constructor({ symbol = '', tfId = null, range = null, settings = {}, broker: brokerId = null } = {}) {   // no symbol until a broker is connected and one is picked (blank slate has none)
     /** @type {string} */
     this.symbol = symbol;
     /** @type {string|null} */

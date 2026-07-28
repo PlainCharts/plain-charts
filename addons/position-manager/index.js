@@ -22,8 +22,8 @@
 
 module.exports = {
   inputs: [
-    { key: 'broker', type: 'text', default: 'cqg' },
-    { key: 'symbol', type: 'text', default: 'EP' },
+    { key: 'broker', type: 'text', default: '' },   // no broker/symbol pinned -- blank slate: user picks once connected
+    { key: 'symbol', type: 'text', default: '' },
     { key: 'qty', type: 'number', default: 1 },
     { key: 'offset', type: 'number', default: 10 },          // one offset for BOTH stop and target beads
     { key: 'thresholdTicks', type: 'number', default: 1 },   // watcher vicinity: fire when price within this many ticks of a level

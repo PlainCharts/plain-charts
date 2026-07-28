@@ -100,7 +100,7 @@ async function start() {
     // workspace tabs own the live layout; seed the first tab from old settings
     await loadTabs({
       layout: getSetting('layout') || '1',
-      panes: getSetting('panes') || [{ symbol: 'EP' }],
+      panes: getSetting('panes') || [{ symbol: '' }],
       sync: {
         syncSymbol: getSetting('syncSymbol') !== false,
         syncInterval: getSetting('syncInterval') === true,

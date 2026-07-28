@@ -178,7 +178,7 @@ export function mergeStudyBoard(orig, rows, opts = {}) {
 /** @returns {void} */
 export function testStudyBoard() {
   const p = getActivePane();
-  const base = p ? { symbol: p.symbol, broker: p.broker } : { symbol: 'EP', broker: null };
+  const base = p ? { symbol: p.symbol, broker: p.broker } : { symbol: '', broker: null };
   applyWorkspace(studyBoardWorkspace([
     { ...base, studyId: 'rsi', params: { length: 14 } },
     { ...base, studyId: 'rsi', params: { length: 7 } },

@@ -85,8 +85,8 @@ module.exports = {
   // setup form (fallback) — types: text | number | bool | color | select(options).
   // Values arrive in ctx.config (defaults below, overridden by the saved settings).
   inputs: [
-    { key: 'broker', label: 'Broker', type: 'text', default: 'cqg' },
-    { key: 'symbol', label: 'Symbol', type: 'text', default: 'EP' },
+    { key: 'broker', label: 'Broker', type: 'text', default: '' },
+    { key: 'symbol', label: 'Symbol', type: 'text', default: '' },
   ],
 
   // Your OWN UI — opened from the addon's rail icon. You get a BLANK root and a small api:
