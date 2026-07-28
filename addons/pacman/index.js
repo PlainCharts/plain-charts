@@ -236,9 +236,6 @@ async function openModal(api) {
 }
 
 module.exports = {
-  name: 'Pacman',
-  description: 'The package manager — browse, install, and remove studies, addons, tools, and more.',
-  icon: 'icon.png',
   popup: true,   // rail icon -> we immediately open the full dialog and dismiss the popup
 
   /** @param {HTMLElement} root @param {import('../../src/panels/addons.js').AddonApi} api */

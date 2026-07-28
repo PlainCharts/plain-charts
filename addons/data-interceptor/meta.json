@@ -1,0 +1,6 @@
+{
+  "name": "Data Interceptor",
+  "description": "Discovers and streams the raw field schema from each live broker feed.",
+  "author": "",
+  "icon": "icon.png"
+}

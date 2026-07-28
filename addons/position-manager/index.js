@@ -21,9 +21,6 @@
  */
 
 module.exports = {
-  name: 'Position Manager',
-  description: 'A live trading panel — market entry plus watcher-driven bracket automation on the active chart.',
-  icon: 'icon.png',
   inputs: [
     { key: 'broker', type: 'text', default: 'cqg' },
     { key: 'symbol', type: 'text', default: 'EP' },

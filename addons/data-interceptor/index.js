@@ -7,10 +7,6 @@
 // Browser-only addon: ui() subscribes to api.onRaw (the broker feed tap wired in the adapters).
 // No Node side. Register the schema, not the data.
 module.exports = {
-  name: 'Data Interceptor',
-  description: 'Discovers and streams the raw field schema from each live broker feed.',
-  icon: 'icon.png',
-
   /** @param {HTMLElement} root @param {import('../../src/panels/addons.js').AddonApi} api */
   ui(root, api) {
     const t = api.t;   // vocabulary lookup — addons translate through the same runtime as the app

@@ -23,10 +23,6 @@
 const EXEC_METHODS = /** @type {Record<string, 1>} */ ({ placeOrder: 1, modifyOrder: 1, cancelOrder: 1, closePosition: 1, closeLot: 1, closeLotPartial: 1 });
 
 module.exports = {
-  name: 'Performance Monitor',
-  description: 'Live resource monitor for the whole app — CPU, memory, buses, and latency per window.',
-  icon: 'icon.png',
-
   // ---------------------------------------------------------------- Node side: OS process sampler
   // Runs in the addon-host (full Node). Walks the app's process tree via /proc (Linux), computes
   // per-process CPU%/RSS every 2s and publishes them into the perf store as `os:<pid>` rows.

@@ -1,0 +1,6 @@
+{
+  "name": "Performance Monitor",
+  "description": "Live resource monitor for the whole app — CPU, memory, buses, and latency per window.",
+  "author": "",
+  "icon": "icon.png"
+}

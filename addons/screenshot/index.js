@@ -4,9 +4,6 @@
 // painted, drawings/alerts/studies included). This addon is pure consumer code: capture -> download
 // / copy / print / preview, all plain browser APIs. Proof that a built-in feature is just an addon.
 module.exports = {
-  name: 'Screenshot',
-  description: 'Capture the chart to an image — download, copy, print, or preview.',
-  icon: 'icon.png',
   popup: true,   // show as a dropdown anchored to the rail icon (not a docked slide-out)
 
   /** @param {HTMLElement} root @param {import('../../src/panels/addons.js').AddonApi} api */

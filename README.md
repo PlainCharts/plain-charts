@@ -79,7 +79,7 @@ Report a bug &bull; Build a piece &bull; Create Themes &bull; Add a translation 
 
 ## Attributions
 
-Open source projects that made it possible.
+People and open source projects that made it possible.
 
 - Chart engine (kapelka) ports [trading-vue-js](https://github.com/tvjs/trading-vue-js) by C451 — MIT License
 - Additional optimization and drawing logic was inspired by [night-vision](https://github.com/project-nv/night-vision) by C451.
