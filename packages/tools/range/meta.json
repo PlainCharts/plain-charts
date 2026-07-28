@@ -16,6 +16,6 @@
   "priceTimeRange": {
     "name": "Date & Price Range",
     "description": "Measure price and time together.",
-    "icon": "priceRange.png"
+    "icon": "priceTimeRange.png"
   }
 }
