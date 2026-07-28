@@ -376,11 +376,14 @@ function appendWindowControls() {
   // Always-on-top pin: keeps this window above others. Reflects the live main-process state.
   if (desktop.winAlwaysOnTopToggle) {
     const pinned = desktop.winIsAlwaysOnTop ? !!desktop.winIsAlwaysOnTop() : false;
+    // outline pushpin when free, the filled "pinned" glyph when always-on-top -- swap the icon on toggle
+    const pinSrc = (/** @type {boolean} */ on) => (on ? '/images/pinned.png' : '/images/pin.png');
     const pin = mk('win-pin', '', pinned ? 'Unpin (always on top)' : 'Always on top', function () {
       const on = desktop.winAlwaysOnTopToggle();
       this.classList.toggle('on', on); this.title = on ? 'Unpin (always on top)' : 'Always on top';
+      this.replaceChildren(themeIcon(pinSrc(on), 16));
     });
-    pin.appendChild(themeIcon('/images/pin.png', 16)); pin.classList.toggle('on', pinned);
+    pin.appendChild(themeIcon(pinSrc(pinned), 16)); pin.classList.toggle('on', pinned);
     ctrls.appendChild(pin);
   }
   ctrls.appendChild(mk('win-min', '–', 'Minimize', () => desktop.winMinimize()));
