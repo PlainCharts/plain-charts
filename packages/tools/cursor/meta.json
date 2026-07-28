@@ -1,0 +1,6 @@
+{
+  "name": "Cursor",
+  "description": "The default pointer — a plain crosshair, no drawing.",
+  "author": "",
+  "icon": "cursor.png"
+}

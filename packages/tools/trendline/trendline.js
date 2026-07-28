@@ -8,9 +8,9 @@
 // (`Tools`, `ToolDrawing`, `ToolView`, `ToolScreenPoint`, … are ambiently typed in tools-global.d.ts.)
 
 // The three variants (makeTrend is a hoisted function declaration, defined below).
-Tools.register(makeTrend({ id: 'trendline', name: 'Trend Line', glyph: '╱', extend: 'none', description: 'Three line tools in one — trend line, ray, and extended line.', icon: 'trendline.png' }));
-Tools.register(makeTrend({ id: 'ray', name: 'Ray', glyph: '↗', extend: 'right' }));
-Tools.register(makeTrend({ id: 'extendedline', name: 'Extended Line', glyph: '⤢', extend: 'both' }));
+Tools.register(makeTrend({ id: 'trendline', glyph: '╱', extend: 'none' }));
+Tools.register(makeTrend({ id: 'ray', glyph: '↗', extend: 'right' }));
+Tools.register(makeTrend({ id: 'extendedline', glyph: '⤢', extend: 'both' }));
 
 // ---------------------------------------------------------------- factory + helpers
 /** @param {{ id:string, name:string, glyph:string, extend:string, description?:string, icon?:string }} cfg */

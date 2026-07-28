@@ -7,9 +7,6 @@ import { initSymbolPicker, renderGlyph, DEFAULT_GLYPH } from './symbol-picker.js
 
 Tools.register({
   id: 'symbol',
-  name: 'Symbol',
-  description: 'A tool that drops a Unicode glyph on the chart as a sticker.',
-  icon: 'symbol.png',
   glyph: '☺',
   kind: 'draw',
   points: 1,

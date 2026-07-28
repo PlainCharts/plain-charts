@@ -1,0 +1,6 @@
+{
+  "name": "Horizontal Ray",
+  "description": "A drawing tool that draws a horizontal line from a point to the right edge.",
+  "author": "",
+  "icon": "hray.png"
+}

@@ -25,9 +25,6 @@ const DEFAULT_LEVELS = [
 
 Tools.register({
   id: 'fib',
-  name: 'Fib retracement',
-  description: 'A drawing tool that plots Fibonacci retracement levels between two points.',
-  icon: 'fib.png',
   glyph: 'F',
   kind: 'draw',
   points: 2,

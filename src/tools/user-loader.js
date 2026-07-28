@@ -3,7 +3,7 @@
 // build step). Each package: <id>.js (self-registers) + optional icon.png + optional
 // vocab.json. Maps tool id -> folder (for edit/delete/reload) and id -> package icon url.
 // The server lists the packages at /api/user-tools. (`file` in the API = the folder name.)
-import { setRegisterHook } from './registry.js';
+import { setRegisterHook, getTool } from './registry.js';
 import { registerVocab } from '../i18n/i18n.js';
 import { bus } from '../bus.js';
 import { log } from '../dom.js';
@@ -33,6 +33,16 @@ async function importFolder(folder, hasVocab) {
   try { await import('/packages/tools/' + folder + '/' + folder + '.js?t=' + Date.now()); }
   finally { setRegisterHook(null); }
   ids.forEach((id) => folderOf.set(id, folder));
+  // Name/description come ONLY from the package's meta.json -- never the code. No meta -> blank.
+  // Multi-tool folders (e.g. range) key their metadata by tool id; single-tool folders are flat.
+  let meta = null;
+  try { const r = await fetch('/packages/tools/' + folder + '/meta.json', { cache: 'no-store' }); if (r.ok) meta = await r.json(); } catch (_) {}
+  for (const id of ids) {
+    const tl = getTool(id);
+    if (!tl) continue;
+    const m = (meta && typeof meta[id] === 'object' && meta[id]) || meta || {};
+    tl.name = m.name || ''; tl.description = m.description || '';
+  }
   if (hasVocab) {
     // a tool can ship its own vocabulary; merge it as base words (user packs still override)
     try { const v = await fetch('/packages/tools/' + folder + '/vocab.json').then((r) => r.json()); registerVocab(v && v.words ? v.words : v); } catch (_) {}

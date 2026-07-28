@@ -8,9 +8,6 @@ const TL = () => Tools.get('trendline');
 
 Tools.register({
   id: 'arrow',
-  name: 'Arrow',
-  description: 'A drawing tool that points an arrow at a spot on the chart.',
-  icon: 'arrow.png',
   glyph: '↗',
   kind: 'draw',
   points: 2,

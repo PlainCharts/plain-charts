@@ -5,9 +5,6 @@
 // are independent handles (drag one without moving the other; angle it freely).
 Tools.register({
   id: 'levelray',
-  name: 'Level Line',
-  description: 'A one-click line that shoots forward and stops at the first candle to reach the level.',
-  icon: 'levelray.png',
   glyph: '⊢',
   kind: 'draw',
   points: 1,                 // one click; onCreate expands it to a 2-point line

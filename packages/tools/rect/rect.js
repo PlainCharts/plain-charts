@@ -6,9 +6,6 @@ import { pin, pinHandles } from './pin.js';
 
 Tools.register({
   id: 'rect',
-  name: 'Rectangle',
-  description: 'A tool that draws a rectangle.',
-  icon: 'rect.png',
   glyph: '▭',
   kind: 'draw',
   points: 2,

@@ -4,9 +4,6 @@
 // arrowhead at the start/end. points:'poly' tells the engine it's variable-length.
 Tools.register({
   id: 'path',
-  name: 'Path',
-  description: 'A drawing tool for a multi-point line.',
-  icon: 'path.png',
   glyph: '↯',
   kind: 'draw',
   points: 'poly',

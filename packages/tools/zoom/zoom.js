@@ -6,9 +6,6 @@
 // double-clicking the price scale, as usual.
 Tools.register({
   id: 'zoom',
-  name: 'Zoom In',
-  description: 'A tool that zooms in on an area of the chart.',
-  icon: 'zoom.png',
   glyph: '⌕',   // magnifier glyph
   kind: 'zoom',
 });

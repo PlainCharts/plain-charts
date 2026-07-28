@@ -13,9 +13,9 @@
 const STAT_NAMES = { price: 'Price range', percent: 'Percent change', pips: 'Change in pips', bars: 'Bars range', time: 'Date/time range' };
 
 // The three variants (makeRange is a hoisted function declaration, defined below).
-Tools.register(makeRange({ id: 'priceRange', name: 'Price Range', glyph: '↕', price: true, time: false, description: 'Three measuring tools in one — price, date, and combined range.', icon: 'priceRange.png' }));
-Tools.register(makeRange({ id: 'dateRange', name: 'Date Range', glyph: '↔', price: false, time: true, icon: 'dateRange.png' }));
-Tools.register(makeRange({ id: 'priceTimeRange', name: 'Date & Price Range', glyph: '⤢', price: true, time: true }));
+Tools.register(makeRange({ id: 'priceRange', glyph: '↕', price: true, time: false }));
+Tools.register(makeRange({ id: 'dateRange', glyph: '↔', price: false, time: true }));
+Tools.register(makeRange({ id: 'priceTimeRange', glyph: '⤢', price: true, time: true }));
 
 // ---------------------------------------------------------------- factory + helpers
 // build one measurement tool with the given price/time flags

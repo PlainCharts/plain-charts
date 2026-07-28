@@ -4,9 +4,6 @@
 // Optional price label rendered in the price axis (style.priceLabels) by the engine.
 Tools.register({
   id: 'hray',
-  name: 'Horizontal Ray',
-  description: 'A drawing tool that draws a horizontal line from a point to the right edge.',
-  icon: 'hray.png',
   glyph: '⊢',
   kind: 'draw',
   points: 1,

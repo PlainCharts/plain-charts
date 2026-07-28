@@ -6,9 +6,6 @@
 
 Tools.register({
   id: 'hline',
-  name: 'Horizontal Line',
-  description: 'A drawing tool that draws a horizontal line across the whole chart.',
-  icon: 'hline.png',
   glyph: '─',
   kind: 'draw',
   points: 1,

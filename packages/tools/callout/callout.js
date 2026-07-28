@@ -10,9 +10,6 @@ import { pin, pinHandles } from './pin.js';
 
 Tools.register({
   id: 'callout',
-  name: 'Callout',
-  description: 'A drawing tool that pins a text bubble to a point on the chart.',
-  icon: 'callout.png',
   glyph: '⤴',
   kind: 'draw',
   points: 2,

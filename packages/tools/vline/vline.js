@@ -5,9 +5,6 @@
 
 Tools.register({
   id: 'vline',
-  name: 'Vertical Line',
-  description: 'A tool that draws a vertical line down the whole chart.',
-  icon: 'vline.png',
   glyph: '│',
   kind: 'draw',
   points: 1,

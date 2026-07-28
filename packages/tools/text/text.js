@@ -11,9 +11,6 @@ import { pin, pinHandles } from './pin.js';
 
 Tools.register({
   id: 'text',
-  name: 'Text',
-  description: 'A tool that places a text label on the chart.',
-  icon: 'text.png',
   glyph: 'T',
   kind: 'draw',
   points: 1,

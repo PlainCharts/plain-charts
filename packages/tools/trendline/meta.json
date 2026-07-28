@@ -1,0 +1,21 @@
+{
+  "name": "Trend Line",
+  "description": "Three line tools in one — trend line, ray, and extended line.",
+  "author": "",
+  "icon": "trendline.png",
+  "trendline": {
+    "name": "Trend Line",
+    "description": "A straight line between two points.",
+    "icon": "trendline.png"
+  },
+  "ray": {
+    "name": "Ray",
+    "description": "A line from a point extending to the right.",
+    "icon": "trendline.png"
+  },
+  "extendedline": {
+    "name": "Extended Line",
+    "description": "A line extended in both directions.",
+    "icon": "trendline.png"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Fib retracement",
+  "description": "A drawing tool that plots Fibonacci retracement levels between two points.",
+  "author": "",
+  "icon": "fib.png"
+}

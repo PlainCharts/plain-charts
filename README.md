@@ -61,7 +61,7 @@ You build what you want on a foundation that stays out of your way.
 
 ## Install
 
-Prebuilt desktop builds for Windows, macOS, and Linux are on the [Releases](https://github.com/ether-strannik/plain_charts_vanilla/releases) page. Download and run.
+Prebuilt desktop builds for Windows, macOS, and Linux are on the [Releases](https://github.com/PlainCharts/plain-charts/releases) page. Download and run.
 
 From source:
 
