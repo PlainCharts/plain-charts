@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Keep the Pacman catalog current. raw.githubusercontent.com can't list folders, so index.json IS the
+# catalog and must match the packages in the SAME commit. We regenerate it here, locally, and stage it --
+# NOT in CI. A CI job that commits index.json back to main would add commits your local doesn't have,
+# making every subsequent push a rejected non-fast-forward. Generating at commit time avoids that wall
+# entirely: nothing but your own commits ever lands on main.
+set -e
+[ -f scripts/catalog-index.mjs ] || exit 0
+command -v node >/dev/null 2>&1 || export PATH="$HOME/opt/node/bin:$PATH"
+node scripts/catalog-index.mjs >/dev/null
+git add index.json

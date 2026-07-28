@@ -1,12 +1,12 @@
-name: Regenerate Pacman catalog
+name: Check Pacman catalog
 
-# Pacman browses <repo>/main/index.json, and raw.githubusercontent.com can't list
-# folders -- so the catalog must be regenerated whenever a package is added,
-# removed, or changed. This does it automatically: on a push touching any content
-# location, rerun the generator and, if index.json changed, commit it back.
+# Pacman browses <repo>/main/index.json, and raw.githubusercontent.com can't list folders -- so the
+# catalog must match the packages in the SAME commit. It is regenerated LOCALLY by the pre-commit hook
+# (.githooks/pre-commit), never here. This job is a read-only GATE: it regenerates and fails if the
+# committed index.json is stale, so a bad commit can't slip through.
 #
-# No loop: the push here uses GITHUB_TOKEN, and GitHub does not start new workflow
-# runs for GITHUB_TOKEN-authored pushes.
+# It does NOT commit anything. A CI job that committed index.json back to main would add commits your
+# local doesn't have, turning every next push into a rejected non-fast-forward -- the wall we removed.
 on:
   push:
     branches: [main]
@@ -16,10 +16,11 @@ on:
       - 'data_engine/adapters/**'
       - 'static/locale/**'
       - 'scripts/catalog-index.mjs'
+      - 'index.json'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: pacman-catalog
@@ -33,16 +34,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Regenerate index.json
-        run: node scripts/catalog-index.mjs
-      - name: Commit if the catalog changed
+      - name: Verify index.json is current
         run: |
-          if git diff --quiet -- index.json; then
-            echo "Catalog unchanged."
-          else
-            git config user.name "PlainCharts"
-            git config user.email "plain-charts@proton.me"
-            git add index.json
-            git commit -m "chore: regenerate pacman catalog"
-            git push
+          node scripts/catalog-index.mjs
+          if ! git diff --quiet -- index.json; then
+            echo "::error::index.json is stale. Regenerate it: 'node scripts/catalog-index.mjs' and commit."
+            echo "The pre-commit hook (.githooks/pre-commit) does this automatically; run 'git config core.hooksPath .githooks' if a fresh clone."
+            git --no-pager diff --stat -- index.json
+            exit 1
           fi
+          echo "Catalog is current."
