@@ -31,10 +31,12 @@ module.exports = {
       const img = doc.querySelector('img'); if (img && !img.complete) img.onload = go; else go();
       say(t('printing…'));
     };
-    /** @param {string} txt @param {() => void} fn @param {string} [color] */
-    const mk = (txt, fn, color) => { const b = document.createElement('button'); b.textContent = txt; b.style.cssText = 'width:100%;text-align:left;' + (color ? 'background:' + color + ';color:#fff;border-color:' + color + ';' : ''); b.onclick = fn; return b; };
-    const row = el('div', 'display:flex;flex-direction:column;gap:6px;');   // stacked, menu-style
-    row.append(mk(t('Download image'), download, '#2962ff'), mk(t('Copy image'), copy), mk(t('Print…'), print));
+    // items use the app's shared menu-item class (same as every other "..." menu) so the dropdown
+    // flows with the app -- subtle theme hover, no custom colours or button chrome.
+    /** @param {string} txt @param {() => void} fn */
+    const mk = (txt, fn) => { const b = el('div', undefined, txt); b.className = 'menu-action'; b.onclick = fn; return b; };
+    const row = el('div');   // stacked menu items; the popup wrapper supplies the chrome
+    row.append(mk(t('Download image'), download), mk(t('Copy image'), copy), mk(t('Print…'), print));
     root.append(row, out);
   },
 

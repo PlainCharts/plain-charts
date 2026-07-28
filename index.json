@@ -418,20 +418,6 @@
     },
     {
       "class": "studies",
-      "id": "sma_cross",
-      "name": "SMA Cross",
-      "description": "Fast and slow simple moving averages on the price pane.",
-      "icon": "",
-      "info": "",
-      "path": "packages/studies/sma_cross",
-      "runtime": "sma_cross.js",
-      "files": [
-        "meta.json",
-        "sma_cross.js"
-      ]
-    },
-    {
-      "class": "studies",
       "id": "time_marker",
       "name": "Time marker",
       "description": "A study that marks specific times of day on the chart.",
