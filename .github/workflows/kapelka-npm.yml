@@ -1,0 +1,41 @@
+name: Publish kapelka to npm
+
+# Publish lib/kapelka to npm when a version tag is pushed. The tag is namespaced (kapelka-vX.Y.Z) so
+# app release tags (vX.Y.Z) never publish the engine by accident. The tag version must match
+# lib/kapelka/package.json, or the run fails before publishing.
+# Needs an npm automation token as the NPM_TOKEN secret:
+#   gh secret set NPM_TOKEN --repo PlainCharts/plain-charts
+on:
+  push:
+    tags:
+      - 'kapelka-v*'
+  workflow_dispatch:
+
+jobs:
+  npm-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+      - name: Publish lib/kapelka
+        working-directory: lib/kapelka
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN is not set. Create an npm automation token (npmjs.com -> Access Tokens -> Automation) and add it: gh secret set NPM_TOKEN --repo PlainCharts/plain-charts"
+            exit 1
+          fi
+          # Guard: on a tag push, the tag version must match package.json. (workflow_dispatch skips this.)
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#kapelka-v}"
+            PKG_VERSION="$(node -p "require('./package.json').version")"
+            if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+              echo "::error::tag kapelka-v${TAG_VERSION} does not match lib/kapelka/package.json version ${PKG_VERSION}. Bump the version, commit, then tag."
+              exit 1
+            fi
+          fi
+          npm publish
