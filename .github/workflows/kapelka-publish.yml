@@ -1,0 +1,40 @@
+name: Publish kapelka engine
+
+# Publish the vendored engine (lib/kapelka) to its standalone repo PlainCharts/kapelka on every push
+# that touches it, so the two-repo split is automatic -- never a manual `git subtree push` again.
+# A cross-repo push needs a token the default GITHUB_TOKEN can't provide. Reuses the DOCS_DEPLOY_TOKEN
+# secret (a fine-grained PAT), scoped to BOTH PlainCharts/kapelka and plaincharts.github.io with
+# Contents: read/write.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/kapelka/**'
+  workflow_dispatch:
+
+# Serialize runs so two quick pushes don't race the subtree push (queue, don't cancel).
+concurrency:
+  group: kapelka-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history: git subtree split walks the whole thing
+      - name: Subtree push lib/kapelka -> PlainCharts/kapelka
+        env:
+          TOKEN: ${{ secrets.DOCS_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::DOCS_DEPLOY_TOKEN is not set, or the PAT lacks Contents: write on PlainCharts/kapelka."
+            exit 1
+          fi
+          git config user.name "PlainCharts"
+          git config user.email "plain-charts@proton.me"
+          # Deterministic split of lib/kapelka's history, then a normal (non-force) push to the engine repo.
+          # kapelka only ever receives via this workflow, so it fast-forwards; a real divergence fails loudly.
+          git subtree split --prefix=lib/kapelka -b kapelka-split
+          git push "https://x-access-token:${TOKEN}@github.com/PlainCharts/kapelka.git" kapelka-split:main
