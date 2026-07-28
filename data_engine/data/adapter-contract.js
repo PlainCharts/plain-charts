@@ -214,7 +214,7 @@
  * proven, complete surface -- a new adapter that satisfies it is plug-and-play.
  * @typedef {Object} BrokerAdapter
  * @property {string} id
- * @property {string} name
+ * @property {string} [name]         name/description come from the package's meta.json (merged at load), not the adapter object
  * @property {string} [description]
  * @property {{ marketData?: boolean, trading?: boolean, depth?: boolean }} capabilities
  * @property {FormField[]} [form]

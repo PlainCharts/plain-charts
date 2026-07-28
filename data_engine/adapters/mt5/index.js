@@ -258,8 +258,6 @@ const call = (cmd) => new Promise((resolve) => { const id = nextId(); cmd.id = i
 // ================= the BrokerAdapter surface =================
 const adapter = {
   id: 'mt5',
-  name: 'MetaTrader 5',
-  description: 'Market data and trading through a MetaTrader 5 terminal bridge.',
   capabilities: { marketData: true, trading: true, depth: true },
   // The EA dials IN, so the app is the TCP server; `host` is the bind interface, not a destination.
   // 0.0.0.0 accepts the EA from a Windows VM / another PC on the LAN; 127.0.0.1 is same-machine only.

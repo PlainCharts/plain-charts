@@ -203,8 +203,6 @@ function pollUnsubscribe(inst, cb) {
 
 const adapter = {
   id: 'oanda',
-  name: 'OANDA',
-  description: 'Forex and CFD market data and trading through the OANDA API.',
   capabilities: { marketData: true, trading: true, depth: false },
   form: [
     { key: 'server', type: 'select', label: 'Server', options: ['Practice', 'Live'], default: 'Practice' },

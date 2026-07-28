@@ -20,7 +20,13 @@ async function loadAdapters() {
   /** @type {any[]} */
   let list = [];
   try { const d = await fetch('/api/adapters').then((r) => r.json()); list = (d && d.adapters) || []; } catch (e) { console.error('[adapters] discovery failed', e); }
-  await Promise.all(list.map((a) => import(a.url).catch((e) => console.error('[adapters] load failed:', a.id, e))));   // each at /data_engine/adapters/<id>/index.js
+  await Promise.all(list.map(async (a) => {
+    try { await import(a.url); } catch (e) { console.error('[adapters] load failed:', a.id, e); return; }   // each at /data_engine/adapters/<id>/index.js
+    // name/description come ONLY from the package's meta.json (carried on the discovery list) -- never the
+    // code. Merge them onto the registered adapter so labels/pickers show the real name.
+    const reg = /** @type {any} */ (getBroker(a.id));
+    if (reg) { reg.name = a.name || ''; reg.description = a.description || ''; }
+  }));
 }
 
 /** @type {Map<string, any>} */

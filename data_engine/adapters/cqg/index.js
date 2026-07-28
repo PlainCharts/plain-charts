@@ -159,8 +159,6 @@ function toBarUpdate(rep, scale) {
 /** @type {import('/data_engine/data/adapter-contract.js').BrokerAdapter} */
 const adapter = {
   id: 'cqg',
-  name: 'CQG',
-  description: 'Futures market data and trading through the CQG gateway.',
   capabilities: { marketData: true, trading: true, depth: true },
   form: [
     { key: 'server', type: 'select', label: 'Server', options: ['Demo', 'Live'], default: 'Demo' },

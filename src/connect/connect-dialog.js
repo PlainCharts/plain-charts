@@ -46,7 +46,7 @@ export function initConnectDialog() {
     protoSel.innerHTML = '';
     /** @type {Set<string>} */
     const ids = new Set();
-    listBrokers().forEach((b) => { ids.add(b.id); const o = document.createElement('option'); o.value = b.id; o.textContent = b.name; protoSel.appendChild(o); });
+    listBrokers().forEach((b) => { ids.add(b.id); const o = document.createElement('option'); o.value = b.id; o.textContent = b.name || b.id; protoSel.appendChild(o); });
     if (want && !ids.has(want)) { const o = document.createElement('option'); o.value = want; o.textContent = want + ' ' + t('(not installed)'); o.disabled = true; protoSel.appendChild(o); }
     protoSel.value = want || (listBrokers()[0] ? listBrokers()[0].id : '');
   };
