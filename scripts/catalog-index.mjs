@@ -25,30 +25,25 @@ const ROOT = process.argv[2] ? path.resolve(process.argv[2]) : path.join(HERE, '
 // "more info" companion to the one-line `description` scraped from the code — a full write-up GitHub renders.
 const INFO_FILE = 'info.md';
 
-// Scrape a single-line string field (`key: '...'` or "..."), anchored after `anchor` so a nested
-// field above the registration (a study input's own `name:`, an adapter form field's `label:`) isn't
-// picked up. Mirrors the app's server-side scraper, so the catalog shows the same metadata a local
-// install would. Returns '' when absent.
-function scrape(src, key, anchor) {
-  let s = src;
-  const i = anchor ? s.indexOf(anchor) : -1;
-  if (i >= 0) s = s.slice(i);
-  const m = new RegExp('\\b' + key + "\\s*:\\s*(['\"])(.*?)\\1").exec(s);
-  return m ? m[2] : '';
+// Read a folder package's meta.json (name/description/icon) -- the single source of package metadata,
+// never scraped from the code. Returns {} when absent/invalid.
+function readMeta(dir) {
+  try { return JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')) || {}; }
+  catch { return {}; }
 }
 
 // Every content class -> where it lives (relative to repo root) and how to read a package's metadata.
-//   folder classes: <root>/<id>/<runtime>; the code self-registers, so scrape name/description/icon.
+//   folder classes: <root>/<id>/<runtime> (proves it's a package); metadata from <id>/meta.json.
 //   file classes:   <root>/<name>.json; the JSON carries name (+ description); no icon.
 // Vocabulary is intentionally omitted: its files are Weblate-owned / local-only, handled separately.
 const CLASSES = {
-  studies:           { root: 'packages/studies',        kind: 'folder', runtime: (id) => id + '.js', anchor: '.register(' },
-  tools:             { root: 'packages/tools',          kind: 'folder', runtime: (id) => id + '.js', anchor: '.register(' },
-  addons:            { root: 'addons',                  kind: 'folder', runtime: () => 'index.js',    anchor: 'module.exports' },
-  adapters:          { root: 'data_engine/adapters',    kind: 'folder', runtime: () => 'index.js',    anchor: 'const adapter' },
-  primitives:        { root: 'packages/primitives',     kind: 'folder', runtime: () => 'index.js',    anchor: 'registerPrimitive(' },
+  studies:           { root: 'packages/studies',        kind: 'folder', runtime: (id) => id + '.js' },
+  tools:             { root: 'packages/tools',          kind: 'folder', runtime: (id) => id + '.js' },
+  addons:            { root: 'addons',                  kind: 'folder', runtime: () => 'index.js' },
+  adapters:          { root: 'data_engine/adapters',    kind: 'folder', runtime: () => 'index.js' },
+  primitives:        { root: 'packages/primitives',     kind: 'folder', runtime: () => 'index.js' },
   themes:            { root: 'packages/themes',         kind: 'file' },
-  'chart-themes':      { root: 'packages/chart-themes',  kind: 'file' },
+  'chart-themes':    { root: 'packages/chart-themes',   kind: 'file' },
 };
 
 // A folder package's file manifest, relative to the package folder, forward-slashed and sorted. raw
@@ -89,13 +84,13 @@ for (const [cls, cfg] of Object.entries(CLASSES)) {
     const runtime = cfg.runtime(id);
     const file = path.join(dir, id, runtime);
     if (!fs.existsSync(file)) continue;   // not a package (reference dir, icon-only folder, ...)
-    const src = fs.readFileSync(file, 'utf8');
+    const meta = readMeta(path.join(dir, id));
     packages.push({
       class: cls,
       id,
-      name: scrape(src, 'name', cfg.anchor) || id,
-      description: scrape(src, 'description', cfg.anchor),
-      icon: scrape(src, 'icon', cfg.anchor),
+      name: meta.name || '',
+      description: meta.description || '',
+      icon: meta.icon || '',
       info: fs.existsSync(path.join(dir, id, INFO_FILE)) ? INFO_FILE : '',
       path: cfg.root + '/' + id,
       runtime,

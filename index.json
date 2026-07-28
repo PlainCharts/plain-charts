@@ -13,6 +13,7 @@
         "images/app-connection.png",
         "index.js",
         "info.md",
+        "meta.json",
         "proto/ReadMe.txt",
         "proto/WebAPI/account_authorization_2.proto",
         "proto/WebAPI/api_limit_2.proto",
@@ -58,7 +59,8 @@
         "images/ea-inputs.png",
         "images/options-experts.png",
         "index.js",
-        "info.md"
+        "info.md",
+        "meta.json"
       ]
     },
     {
@@ -72,6 +74,7 @@
       "runtime": "index.js",
       "files": [
         "index.js",
+        "meta.json",
         "server.js"
       ]
     },
@@ -90,6 +93,7 @@
         "images/app-connection.png",
         "index.js",
         "info.md",
+        "meta.json",
         "server.js",
         "streamer.js",
         "trader.js"
@@ -108,7 +112,8 @@
         "icon.png",
         "index.js",
         "locales/en.json",
-        "locales/es.json"
+        "locales/es.json",
+        "meta.json"
       ]
     },
     {
@@ -136,6 +141,7 @@
         "index.js",
         "lang.js",
         "languages.csv",
+        "meta.json",
         "ui.js"
       ]
     },
@@ -152,7 +158,8 @@
         "icon.png",
         "index.js",
         "locales/en.json",
-        "locales/es.json"
+        "locales/es.json",
+        "meta.json"
       ]
     },
     {
@@ -174,6 +181,7 @@
         "locales/en.json",
         "locales/es.json",
         "market-data.js",
+        "meta.json",
         "plan-bridge.js",
         "shell.js",
         "trade-feed.js"
@@ -192,7 +200,8 @@
         "icon.png",
         "index.js",
         "locales/en.json",
-        "locales/es.json"
+        "locales/es.json",
+        "meta.json"
       ]
     },
     {
@@ -277,7 +286,8 @@
       "path": "packages/primitives/string-beads",
       "runtime": "index.js",
       "files": [
-        "index.js"
+        "index.js",
+        "meta.json"
       ]
     },
     {
@@ -290,7 +300,8 @@
       "path": "packages/studies/bollinger",
       "runtime": "bollinger.js",
       "files": [
-        "bollinger.js"
+        "bollinger.js",
+        "meta.json"
       ]
     },
     {
@@ -303,7 +314,8 @@
       "path": "packages/studies/day_marker",
       "runtime": "day_marker.js",
       "files": [
-        "day_marker.js"
+        "day_marker.js",
+        "meta.json"
       ]
     },
     {
@@ -316,7 +328,8 @@
       "path": "packages/studies/fvg",
       "runtime": "fvg.js",
       "files": [
-        "fvg.js"
+        "fvg.js",
+        "meta.json"
       ]
     },
     {
@@ -329,7 +342,8 @@
       "path": "packages/studies/ma_ribbon",
       "runtime": "ma_ribbon.js",
       "files": [
-        "ma_ribbon.js"
+        "ma_ribbon.js",
+        "meta.json"
       ]
     },
     {
@@ -342,6 +356,7 @@
       "path": "packages/studies/open_interest",
       "runtime": "open_interest.js",
       "files": [
+        "meta.json",
         "open_interest.js"
       ]
     },
@@ -355,6 +370,7 @@
       "path": "packages/studies/pr_terrain",
       "runtime": "pr_terrain.js",
       "files": [
+        "meta.json",
         "pr_terrain.js"
       ]
     },
@@ -368,6 +384,7 @@
       "path": "packages/studies/pr_trend_exhaustion",
       "runtime": "pr_trend_exhaustion.js",
       "files": [
+        "meta.json",
         "pr_trend_exhaustion.js"
       ]
     },
@@ -381,6 +398,7 @@
       "path": "packages/studies/rsi",
       "runtime": "rsi.js",
       "files": [
+        "meta.json",
         "rsi.js"
       ]
     },
@@ -394,6 +412,7 @@
       "path": "packages/studies/session_marker",
       "runtime": "session_marker.js",
       "files": [
+        "meta.json",
         "session_marker.js"
       ]
     },
@@ -421,6 +440,7 @@
       "path": "packages/studies/time_marker",
       "runtime": "time_marker.js",
       "files": [
+        "meta.json",
         "time_marker.js"
       ]
     },
@@ -434,6 +454,7 @@
       "path": "packages/studies/volume",
       "runtime": "volume.js",
       "files": [
+        "meta.json",
         "volume.js"
       ]
     },
@@ -447,6 +468,7 @@
       "path": "packages/studies/volume_cvd",
       "runtime": "volume_cvd.js",
       "files": [
+        "meta.json",
         "volume_cvd.js"
       ]
     },
@@ -460,6 +482,7 @@
       "path": "packages/studies/volume_delta_candle",
       "runtime": "volume_delta_candle.js",
       "files": [
+        "meta.json",
         "volume_delta_candle.js"
       ]
     },
@@ -473,6 +496,7 @@
       "path": "packages/studies/volume_profile",
       "runtime": "volume_profile.js",
       "files": [
+        "meta.json",
         "volume_profile.js"
       ]
     },
@@ -486,6 +510,7 @@
       "path": "packages/studies/volume_up_down_absorption",
       "runtime": "volume_up_down_absorption.js",
       "files": [
+        "meta.json",
         "volume_up_down_absorption.js"
       ]
     },
@@ -499,6 +524,7 @@
       "path": "packages/studies/vwap",
       "runtime": "vwap.js",
       "files": [
+        "meta.json",
         "vwap.js"
       ]
     },
@@ -594,7 +620,8 @@
       "runtime": "arrow.js",
       "files": [
         "arrow.js",
-        "arrow.png"
+        "arrow.png",
+        "meta.json"
       ]
     },
     {
@@ -609,6 +636,7 @@
       "files": [
         "callout.js",
         "callout.png",
+        "meta.json",
         "pin.js",
         "text-box.js"
       ]
@@ -624,7 +652,8 @@
       "runtime": "cursor.js",
       "files": [
         "cursor.js",
-        "cursor.png"
+        "cursor.png",
+        "meta.json"
       ]
     },
     {
@@ -638,7 +667,8 @@
       "runtime": "fib.js",
       "files": [
         "fib.js",
-        "fib.png"
+        "fib.png",
+        "meta.json"
       ]
     },
     {
@@ -652,7 +682,8 @@
       "runtime": "hline.js",
       "files": [
         "hline.js",
-        "hline.png"
+        "hline.png",
+        "meta.json"
       ]
     },
     {
@@ -666,7 +697,8 @@
       "runtime": "hray.js",
       "files": [
         "hray.js",
-        "hray.png"
+        "hray.png",
+        "meta.json"
       ]
     },
     {
@@ -680,7 +712,8 @@
       "runtime": "levelray.js",
       "files": [
         "levelray.js",
-        "levelray.png"
+        "levelray.png",
+        "meta.json"
       ]
     },
     {
@@ -693,6 +726,7 @@
       "path": "packages/tools/path",
       "runtime": "path.js",
       "files": [
+        "meta.json",
         "path.js",
         "path.png"
       ]
@@ -700,7 +734,7 @@
     {
       "class": "tools",
       "id": "range",
-      "name": "Price Range",
+      "name": "Range",
       "description": "Three measuring tools in one — price, date, and combined range.",
       "icon": "priceRange.png",
       "info": "",
@@ -708,6 +742,7 @@
       "runtime": "range.js",
       "files": [
         "dateRange.png",
+        "meta.json",
         "priceRange.png",
         "range.js"
       ]
@@ -722,6 +757,7 @@
       "path": "packages/tools/rect",
       "runtime": "rect.js",
       "files": [
+        "meta.json",
         "pin.js",
         "rect.js",
         "rect.png"
@@ -737,6 +773,7 @@
       "path": "packages/tools/symbol",
       "runtime": "symbol.js",
       "files": [
+        "meta.json",
         "symbol-picker.js",
         "symbol.js",
         "symbol.png"
@@ -752,6 +789,7 @@
       "path": "packages/tools/text",
       "runtime": "text.js",
       "files": [
+        "meta.json",
         "pin.js",
         "text-box.js",
         "text.js",
@@ -768,6 +806,7 @@
       "path": "packages/tools/trendline",
       "runtime": "trendline.js",
       "files": [
+        "meta.json",
         "trendline.js",
         "trendline.png"
       ]
@@ -782,6 +821,7 @@
       "path": "packages/tools/vline",
       "runtime": "vline.js",
       "files": [
+        "meta.json",
         "vline.js",
         "vline.png"
       ]
@@ -796,6 +836,7 @@
       "path": "packages/tools/zoom",
       "runtime": "zoom.js",
       "files": [
+        "meta.json",
         "zoom.js",
         "zoom.png"
       ]
