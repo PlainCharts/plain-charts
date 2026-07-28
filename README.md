@@ -1,3 +1,9 @@
+<!-- logo -->
+<p align="center">
+    <a href="https://plaincharts.github.io" alt="PlainCharts Logo">
+    <img src="icon.png" height="160"/></a>
+</p>
+
 <h1 align="center">Plain Charts</h1>
 
 <h4 align="center">
@@ -75,7 +81,7 @@ From source:
 
 If this idea resonates with you, and you derive value from it and want it to continue evolving, you're welcome to contribute to this project. Just pick what feels right (CONTRIBUTING.md).
 
-Report a bug &bull; Build a piece &bull; Create Themes &bull; Add a translation &bull; Improve Documentation &bull; Propose a feature
+[Report a bug](CONTRIBUTING.md#report-a-bug) &bull; [Build a piece](CONTRIBUTING.md#build-a-piece) &bull; [Create Themes](CONTRIBUTING.md#create-themes) &bull; [Add a translation](CONTRIBUTING.md#add-a-translation) &bull; [Improve Documentation](CONTRIBUTING.md#improve-documentation) &bull; [Propose a feature](CONTRIBUTING.md#propose-a-feature)
 
 ## Attributions
 
