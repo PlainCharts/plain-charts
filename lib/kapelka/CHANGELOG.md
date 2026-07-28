@@ -29,6 +29,8 @@ What stayed is the rendering core; what left is everything that assumed a partic
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-28
+
 ### Added
 
 - Configurable time-axis label gap (`timeAxis.labelGap`) — minimum pixels before crowded labels drop.
