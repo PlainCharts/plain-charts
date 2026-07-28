@@ -191,4 +191,4 @@ function renderSettings(host, cfg, save) {
 
 // PRIMITIVE #1 -- the string-and-beads registers itself as an order primitive (primitive-contract.js). It is
 // the DEFAULT: always available (imported by the overlay), so the chart never lacks an order renderer.
-registerPrimitive({ id: 'string-beads', name: 'String and beads', description: 'An on-chart order view: a vertical line carrying entry, stop, target, and order dots.', capabilities: { anchor: true, plan: true }, create: createPositionView, renderSettings });
+registerPrimitive({ id: 'string-beads', capabilities: { anchor: true, plan: true }, create: createPositionView, renderSettings });
