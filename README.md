@@ -15,6 +15,7 @@
     <a href="#features">Features</a> |
     <a href="#install">Install</a> |
     <a href="#contributing">Contributing</a> |
+    <a href="#connect">Connect</a> |
     <a href="#attributions">Attributions</a> |
     <a href="#license">License</a>
 </div>
