@@ -12,8 +12,6 @@
 
 <div align="center">
     <a href="#concept">Concept</a> |
-    <a href="#architecture">Architecture</a> |
-    <a href="#demo">Demo</a> |
     <a href="#features">Features</a> |
     <a href="#install">Install</a> |
     <a href="#contributing">Contributing</a> |
@@ -27,6 +25,11 @@
 </div>
 
 <br></br>
+
+> [!NOTE]
+> Beta Notice: Plain Charts is currently in beta and under active development. Please use a demo account only. Bugs and missing features are still being addressed.
+>
+> Found a bug or have an idea? Open a [GitHub issue](https://github.com/PlainCharts/plain-charts/issues/new/choose), and please search [existing issues](https://github.com/PlainCharts/plain-charts/issues?q=is%3Aissue+sort%3Arelevance-desc) before submitting a new one.
 
 ## Concept
 
@@ -48,7 +51,7 @@ You build what you want on a foundation that stays out of your way.
 ### Charting
 - Charting engine — reactive, declarative rendering (kapelka)
 - Studies — computed off the render thread
-- Drawing tools — 
+- Drawing tools — lines, rays, shapes, Fibonacci, and text, snapped to price and time
 - Object tree — drawing objects organized into layers and folders
 
 ### Trading
@@ -71,7 +74,7 @@ Prebuilt desktop builds for Windows, macOS, and Linux are on the [Releases](http
 
 From source:
 
-    git clone https://github.com/ether-strannik/plain_charts_vanilla.git
+    git clone https://github.com/PlainCharts/plain-charts.git
     npm install
     npm start
 
