@@ -10,11 +10,15 @@
   "module": "./index.js",
   "exports": {
     ".": "./index.js",
+    "./studies": "./studies/index.js",
+    "./skin": "./skin/index.js",
     "./package.json": "./package.json"
   },
   "files": [
     "index.js",
     "core/",
+    "studies/",
+    "skin/",
     "examples/",
     "README.md",
     "LICENSE"
