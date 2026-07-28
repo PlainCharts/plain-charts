@@ -322,7 +322,7 @@ function renderManager() {
     const iconCell = el('div', 'tool-icon-cell');
     const prev = el('span', 'tool-icon-prev');
     const ic = iconFor(a.id) || addonPkgIcon(a);
-    if (ic) { const im = document.createElement('img'); im.src = ic; prev.appendChild(im); } else prev.textContent = badgeText(a.name);
+    if (ic) prev.appendChild(themeIcon(ic, 20)); else prev.textContent = badgeText(a.name);
     const setIco = el('span', 'tool-ico', '🖼'); setIco.title = t('Set PNG icon'); setIco.onclick = () => pickIcon(a.id);
     iconCell.append(prev, setIco);
     // clear BOTH sources: the toolbar override AND the package's folder icon.png, so it truly reverts to the

@@ -44,6 +44,7 @@ export function injectCss() {
   .pac-row.sel{background:var(--active);box-shadow:inset 3px 0 0 var(--accent);}
   .pac-thumb{flex:0 0 32px;width:32px;height:32px;border-radius:5px;background:transparent center/contain no-repeat;overflow:hidden;}
   .pac-thumb.pac-flag{height:24px;border-radius:3px;background-size:cover;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);}
+  .pac-thumb.pac-mask{background:var(--icon,var(--tx));-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;}
   .pac-body{flex:1;min-width:0;}
   .pac-name{font-weight:600;color:var(--tx);}
   .pac-name .pac-by{font-weight:400;color:var(--tx-dim);}

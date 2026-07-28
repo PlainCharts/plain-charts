@@ -170,7 +170,15 @@ async function openModal(api) {
       const name = el('div', 'pac-name'); name.append(document.createTextNode(p.name || p.id));
       if (p.author) name.appendChild(el('span', 'pac-by', ' ' + t('by') + ' ' + p.author));
       body.append(name, el('div', 'pac-id', p.id), el('div', 'pac-desc', p.description || ''));
-      if (img) { const thumb = el('div', 'pac-thumb' + (p.class === 'vocab' ? ' pac-flag' : '')); thumb.style.backgroundImage = `url(${img})`; row.append(thumb); }
+      if (img) {
+        // Flags stay colourful; package line-icons are masked to the theme's --icon colour so they adapt
+        // to light/dark instead of rendering as a dark PNG that vanishes on a dark theme.
+        const isFlag = p.class === 'vocab';
+        const thumb = el('div', 'pac-thumb' + (isFlag ? ' pac-flag' : ' pac-mask'));
+        if (isFlag) thumb.style.backgroundImage = `url(${img})`;
+        else thumb.style.webkitMaskImage = thumb.style.maskImage = `url(${img})`;
+        row.append(thumb);
+      }
       row.append(body);
       if (state.mode === 'local' && inCatalog(p.id)) row.append(el('span', 'pac-badge', t('From repo')));
       // The per-row action button belongs to Remote only: ⤓ downloads into the library, ✓ marks an item

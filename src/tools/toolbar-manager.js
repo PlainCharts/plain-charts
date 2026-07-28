@@ -12,6 +12,7 @@ import { openCodeEditor } from '../studies/editor.js';
 import { t as tr } from '../i18n/i18n.js';   // vocabulary lookup (aliased -- `t` is a tool-def param here)
 import { makeDraggable } from '../ui/draggable.js';
 import { confirmDialog } from '../ui/confirm.js';   // gate the destructive package-folder delete
+import { themeIcon } from '../ui/icon.js';   // recolour previews with the theme, same as the on-bar buttons
 
 /** @typedef {{ label: string, icon: string, build: () => HTMLButtonElement }} Feature */
 
@@ -282,7 +283,7 @@ export function openManager(refresh, FEATURES) {
       const iconCell = document.createElement('div'); iconCell.className = 'tool-icon-cell';
       const cur = iconFor(tool.id) || toolIconUrl(tool.id);
       const prev = document.createElement('span'); prev.className = 'tool-icon-prev';
-      if (isImg(cur)) { const im = document.createElement('img'); im.src = /** @type {string} */ (cur); prev.appendChild(im); }
+      if (isImg(cur)) prev.appendChild(themeIcon(/** @type {string} */ (cur), 20));
       else prev.textContent = cur || tool.glyph || '•';
       const upBtn = document.createElement('span'); upBtn.className = 'tool-ico'; upBtn.textContent = '🖼'; upBtn.title = tr('Upload PNG icon');
       upBtn.onclick = () => uploadIcon(tool.id, () => { render(); refreshBar(); });
@@ -331,7 +332,7 @@ export function openManager(refresh, FEATURES) {
       const grip = el2('span', 'tool-mgr-grip', '⠿'); grip.title = tr('Drag to reorder');
       const noChk = el2('span', 'tool-chk'); noChk.style.visibility = 'hidden';   // no add/remove for features
       const iconCell = document.createElement('div'); iconCell.className = 'tool-icon-cell';
-      const prev = el2('span', 'tool-icon-prev'); const im = document.createElement('img'); im.src = f.icon; prev.appendChild(im); iconCell.appendChild(prev);
+      const prev = el2('span', 'tool-icon-prev'); prev.appendChild(themeIcon(f.icon, 20)); iconCell.appendChild(prev);
       const name = el2('span', 'tool-mgr-name', tr(f.label));
       wireRowDrag(row, id, () => dragFeature, (v) => { dragFeature = v; }, placeFeature, render);
       row.append(grip, noChk, iconCell, name);
