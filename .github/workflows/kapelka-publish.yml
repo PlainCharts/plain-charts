@@ -23,7 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history: git subtree split walks the whole thing
+          fetch-depth: 0            # full history: git subtree split walks the whole thing
+          persist-credentials: false   # don't leave the GITHUB_TOKEN auth header; we push with DOCS_DEPLOY_TOKEN
       - name: Subtree push lib/kapelka -> PlainCharts/kapelka
         env:
           TOKEN: ${{ secrets.DOCS_DEPLOY_TOKEN }}
