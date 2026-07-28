@@ -12,6 +12,9 @@ __pycache__/
 # cached historical bars (Settings > Data) — large, local-only, never commit
 /data/
 
+# Chromium/browser state (localStorage, cookies, cache) redirected here to stay portable — local-only
+/userdata/
+
 # internal design docs / scratch notes (adr, specs, references, private notes) — not part of the public repo
 .docs/
 

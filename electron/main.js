@@ -24,6 +24,12 @@ const { killAllPtys } = require('./pty');
 // helper then inherits -- that's the real "shows up as plaincharts everywhere" fix.
 try { process.title = 'plaincharts'; } catch (_) {}
 
+// Portability: keep ALL Chromium/browser state (localStorage, cookies, HTTP cache, GPUCache) INSIDE the
+// app folder -- a `userdata/` sibling of settings/ and data/ -- instead of the OS default
+// (~/.config/Plain Charts). Runs before app is ready, in dev (`electron .`) and packaged alike, so nothing
+// the app persists ever escapes its own tree. This is what makes the whole app portable.
+try { app.setPath('userData', path.join(__dirname, '..', 'userdata')); } catch (_) {}
+
 const PORT = process.env.PORT || 8011;
 const ORIGIN = `http://127.0.0.1:${PORT}/`;
 setOrigin(ORIGIN);   // diag logs window URLs short from here on
