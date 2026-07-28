@@ -17,10 +17,13 @@ const DEFAULT_REPO = 'https://raw.githubusercontent.com/PlainCharts/plain-charts
 // classes.js = the per-class capability tables (CATEGORIES, LOCAL discovery, install/uninstall endpoints);
 // ui.js = the presentation layer (el, header drag, the injected stylesheet); actions.js = the install /
 // uninstall actions (everything that writes to the library) + ghUrl.
-const langP = import('/addons/pacman/lang.js');
-const classesP = import('/addons/pacman/classes.js');
-const uiP = import('/addons/pacman/ui.js');
-const actionsP = import('/addons/pacman/actions.js');
+// Relative specifiers so these resolve against THIS module in both contexts: the browser (served over
+// http, absolute '/addons/...' happens to work) AND the Node addon-host (where a leading '/' is the
+// filesystem root, not the app root -- absolute paths throw ERR_MODULE_NOT_FOUND there).
+const langP = import('./lang.js');
+const classesP = import('./classes.js');
+const uiP = import('./ui.js');
+const actionsP = import('./actions.js');
 
 const cfg = {
   get repo() { return (localStorage.getItem('pacman.repo') || DEFAULT_REPO).replace(/\/+$/, ''); },
