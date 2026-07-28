@@ -95,6 +95,6 @@ Full license texts: see `licenses/`
 
 ## License
 
-[![GNU AGPLv3 Image](https://www.gnu.org/graphics/agplv3-155x51.png)](https://www.gnu.org/licenses/agpl-3.0.html)  
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)  
 
-Licensed under the [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.html). See the LICENSE file for more information.
+Licensed under the [MIT License](LICENSE). Use it freely, including in closed-source and commercial projects. kapelka incorporates trading-vue-js and night-vision (both MIT by C451), and their notices are kept in `licenses/`.

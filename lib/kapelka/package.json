@@ -30,7 +30,7 @@
     "vanilla",
     "zero-dependency"
   ],
-  "license": "AGPL-3.0-or-later",
+  "license": "MIT",
   "author": "PlainCharts",
   "repository": {
     "type": "git",
