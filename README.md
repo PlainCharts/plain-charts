@@ -82,7 +82,7 @@ From source:
 
 ## Contributing
 
-If this idea resonates with you, and you derive value from it and want it to continue evolving, you're welcome to contribute to this project. Just pick what feels right (CONTRIBUTING.md).
+If this idea resonates with you, and you derive value from it and want it to continue evolving, you're welcome to contribute to this project. Just pick what feels right.
 
 [Report a bug](CONTRIBUTING.md#report-a-bug) &bull; [Build a piece](CONTRIBUTING.md#build-a-piece) &bull; [Create Themes](CONTRIBUTING.md#create-themes) &bull; [Add a translation](CONTRIBUTING.md#add-a-translation) &bull; [Improve Documentation](CONTRIBUTING.md#improve-documentation) &bull; [Propose a feature](CONTRIBUTING.md#propose-a-feature)
 
