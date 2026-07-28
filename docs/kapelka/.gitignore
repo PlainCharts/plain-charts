@@ -28,3 +28,6 @@ public/core/
 public/studies/
 public/skin/
 public/examples/
+
+# changelog page generated from lib/kapelka/CHANGELOG.md by scripts/mirror-engine.mjs (not committed)
+src/pages/docs/changelog.md
