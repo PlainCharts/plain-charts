@@ -90,6 +90,10 @@ Help translate the interface into your language with [Weblate](https://weblate.o
 
 [![Translation status](https://hosted.weblate.org/widget/plain-charts/svg-badge.svg)](https://hosted.weblate.org/engage/plain-charts/)
 
+## Connect
+
+If you need help or have a question, start a discussion on our [Discussions](https://github.com/orgs/PlainCharts/discussions) page.
+
 ## Attributions
 
 People and open source projects that made it possible.
