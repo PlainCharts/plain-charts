@@ -11,11 +11,11 @@
   "ray": {
     "name": "Ray",
     "description": "A line from a point extending to the right.",
-    "icon": "trendline.png"
+    "icon": "ray.png"
   },
   "extendedline": {
     "name": "Extended Line",
     "description": "A line extended in both directions.",
-    "icon": "trendline.png"
+    "icon": "extendedline.png"
   }
 }

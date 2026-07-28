@@ -807,7 +807,9 @@
       "path": "packages/tools/trendline",
       "runtime": "trendline.js",
       "files": [
+        "extendedline.png",
         "meta.json",
+        "ray.png",
         "trendline.js",
         "trendline.png"
       ]
