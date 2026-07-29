@@ -20,3 +20,5 @@ This makes it an active trading companion, not just a chatbot. It can analyze ma
 That power requires care. Safety controls gate sensitive API calls behind additional confirmation, and order execution is disabled by default.
 
 ![Assistant permissions in Settings](/images/ai-assistant.jpg)
+
+For more, see [The AI assistant](/docs/ai/assistant) and [The AI Workspace](/docs/ai/ai-workspace).

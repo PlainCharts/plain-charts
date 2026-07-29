@@ -21,3 +21,11 @@ Enable **Project order** to draw the order as a primitive on the chart. The dial
 The default primitive uses a kebab-style control. Drag the stop and target handles to set levels, move the control on the chart, and change quantity, direction, or order type directly. Cancel or execute from the same control.
 
 After execution, choose what remains visible on the chart. Hide the entry, stop, or target to keep the display focused on what matters to you.
+
+The on-chart primitive is configurable. Open **Settings → Chart → Trading → Primitives** to choose the primitive and style its colors, placement, and lines.
+
+![On-chart primitive settings](/images/primitives.jpg)
+
+The app ships with a default primitive (**Pill**), but it isn't set in stone. Build your own to match your thinking and visual vocabulary. Examples are available through Pacman.
+
+For more, see [On-chart order primitives](/docs/architecture/on-chart-orders).
