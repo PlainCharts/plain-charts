@@ -17,6 +17,8 @@ export const START_SIDEBAR = [
 		collapsible: true,
 		links: [
 			{ href: '/start/features/trade-desk', label: 'Trade Desk' },
+			{ href: '/start/features/order-dialog', label: 'Order dialog' },
+			{ href: '/start/features/quick-buttons', label: 'Quick buttons' },
 			{ href: '/start/features/ai-workspace', label: 'AI Workspace' },
 			{ href: '/start/features/study-boards', label: 'Study boards' },
 		],
