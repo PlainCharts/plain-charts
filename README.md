@@ -28,6 +28,9 @@
 
 ![](/docs/images/main.jpg)
 
+> [!NOTE]
+> Plain Charts is currently in beta. Please use a demo account only. Bugs and missing features are still being addressed.
+
 ### Install
 
 Prebuilt desktop builds for Windows, macOS, and Linux are on the [Releases](https://github.com/PlainCharts/plain-charts/releases) page. Download and run.
@@ -42,11 +45,11 @@ From source:
 
 ### Documentation
 
-For more information on getting started, see the Plain Charts [documentation](https://plaincharts.github.io/start/).
+For more information on getting started, see the [**documentation**](https://plaincharts.github.io/start/).
 
 ### Contributing
 
-If this idea resonates with you, and you derive value from it and want it to continue evolving, you're welcome to contribute to this project. Just pick what feels right.
+If this idea resonates with you, you're welcome to contribute to this project. Just pick what feels right.
 
 [Report a bug](CONTRIBUTING.md#report-a-bug) &bull; [Build a piece](CONTRIBUTING.md#build-a-piece) &bull; [Create Themes](CONTRIBUTING.md#create-themes) &bull; [Add a translation](CONTRIBUTING.md#add-a-translation) &bull; [Improve Documentation](CONTRIBUTING.md#improve-documentation) &bull; [Propose a feature](CONTRIBUTING.md#propose-a-feature)
 
@@ -56,7 +59,7 @@ Help translate the interface into your language with [Weblate](https://weblate.o
 
 ### Connect
 
-If you need help or have a question, start a discussion on our [Discussions](https://github.com/orgs/PlainCharts/discussions) page.
+If you need help or have a question, start a discussion on our [discussions](https://github.com/orgs/PlainCharts/discussions) page.
 
 ### Attributions
 
