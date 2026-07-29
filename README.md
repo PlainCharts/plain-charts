@@ -6,10 +6,13 @@
 
 <h1 align="center">Plain Charts</h1>
 
+<h4 align="center">
+    A modular, open-source trading and charting platform shaped by you, not for you.
+</h4>
+
 <div align="center">
-    <a href="#concept">Concept</a> |
-    <a href="#features">Features</a> |
     <a href="#install">Install</a> |
+    <a href="#documentation">Documentation</a> |
     <a href="#contributing">Contributing</a> |
     <a href="#connect">Connect</a> |
     <a href="#attributions">Attributions</a> |
@@ -25,41 +28,6 @@
 
 ![](/docs/images/main.jpg)
 
-### What it is
-
-A modular, open-source trading and charting platform shaped by you, not for you.
-
-### What it does
-
-Ships flat, becomes the workspace you compose, and reshapes itself as your mental model changes.
-
-### What you build on
-
-#### Platform
-- Desktop app — Electron, runs on Windows, Mac, and Linux
-- Multi-window layouts — tabs and chart arrangements
-- Theming — app themes, chart templates, translatable vocabulary packs
-
-#### Charting
-- Charting engine — reactive, declarative rendering (kapelka)
-- Studies — computed off the render thread
-- Drawing tools — lines, rays, shapes, Fibonacci, and text, snapped to price and time
-- Object tree — drawing objects organized into layers and folders
-
-#### Trading
-- Multi-broker execution — through plug-in adapters
-- Chart trading — place, move, and close orders and brackets via draggable lines
-- Order ticket — risk-based position sizing and OCO brackets
-- Trade desk — console, orders, positions, history, accounts; configurable columns
-- Watchlist — symbols with live quotes
-- Alerts — price, time, and moving-percent conditions, with a persistent log
-
-#### Extensibility
-- Data caching — opt-in persistent store of historical bars, per broker and symbol
-- Assistant — policy-gated MCP integration
-- Package manager (Pacman) — browse, install, remove studies, tools, addons, adapters, themes, vocab
-- Addon system — extension modules in a Node.js host, with access to internal and external APIs
-
 ### Install
 
 Prebuilt desktop builds for Windows, macOS, and Linux are on the [Releases](https://github.com/PlainCharts/plain-charts/releases) page. Download and run.
@@ -71,6 +39,10 @@ From source:
     npm start
 
 `npm install` builds `node-pty` natively, so you need Node.js and a C/C++ toolchain.
+
+### Documentation
+
+For more information on getting started, see the Plain Charts [documentation](https://plaincharts.github.io/start/).
 
 ### Contributing
 
