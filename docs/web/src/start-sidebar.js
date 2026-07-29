@@ -24,6 +24,8 @@ export const START_SIDEBAR = [
 			{ href: '/start/features/study-boards', label: 'Study boards' },
 			{ href: '/start/features/study-display', label: 'Study display' },
 			{ href: '/start/features/object-tree', label: 'Object tree' },
+			{ href: '/start/features/drawing-properties', label: 'Drawing properties' },
+			{ href: '/start/features/tool-tips', label: 'Tool tips' },
 			{ href: '/start/features/watchlist', label: 'Watchlist' },
 			{ href: '/start/features/alerts', label: 'Alerts' },
 		],
