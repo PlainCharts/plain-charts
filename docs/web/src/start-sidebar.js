@@ -7,7 +7,7 @@
 export const START_SIDEBAR = [
 	{
 		links: [
-			{ href: '/start', label: 'Overview' },
+			{ href: '/start', label: 'Getting started' },
 		],
 	},
 ];
