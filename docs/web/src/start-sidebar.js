@@ -22,6 +22,7 @@ export const START_SIDEBAR = [
 			{ href: '/start/features/quick-buttons', label: 'Quick buttons' },
 			{ href: '/start/features/ai-workspace', label: 'AI Workspace' },
 			{ href: '/start/features/study-boards', label: 'Study boards' },
+			{ href: '/start/features/study-display', label: 'Study display' },
 			{ href: '/start/features/object-tree', label: 'Object tree' },
 			{ href: '/start/features/watchlist', label: 'Watchlist' },
 			{ href: '/start/features/alerts', label: 'Alerts' },
