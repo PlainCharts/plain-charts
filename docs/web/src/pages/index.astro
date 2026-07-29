@@ -1,23 +1,581 @@
 ---
-import Base from '../layouts/Base.astro';
+// Landing page. Ported from the persona-scroll prototype (.temp/persona-scroll).
+// Full self-contained document: no shared layout, is:inline style + script so Astro
+// emits both verbatim. Images live in public/landing/.
 ---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plain Charts</title>
+<style is:inline>
+  /* Nunito Sans (self-hosted, variable) -- one file covers all weights, another the italics */
+  @font-face {
+    font-family: 'Nunito Sans';
+    font-style: normal;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('/fonts/nunito-sans-var.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Nunito Sans';
+    font-style: italic;
+    font-weight: 300 800;
+    font-display: swap;
+    src: url('/fonts/nunito-sans-var-italic.woff2') format('woff2');
+  }
+  :root {
+    --page: #ece9e4;
+    --page-2: #e4e0d9;
+    --ink: #14181f;
+    --muted: #6b7280;
+    --line: #d7d2c8;
+    --accent: #2f6f5b;
+    --win: #0f1116;
+    --panel: #171a21;
+    --win-line: #262b36;
+    --win-ink: #e6e8ec;
+    --win-dim: #8b93a1;
+    --up: #2ebd85;
+    --down: #f6465d;
+    --blue: #4b8bf5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Nunito Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--page);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
 
-<Base title="Plain Charts — Documentation">
-	<style>
-		.hero { padding: 2rem 0 0.5rem; }
-		.hero h1 { font-size: 2.6rem; font-weight: 600; margin-bottom: 1rem; letter-spacing: -0.02em; line-height: 1.15; }
-		.hero p { color: #666; font-size: 1.3rem; line-height: 1.5; margin-bottom: 2.5rem; }
-		.btn-docs {
-			display: inline-flex; align-items: center; gap: 0.5rem; background: #000; color: #fff;
-			padding: 0.7rem 1.3rem; font-size: 0.95rem; text-decoration: none; border-radius: 6px;
-		}
-		.btn-docs:hover { background: #333; color: #fff; }
-	</style>
+  /* fixed top bar, always visible */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: var(--page);
+    border-bottom: 1px solid rgba(20, 24, 31, 0.07);
+    z-index: 100;
+  }
+  .topbar-inner {
+    max-width: 1720px;
+    margin: 0 auto;
+    padding: 0 40px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+  .topbar .brand {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .topnav { margin-left: auto; display: flex; align-items: center; gap: 28px; }
+  .topnav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 600; transition: color 0.15s ease; }
+  .topnav a:hover { color: var(--ink); }
+  .topnav .gh { display: inline-flex; color: var(--ink); }
+  .topnav .gh svg { width: 22px; height: 22px; fill: currentColor; display: block; }
 
-	<div class="hero">
-		<h1>Modular trading platform built to be extended.</h1>
-		<p>Build what you want on a foundation that stays out of your way.</p>
-	</div>
+  /* ---------- hero (what it is) ---------- */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20vh 24px 4vh;
+  }
+  .eyebrow {
+    font-size: 0.8rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 22px;
+  }
 
-	<a class="btn-docs" href="/start">Read the docs →</a>
-</Base>
+  /* ---------- features (collapsible) ---------- */
+  .features { max-width: 1000px; margin: 0 auto; padding: 2vh 24px 14vh; }
+  .features .eyebrow { margin-bottom: 30px; }
+  .fgroup { border-top: 1px solid rgba(20, 24, 31, 0.08); }
+  .fgroup:last-of-type { border-bottom: 1px solid rgba(20, 24, 31, 0.08); }
+  .fgroup summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 4px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .fgroup summary::-webkit-details-marker { display: none; }
+  .fgroup summary::before { content: "+"; font-size: 1.3rem; font-weight: 300; color: var(--muted); line-height: 1; width: 16px; text-align: center; flex: none; }
+  .fgroup[open] summary::before { content: "\2212"; }
+  .fgroup ul { list-style: none; margin: 0; padding: 0 4px 20px 32px; }
+  .fgroup li { padding: 7px 0; font-size: 1rem; line-height: 1.5; color: var(--muted); }
+  .fgroup li strong { color: var(--ink); font-weight: 700; }
+  .hero h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    max-width: 100%;
+  }
+  .hero h1 .em { color: var(--accent); }
+  .hero .hdesc { font-size: 18px; font-weight: 400; line-height: 1.6; color: var(--ink); max-width: 100%; white-space: nowrap; }
+  .hero .hdesc .em { color: var(--accent); font-weight: 600; }
+
+  /* ---------- intro ---------- */
+  .intro {
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6vh 24px 26vh;
+  }
+  .intro h1 { font-size: clamp(2rem, 5vw, 3.6rem); font-weight: 800; letter-spacing: -0.02em; max-width: 16ch; }
+  .intro p { margin-top: 20px; font-size: 1.15rem; color: var(--muted); max-width: 40ch; }
+  .scrollcue { margin-top: 48px; font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); animation: bob 2s ease-in-out infinite; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+  /* ---------- persona section ---------- */
+  .persona {
+    position: relative;
+    max-width: 1720px;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 80px;
+  }
+  /* persona identity: centered header spanning the top of the section */
+  .persona-id { grid-column: 1 / -1; text-align: center; margin-bottom: 2vh; }
+  .persona-id .ptag { font-size: 0.95rem; padding: 9px 24px; letter-spacing: 0.18em; }
+  .persona-id .pname { font-size: 1.6rem; margin-top: 18px; }
+  .media-sticky { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+  .realm-stage { position: relative; width: 1200px; max-width: 100%; aspect-ratio: 1920 / 1000; }
+  .realm-img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    border-radius: 12px; border: 1px solid var(--win-line);
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.45);
+  }
+  .persona:nth-child(even) { background: transparent; }
+
+  /* left: scrolling beats */
+  .col-left { padding: 8vh 0; }
+  .ptag {
+    display: inline-block;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .pname { font-size: 1.05rem; color: var(--muted); font-weight: 600; margin-bottom: 6vh; }
+
+  .beat {
+    min-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0.32;
+    transform: translateY(6px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .beat.is-active { opacity: 1; transform: none; }
+  .beat h2 { font-size: clamp(1.5rem, 3vw, 2.3rem); font-weight: 800; letter-spacing: -0.015em; line-height: 1.15; }
+  .beat h2 .em { color: var(--accent); }
+  .beat p { margin-top: 16px; font-size: 1.1rem; color: #3a4049; max-width: 34ch; }
+
+  /* right: sticky build stage */
+  .col-right { position: relative; }
+  .sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stage { position: relative; width: 440px; height: 520px; }
+
+  /* ---------- scene (centered, blur-in) ---------- */
+  .scene {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12vh 24px;
+    gap: 48px;
+  }
+  .scene-head h2 { font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+  .scene-head h2 .em { color: var(--accent); }
+  .scene-head p { margin-top: 16px; font-size: 1.15rem; color: var(--muted); max-width: 46ch; margin-inline: auto; }
+  .scene-media { width: min(1100px, 92vw); }
+  .scene-media img {
+    width: 100%; height: auto; display: block;
+    border-radius: 14px;
+    border: 1px solid var(--win-line);
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.45);
+    filter: blur(22px);
+    opacity: 0;
+    transform: scale(0.985);
+    transition: filter 0.7s ease, opacity 0.7s ease, transform 0.7s ease;
+  }
+  .scene-media.in img { filter: blur(0); opacity: 1; transform: none; }
+  @media (max-width: 980px) {
+    .persona { grid-template-columns: 1fr; gap: 0; }
+    .col-right { display: none; }
+    .beat { min-height: auto; padding: 5vh 0; opacity: 1; transform: none; }
+  }
+
+  .build {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+  }
+  .build.is-active { opacity: 1; transform: none; }
+
+  /* ---------- window mock ---------- */
+  .win {
+    background: var(--win);
+    border: 1px solid var(--win-line);
+    border-radius: 12px;
+    height: 100%;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.4), 0 8px 20px -8px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--win-ink);
+  }
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--win-line);
+    font-size: 0.85rem;
+    color: var(--win-dim);
+  }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .titlebar .tt { margin-left: 8px; color: var(--win-ink); font-weight: 700; }
+  .titlebar .bell { margin-left: auto; position: relative; font-size: 1rem; }
+  .badge {
+    position: absolute; top: -6px; right: -8px;
+    background: var(--down); color: #fff; font-size: 0.65rem; font-weight: 800;
+    min-width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; padding: 0 4px;
+  }
+  .winbody { padding: 10px; flex: 1; overflow: hidden; }
+
+  .tabs { display: flex; gap: 4px; padding: 4px; background: #0b0d12; border-radius: 8px; margin-bottom: 10px; }
+  .tab { flex: 1; text-align: center; padding: 7px; font-size: 0.82rem; font-weight: 700; color: var(--win-dim); border-radius: 6px; }
+  .tab.on { background: var(--panel); color: var(--win-ink); box-shadow: inset 0 0 0 1px var(--win-line); }
+
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 10px; border-radius: 8px;
+    background: var(--panel); margin-bottom: 7px;
+    font-size: 0.85rem;
+  }
+  .row .sym { font-weight: 800; letter-spacing: 0.01em; }
+  .row .desc { color: var(--win-dim); }
+  .row .time { margin-left: auto; color: var(--win-dim); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
+  .pill { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .pill.up { color: var(--up); background: rgba(46,189,133,0.12); }
+  .pill.tm { color: var(--blue); background: rgba(75,139,245,0.12); }
+  .pill.wl { color: #d9a441; background: rgba(217,164,65,0.12); }
+  .led { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .led.up { background: var(--up); } .led.tm { background: var(--blue); } .led.wl { background: #d9a441; }
+
+  .code { font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 0.78rem; color: #b9c2d0; background: #0b0d12; border-radius: 8px; padding: 12px; line-height: 1.7; }
+  .code .k { color: #c586c0; } .code .s { color: #ce9178; } .code .f { color: #dcdcaa; } .code .c { color: #6a7280; }
+  .drop { border: 1.5px dashed var(--win-line); border-radius: 10px; padding: 20px; text-align: center; color: var(--win-dim); margin-bottom: 10px; }
+  .drop .file { display: inline-block; background: var(--panel); border: 1px solid var(--win-line); border-radius: 8px; padding: 8px 14px; color: var(--win-ink); font-family: monospace; font-size: 0.8rem; }
+  .ok { color: var(--up); font-weight: 700; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; height: 100%; }
+  .cell { background: var(--panel); border: 1px solid var(--win-line); border-radius: 8px; padding: 10px; font-size: 0.78rem; color: var(--win-dim); }
+  .cell .h { color: var(--win-ink); font-weight: 700; margin-bottom: 8px; font-size: 0.82rem; }
+  .cell.big { grid-column: 1 / -1; }
+  .spark { height: 42px; margin-top: 8px; background:
+     linear-gradient(transparent 60%, rgba(46,189,133,0.12) 100%);
+     border-bottom: 2px solid var(--up); border-radius: 2px; position: relative; }
+
+  .modrow { display: flex; align-items: center; gap: 10px; padding: 9px 10px; background: var(--panel); border-radius: 8px; margin-bottom: 6px; font-size: 0.84rem; }
+  .modrow .tog { margin-left: auto; width: 34px; height: 18px; border-radius: 999px; background: #2a3040; position: relative; }
+  .modrow .tog.on { background: var(--accent); }
+  .modrow .tog::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: 0.2s; }
+  .modrow .tog.on::after { left: 18px; }
+
+  .caption { position: absolute; bottom: -30px; left: 0; width: 100%; text-align: center; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.04em; }
+
+  .outro { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8vh 24px; }
+  .outro h2 { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 800; max-width: 900px; line-height: 1.2; }
+  .outro p { margin-top: 16px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+   <div class="topbar-inner">
+    <span class="brand">Plain Charts</span>
+    <nav class="topnav">
+      <a href="/start">First steps</a>
+      <a href="/docs">Usage</a>
+      <a href="/adr">Schema</a>
+      <a href="https://github.com/PlainCharts/plain-charts" class="gh" aria-label="GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </nav>
+   </div>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">What it is</div>
+    <h1>A modular, open-source trading and charting platform <span class="em">shaped by you, not for you</span>.</h1>
+    <div class="eyebrow" style="margin-top:44px">What it does</div>
+    <p class="hdesc">Ships flat, becomes the workspace you compose, and <span class="em">reshapes itself as your mental model changes</span>.</p>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
+  <section class="features">
+    <div class="eyebrow">What you build on</div>
+
+    <details class="fgroup">
+      <summary>Platform</summary>
+      <ul>
+        <li><strong>Desktop app</strong> Electron, runs on Windows, Mac, and Linux</li>
+        <li><strong>Multi-window layouts</strong> tabs and chart arrangements</li>
+        <li><strong>Theming</strong> app themes, chart templates, translatable vocabulary packs</li>
+      </ul>
+    </details>
+
+    <details class="fgroup">
+      <summary>Charting</summary>
+      <ul>
+        <li><strong>Charting engine</strong> reactive, declarative rendering (kapelka)</li>
+        <li><strong>Studies</strong> computed off the render thread</li>
+        <li><strong>Drawing tools</strong> lines, rays, shapes, Fibonacci, and text, snapped to price and time</li>
+        <li><strong>Object tree</strong> drawing objects organized into layers and folders</li>
+      </ul>
+    </details>
+
+    <details class="fgroup">
+      <summary>Trading</summary>
+      <ul>
+        <li><strong>Multi-broker execution</strong> through plug-in adapters</li>
+        <li><strong>Chart trading</strong> place, move, and close orders and brackets via draggable lines</li>
+        <li><strong>Order ticket</strong> risk-based position sizing and OCO brackets</li>
+        <li><strong>Trade desk</strong> console, orders, positions, history, and accounts, with configurable columns</li>
+        <li><strong>Watchlist</strong> symbols with live quotes</li>
+        <li><strong>Alerts</strong> price, time, and moving-percent conditions, with a persistent log</li>
+      </ul>
+    </details>
+
+    <details class="fgroup">
+      <summary>Extensibility</summary>
+      <ul>
+        <li><strong>Data caching</strong> opt-in persistent store of historical bars, per broker and symbol</li>
+        <li><strong>Assistant</strong> policy-gated MCP integration</li>
+        <li><strong>Package manager (Pacman)</strong> browse, install, and remove studies, tools, addons, adapters, themes, and vocab</li>
+        <li><strong>Addon system</strong> extension modules in a Node.js host, with access to internal and external APIs</li>
+      </ul>
+    </details>
+
+    <div class="scrollcue" style="text-align:center; margin-top:44px">Scroll &darr;</div>
+  </section>
+
+  <section class="intro">
+    <div class="eyebrow" style="margin-bottom:24px">What it becomes</div>
+    <h1>Same core. Five visions of what it should be.</h1>
+  </section>
+
+  <!-- ============ PERSONA 1: TRADER ============ -->
+  <section class="persona">
+    <div class="persona-id">
+      <span class="ptag">Trader</span>
+      <div class="pname">watches markets, sets conditions, never wants to miss a fire</div>
+    </div>
+    <div class="col-left">
+      <div class="beat" data-i="0">
+        <h2>My system, <span class="em">not the default</span>.</h2>
+        <p>I want to compose my workspace from the modules I pick, so that my system is mine, not the platform's default.</p>
+      </div>
+      <div class="beat" data-i="1">
+        <h2>Only what <span class="em">I act on</span>.</h2>
+        <p>I want the things I never use gone from the workspace, so that what's on screen is only what I act on.</p>
+      </div>
+      <div class="beat" data-i="2">
+        <h2>Intent in <span class="em">one key</span>.</h2>
+        <p>I want to write an action in plain language and bind it to a key, so that my intent fires in one press, not a sequence of clicks.</p>
+      </div>
+    </div>
+
+    <div class="col-right">
+      <div class="media-sticky">
+        <div class="realm-stage">
+          <div class="build is-active" data-i="0"><img class="realm-img" src="/landing/image-13.jpg" alt="Workspace composed from chosen modules"></div>
+          <div class="build" data-i="1"><img class="realm-img" src="/landing/image-9.jpg" alt="Stripped-down minimal workspace"></div>
+          <div class="build" data-i="2"><img class="realm-img" src="/landing/image-8.jpg" alt="Plain-language order script bound to a key"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CREATOR ============ -->
+  <section class="persona">
+    <div class="persona-id">
+      <span class="ptag" style="background:#3a5a8f">Creator</span>
+      <div class="pname">makes what isn't there</div>
+    </div>
+    <div class="col-left">
+      <div class="beat" data-i="0">
+        <h2>In my <span class="em">own words</span>.</h2>
+        <p>I want to author my own vocabulary and theme, so that the platform speaks in my language, not its own.</p>
+      </div>
+      <div class="beat" data-i="1">
+        <h2>Draw what <span class="em">wasn't there</span>.</h2>
+        <p>I want to write a drawing tool the platform never shipped, so that my process has a shape on the chart.</p>
+      </div>
+      <div class="beat" data-i="2">
+        <h2>Many tools, <span class="em">one system</span>.</h2>
+        <p>I want to compose several modules into one workspace, so that my tools work as a system, not in isolation.</p>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="media-sticky">
+        <div class="realm-stage">
+          <div class="build is-active" data-i="0"><img class="realm-img" src="/landing/image-1.jpg" alt="The platform, in Spanish"></div>
+          <div class="build" data-i="1"><img class="realm-img" src="/landing/image-2.jpg" alt="Writing a custom drawing tool"></div>
+          <div class="build" data-i="2"><img class="realm-img" src="/landing/image-3.jpg" alt="Position Manager addon composed with chart primitives and a study"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OPERATOR ============ -->
+  <section class="persona">
+    <div class="persona-id">
+      <span class="ptag" style="background:#2e7d7a">Operator</span>
+      <div class="pname">connects the market to the app</div>
+    </div>
+    <div class="col-left">
+      <div class="beat" data-i="0">
+        <h2>Beyond the <span class="em">supported list</span>.</h2>
+        <p>I want to connect a broker the platform never heard of, so that my execution isn't limited to a supported list.</p>
+      </div>
+      <div class="beat" data-i="1">
+        <h2>Every account, <span class="em">under one roof</span>.</h2>
+        <p>I want to run one interface over several brokers at once, so that I'm not switching clients to switch accounts.</p>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="media-sticky">
+        <div class="realm-stage">
+          <div class="build is-active" data-i="0"><img class="realm-img" src="/landing/image-4.jpg" alt="Connections dialog with pluggable broker adapters"></div>
+          <div class="build" data-i="1"><img class="realm-img" src="/landing/image-5.jpg" alt="All brokers connected at once"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ANALYST ============ -->
+  <section class="persona">
+    <div class="persona-id">
+      <span class="ptag" style="background:#6b4e8f">Analyst</span>
+      <div class="pname">builds the lens they read the market through</div>
+    </div>
+    <div class="col-left">
+      <div class="beat" data-i="0">
+        <h2>Linked, <span class="em">not stacked</span>.</h2>
+        <p>I want my studies on a second screen, still linked to the chart, so that I read the signal and the price without stacking them.</p>
+      </div>
+      <div class="beat" data-i="1">
+        <h2>One signal, <span class="em">any source</span>.</h2>
+        <p>I want a study computed from one broker's symbol drawn over a chart from another, so that my signal isn't trapped in one data source.</p>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="media-sticky">
+        <div class="realm-stage">
+          <div class="build is-active" data-i="0"><img class="realm-img" src="/landing/image-6.jpg" alt="Study board on a second screen, linked to the chart"></div>
+          <div class="build" data-i="1"><img class="realm-img" src="/landing/image-7.jpg" alt="Two brokers' charts side by side (placeholder for cross-source study)"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUANT ============ -->
+  <section class="persona">
+    <div class="persona-id">
+      <span class="ptag" style="background:#a5762c">Quant</span>
+      <div class="pname">delegates the work to code and agents</div>
+    </div>
+    <div class="col-left">
+      <div class="beat" data-i="0">
+        <h2>An agent, <span class="em">not a chatbot</span>.</h2>
+        <p>I want the assistant to call the same APIs my scripts do, so that it operates on the platform, not just talks about it.</p>
+      </div>
+      <div class="beat" data-i="1">
+        <h2>Free to read, <span class="em">gated to act</span>.</h2>
+        <p>I want to gate what the agent can touch, so that it can analyze freely but never place an order I didn't allow.</p>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="media-sticky">
+        <div class="realm-stage">
+          <div class="build is-active" data-i="0"><img class="realm-img" src="/landing/image-11.jpg" alt="Assistant marked the highest high and lowest low via the drawing API"></div>
+          <div class="build" data-i="1"><img class="realm-img" src="/landing/image-12.jpg" alt="Policy gating what the agent is allowed to touch"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="outro">
+    <h2><span style="color:var(--accent)">You build</span> what you want on a foundation<br>that stays out of your way.</h2>
+  </section>
+
+<script is:inline>
+  const sections = document.querySelectorAll('.persona');
+  sections.forEach((sec) => {
+    const beats = sec.querySelectorAll('.beat');
+    const builds = sec.querySelectorAll('.build');
+    const setActive = (i) => {
+      beats.forEach((b) => b.classList.toggle('is-active', +b.dataset.i === i));
+      builds.forEach((b) => b.classList.toggle('is-active', +b.dataset.i === i));
+    };
+    // Active = the beat whose center crosses the viewport center (0-height band).
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) setActive(+e.target.dataset.i); });
+    }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
+    beats.forEach((b) => io.observe(b));
+  });
+
+  // Scene media: blur + fade in when it enters the viewport, blur out when it leaves.
+  const sceneIO = new IntersectionObserver((entries) => {
+    entries.forEach((e) => e.target.classList.toggle('in', e.isIntersecting));
+  }, { threshold: 0.35 });
+  document.querySelectorAll('.scene-media').forEach((m) => sceneIO.observe(m));
+</script>
+</body>
+</html>
