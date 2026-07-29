@@ -59,3 +59,62 @@ Each broker has its own setup guide:
 - **[MetaTrader 5](https://github.com/PlainCharts/plain-charts/blob/main/data_engine/adapters/mt5/info.md)** — Connect through a local MT5 terminal using the bridge EA
 - **[Schwab](https://github.com/PlainCharts/plain-charts/blob/main/data_engine/adapters/schwab/info.md)** — Stocks and options, with a one-time developer app setup
 - **OANDA** — Forex and CFDs
+
+Need to connect to a broker that isn't supported? Write your own adapter using the [adapter contract](/docs/data/writing-an-adapter).
+
+## Configure
+
+Open **Settings** to customize Plain Charts for your workflow.
+
+![The Settings dialog](/images/settings.jpg)
+
+Settings are organized into two groups:
+
+### Chart
+
+Everything that affects the current chart. These settings are saved with chart templates, so you can apply the same look and behavior with a single click.
+
+- **Instrument** — Candles, borders, and wicks
+- **Canvas** — Chart background and canvas
+- **Scales** — Price and time axes
+- **Status** — On-chart status line
+- **Trading** — On-chart order behavior
+- **Time** — Trading sessions and time zone
+- **Chart Theme** — Save and load chart layouts and styles
+
+### Global
+
+Everything that applies across the entire application. These settings are saved with your user profile and apply to every chart and window.
+
+- **General** — App-wide preferences
+- **Data** — Historical data cache
+- **App Theme** — Application theme
+- **Hotkeys** — Custom keyboard shortcuts
+- **Notifications** — How alerts are delivered
+- **Alerts** — Default alert settings
+- **Advanced** — Power-user options
+
+### Themes
+
+Customize the look of both your charts and the application.
+
+Choose a built-in theme or create your own in the theme editor.
+
+![The chart theme editor](/images/theme.jpg)
+
+- **Chart themes** — Customize candles, background, grid, crosshair, scales, and more. Saved with chart templates.
+- **App themes** — Customize the appearance of the entire application.
+
+Select a preset from the dropdown, or click **New** to create a theme. Organize themes into folders, and import or export them to share with others.
+
+### Vocabulary
+
+Vocabulary packs change the words the app uses, so the screen reads in terms your mind already understands. The same mechanism handles translation into other languages.
+
+![The app running a Spanish vocabulary pack](/images/vocab.jpg)
+
+Several packs are available today. Pick one from the dropdown, or import your own.
+
+Translations are managed through Weblate. To help translate Plain Charts into your native language, join the project on [Weblate](https://hosted.weblate.org/engage/plain-charts/).
+
+> This guide covers the most commonly used settings, not every available option.
