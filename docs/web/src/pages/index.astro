@@ -253,7 +253,7 @@
     transition: opacity 0.5s ease, transform 0.5s ease;
     pointer-events: none;
   }
-  .build.is-active { opacity: 1; transform: none; }
+  .build.is-active { opacity: 1; transform: none; pointer-events: auto; }
 
   /* ---------- window mock ---------- */
   .win {
@@ -332,6 +332,22 @@
   .outro { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8vh 24px; }
   .outro h2 { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 800; max-width: 900px; line-height: 1.2; }
   .outro p { margin-top: 16px; color: var(--muted); }
+
+  /* ---------- lightbox (click a build image to zoom) ---------- */
+  .realm-img { cursor: zoom-in; }
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 300;
+    cursor: zoom-out;
+    justify-content: center;
+    align-items: center;
+    padding: 4vh 4vw;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 96%; max-height: 92%; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -567,6 +583,8 @@
     <h2><span style="color:var(--accent)">You build</span> what you want on a foundation<br>that stays out of your way.</h2>
   </section>
 
+  <div class="lightbox" id="lightbox"><img id="lightboxImg" src="" alt="" /></div>
+
 <script is:inline>
   const sections = document.querySelectorAll('.persona');
   sections.forEach((sec) => {
@@ -588,6 +606,21 @@
     entries.forEach((e) => e.target.classList.toggle('in', e.isIntersecting));
   }, { threshold: 0.35 });
   document.querySelectorAll('.scene-media').forEach((m) => sceneIO.observe(m));
+
+  // Lightbox: click a build image to zoom, click anywhere or press Esc to close.
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  document.querySelectorAll('.realm-img').forEach((img) => {
+    img.addEventListener('click', () => {
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.alt;
+      lightbox.classList.add('open');
+    });
+  });
+  lightbox.addEventListener('click', () => lightbox.classList.remove('open'));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') lightbox.classList.remove('open');
+  });
 </script>
 </body>
 </html>
