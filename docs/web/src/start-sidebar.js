@@ -8,6 +8,17 @@ export const START_SIDEBAR = [
 	{
 		links: [
 			{ href: '/start', label: 'Getting started' },
+			{ href: '/start/configure', label: 'Configure' },
+			{ href: '/start/customize', label: 'Customize' },
+		],
+	},
+	{
+		title: 'Features',
+		collapsible: true,
+		links: [
+			{ href: '/start/features/trade-desk', label: 'Trade Desk' },
+			{ href: '/start/features/ai-workspace', label: 'AI Workspace' },
+			{ href: '/start/features/study-boards', label: 'Study boards' },
 		],
 	},
 ];
