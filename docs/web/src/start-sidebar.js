@@ -18,10 +18,13 @@ export const START_SIDEBAR = [
 		links: [
 			{ href: '/start/features/trade-desk', label: 'Trade Desk' },
 			{ href: '/start/features/order-dialog', label: 'Order dialog' },
+			{ href: '/start/features/quick-placement', label: 'Quick placement' },
 			{ href: '/start/features/quick-buttons', label: 'Quick buttons' },
 			{ href: '/start/features/ai-workspace', label: 'AI Workspace' },
 			{ href: '/start/features/study-boards', label: 'Study boards' },
 			{ href: '/start/features/object-tree', label: 'Object tree' },
+			{ href: '/start/features/watchlist', label: 'Watchlist' },
+			{ href: '/start/features/alerts', label: 'Alerts' },
 		],
 	},
 ];
