@@ -6,7 +6,7 @@ import { t } from '../../i18n/i18n.js';   // vocabulary lookup (the app NAME sta
 const APP = {
   name: 'Plain Charts',
   version: '0.1.0',
-  icon: 'images/logo.png',
+  icon: 'icon.png',
 };
 
 /** @param {import('../sd-controls.js').SettingsCtx} ctx */
