@@ -232,6 +232,27 @@ export function startHost(core) {
   /** @param {string} id @param {Function} job @param {boolean} [front] */
   const enqueue = (id, job, front) => { const q = qFor(id); front ? q.queue.unshift(job) : q.queue.push(job); pump(id); };
 
+  // The shared throttle LIFECYCLE for a window's history fetch (subscribeBars + getBars use the identical
+  // sequence): register the relay record, queue the job on the per-broker limiter, and settle EXACTLY once
+  // (batch complete / error / guard timeout) to free the slot. opts.front jumps the queue (a live feed goes
+  // ahead of backfill); opts.deleteOnSettle drops the relay record when the fetch settles (one-shot getBars;
+  // a live subscribeBars stays registered for its stream + the eventual drop).
+  /** @param {string} brokerId @param {string} key @param {{ front?: boolean, deleteOnSettle?: boolean }} opts
+   * @param {(rec: { handle: any, cancelled: boolean, settle: any }, settle: () => void) => void} start */
+  const relayedFetch = (brokerId, key, opts, start) => {
+    /** @type {{ handle: any, cancelled: boolean, settle: any }} */
+    const rec = { handle: null, cancelled: false, settle: null };
+    relays.set(key, rec);
+    enqueue(brokerId, () => {
+      if (rec.cancelled) { release(brokerId); return; }
+      let done = false, guard = /** @type {any} */ (null);
+      const settle = () => { if (done) return; done = true; if (guard) { clearTimeout(guard); guard = null; } if (opts.deleteOnSettle) relays.delete(key); release(brokerId); };
+      rec.settle = settle;
+      guard = setTimeout(settle, HIST_GUARD_MS);
+      start(rec, settle);
+    }, opts.front);
+  };
+
   function buildSnap() {
     /** @type {Record<string, any>} */
     const adapters = {};
@@ -295,32 +316,16 @@ export function startHost(core) {
       switch (m.method) {
         case 'resolveSymbol': ad.resolveSymbol(m.args[0], (/** @type {any} */ inst, /** @type {any} */ err) => post(m.win, m.callId, [inst, err])); break;
         case 'subscribeBars': {
-          /** @type {{ handle: any, cancelled: boolean, settle: any }} */
-          const rec = { handle: null, cancelled: false, settle: null };
-          relays.set(key, rec);
-          enqueue(m.id, () => {
-            if (rec.cancelled) { release(m.id); return; }
-            let done = false, guard = /** @type {any} */ (null);
-            const settle = () => { if (done) return; done = true; if (guard) { clearTimeout(guard); guard = null; } release(m.id); };
-            rec.settle = settle;
-            guard = setTimeout(settle, HIST_GUARD_MS);
+          relayedFetch(m.id, key, { front: true }, (rec, settle) => {   // live feed jumps ahead of backfill getBars
             rec.handle = ad.subscribeBars(m.args[0], (/** @type {any} */ u) => {
               post(m.win, m.callId, [u]);
               if (u && (u.complete || u.error)) settle();   // initial batch done -> free the slot; live keeps streaming
             });
-          }, true);   // live feed jumps ahead of backfill getBars
+          });
           break;
         }
         case 'getBars': {
-          /** @type {{ cancelled: boolean, settle: any }} */
-          const rec = { cancelled: false, settle: null };
-          relays.set(key, rec);
-          enqueue(m.id, () => {
-            if (rec.cancelled) { release(m.id); return; }
-            let done = false, guard = /** @type {any} */ (null);
-            const settle = () => { if (done) return; done = true; if (guard) { clearTimeout(guard); guard = null; } relays.delete(key); release(m.id); };
-            rec.settle = settle;
-            guard = setTimeout(settle, HIST_GUARD_MS);
+          relayedFetch(m.id, key, { deleteOnSettle: true }, (rec, settle) => {
             ad.getBars(m.args[0], (/** @type {any} */ u) => {
               if (!rec.cancelled) post(m.win, m.callId, [u]);
               if (u && (u.complete || u.error)) settle();

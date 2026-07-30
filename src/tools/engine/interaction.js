@@ -463,59 +463,63 @@ export class Interaction {
       }
       return;
     }
-    if (this.mode === 'moving') {
-      const drag = /** @type {Drag} */ (this.drag);
-      const start = /** @type {ScreenPoint} */ (drag.start);
-      let dx = x - start.x, dy = y - start.y;
-      // Shift locks the move to one axis -- a straight-line drag / alignment for ANY drawing (slide a
-      // rectangle left/right keeping its price, align an arrow). The axis is fixed from the INITIAL
-      // dominant direction and held for the rest of the drag (no switching mid-move, even if you drift).
-      // Releasing Shift frees both axes; pressing it again re-establishes from the current direction.
-      if (this._shiftHeld) {
-        if (!drag.lockAxis && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) drag.lockAxis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
-        if (drag.lockAxis === 'x') dy = 0; else if (drag.lockAxis === 'y') dx = 0;
-      } else {
-        drag.lockAxis = null;
-      }
-      if (!drag.moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
-        drag.moved = true;
-        if (drag.ctrlClone) {   // Ctrl+drag → clone in place, then drag the copy
-          const nd = this.engine.clone(/** @type {string} */ (drag.clickedId));
-          if (nd) { drag.ids = [nd.id]; drag.clickedId = nd.id; drag.orig = { [nd.id]: nd.points.map((p) => ({ ...p })) }; }
-          drag.ctrlClone = false;
-        }
-      }
-      const dragIds = /** @type {string[]} */ (drag.ids);
-      const dragOrig = /** @type {Record<string, Anchor[]>} */ (drag.orig);
-      const single = dragIds.length === 1;
-      dragIds.forEach((id) => {
-        const d = this.engine.get(id);
-        if (!d) return;
-        const orig = dragOrig[id];
-        // a tool can redefine how a lone body-drag translates its points (e.g. the callout keeps its
-        // attachment tip fixed and moves only the box). A group move always translates every point.
-        const tool = /** @type {Tool|undefined} */ (getTool(d.tool));
-        const snapBar = !(tool && tool.snapToBar === false);
-        /** @param {Anchor} p @returns {Anchor} */
-        const move = (p) => {
-          const s = toScreen(this.pane, /** @type {{ time: number, price: number }} */ (p), this.engine.series);
-          if (!s) return p;
-          const nd = toData(this.pane, s.x + dx, s.y + dy, this.engine.series);
-          nd.price = this._snapPrice(nd.price);   // keep the moved drawing on the instrument's tick grid
-          // ...and snap time to the BAR grid (index space), exactly like create/reshape -- a body-drag
-          // must step bar-to-bar, not slide continuously through time. null in whitespace past the data
-          // leaves the free time so a drawing can still be dragged into the future / before the first bar.
-          if (snapBar) { const t = this._nearestBarTime(s.x + dx); if (t != null) nd.time = t; }
-          return nd;
-        };
-        d.points = (single && tool && typeof tool.bodyMove === 'function') ? tool.bodyMove(orig, move) : orig.map(move);
-        this.engine.liveUpdate(d);
-      });
-      const cd = toData(this.pane, x, y, this.engine.series);   // keep crosshair on the cursor
-      this._syncCrosshair(cd.time, cd.price);
-      return;
-    }
+    if (this.mode === 'moving') { this._moveSelection(x, y); return; }
     this._hover(x, y);   // idle hover on the overlay (crosshair handled in _onHover)
+  }
+
+  // Translate the dragged selection: shift axis-lock, Ctrl clone-on-first-move, then per-point translation
+  // with tick + bar snapping (or the tool's own bodyMove for a lone drag).
+  /** @param {number} x @param {number} y */
+  _moveSelection(x, y) {
+    const drag = /** @type {Drag} */ (this.drag);
+    const start = /** @type {ScreenPoint} */ (drag.start);
+    let dx = x - start.x, dy = y - start.y;
+    // Shift locks the move to one axis -- a straight-line drag / alignment for ANY drawing (slide a
+    // rectangle left/right keeping its price, align an arrow). The axis is fixed from the INITIAL
+    // dominant direction and held for the rest of the drag (no switching mid-move, even if you drift).
+    // Releasing Shift frees both axes; pressing it again re-establishes from the current direction.
+    if (this._shiftHeld) {
+      if (!drag.lockAxis && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) drag.lockAxis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+      if (drag.lockAxis === 'x') dy = 0; else if (drag.lockAxis === 'y') dx = 0;
+    } else {
+      drag.lockAxis = null;
+    }
+    if (!drag.moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
+      drag.moved = true;
+      if (drag.ctrlClone) {   // Ctrl+drag → clone in place, then drag the copy
+        const nd = this.engine.clone(/** @type {string} */ (drag.clickedId));
+        if (nd) { drag.ids = [nd.id]; drag.clickedId = nd.id; drag.orig = { [nd.id]: nd.points.map((p) => ({ ...p })) }; }
+        drag.ctrlClone = false;
+      }
+    }
+    const dragIds = /** @type {string[]} */ (drag.ids);
+    const dragOrig = /** @type {Record<string, Anchor[]>} */ (drag.orig);
+    const single = dragIds.length === 1;
+    dragIds.forEach((id) => {
+      const d = this.engine.get(id);
+      if (!d) return;
+      const orig = dragOrig[id];
+      // a tool can redefine how a lone body-drag translates its points (e.g. the callout keeps its
+      // attachment tip fixed and moves only the box). A group move always translates every point.
+      const tool = /** @type {Tool|undefined} */ (getTool(d.tool));
+      const snapBar = !(tool && tool.snapToBar === false);
+      /** @param {Anchor} p @returns {Anchor} */
+      const move = (p) => {
+        const s = toScreen(this.pane, /** @type {{ time: number, price: number }} */ (p), this.engine.series);
+        if (!s) return p;
+        const nd = toData(this.pane, s.x + dx, s.y + dy, this.engine.series);
+        nd.price = this._snapPrice(nd.price);   // keep the moved drawing on the instrument's tick grid
+        // ...and snap time to the BAR grid (index space), exactly like create/reshape -- a body-drag
+        // must step bar-to-bar, not slide continuously through time. null in whitespace past the data
+        // leaves the free time so a drawing can still be dragged into the future / before the first bar.
+        if (snapBar) { const t = this._nearestBarTime(s.x + dx); if (t != null) nd.time = t; }
+        return nd;
+      };
+      d.points = (single && tool && typeof tool.bodyMove === 'function') ? tool.bodyMove(orig, move) : orig.map(move);
+      this.engine.liveUpdate(d);
+    });
+    const cd = toData(this.pane, x, y, this.engine.series);   // keep crosshair on the cursor
+    this._syncCrosshair(cd.time, cd.price);
   }
 
   /** @param {PointerEvent} e */

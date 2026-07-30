@@ -50,6 +50,47 @@ function onEvent(brokerId, raw, quiet) {
 /** @type {Set<string>} */
 const tripped = new Set();
 
+// TRIPWIRE (the intermittent "working orders vanished from the chart" hunt): an order whose SYMBOL is an
+// unresolved placeholder ('contract N') or whose WORKING limit/stop carries no drawable price lands in the store
+// fine -- the desk lists it -- but the chart overlay filters it out silently. Catch the corrupt event the moment
+// it lands and name it in the Console (the next well-formed status self-heals the store, so this line is the
+// only trace). Active debug instrumentation -- stays until the hunt closes.
+/** @param {string} brokerId @param {string} key @param {any} o */
+function tripwireCheck(brokerId, key, o) {
+  const drawPx = o.type === 'stop' ? (o.stopPrice != null ? o.stopPrice : o.price) : (o.limitPrice != null ? o.limitPrice : o.price);
+  const why = (!o.symbol || /^contract \d+$/.test(String(o.symbol))) ? 'unresolved symbol "' + o.symbol + '"'
+    : ((o.type === 'limit' || o.type === 'stop') && !isTerminal(o.status) && !Number.isFinite(Number(drawPx))) ? 'no drawable price on a working ' + o.type
+    : null;
+  if (!why) return;
+  const k = key + '|' + why;
+  if (tripped.has(k)) return;
+  tripped.add(k);
+  platform.console.post({ level: 'error', cat: 'journal', src: brokerId, msg: 'ORDER TRIPWIRE #' + o.id + ' ' + o.side + ' ' + o.type + ' ' + o.symbol + ' (' + o.status + '): ' + why + ' -- the chart cannot draw this order; raw ' + JSON.stringify({ price: o.price, limitPrice: o.limitPrice, stopPrice: o.stopPrice, time: o.time, updateTime: o.updateTime }) });
+}
+
+// Console = RAW broker comms. Print the broker's OWN per-transaction reports (ACK_PLACE / ACK_MODIFY /
+// ACK_CANCEL / FILL / REJECTED ...) verbatim -- no app-synthesized status narrative. text is set by the broker
+// mainly on rejects. Adapters without per-transaction comms (e.g. MT5) fall back to the plain status line.
+/** @param {string} brokerId @param {any} o */
+function journalOrder(brokerId, o) {
+  const head = o.side + ' ' + o.qty + ' ' + o.symbol;
+  const txns = Array.isArray(o.txns) ? o.txns : [];
+  if (txns.length) {
+    const fillPx = o.avgFillPrice != null ? o.avgFillPrice : o.price;
+    for (const t of txns) {
+      const isRej = /REJECT/.test(t.type);
+      const fill = t.type === 'FILL' && t.fillQty != null ? ' ' + t.fillQty + (fillPx != null ? ' @ ' + fillPx : '') : '';
+      const text = t.text ? ' -- ' + t.text : (isRej && o.rejectText ? ' -- ' + o.rejectText : '');
+      platform.console.post({ cat: 'journal', src: brokerId, dir: 'in', level: isRej ? 'error' : 'info', msg: head + ' ' + t.type + fill + text });
+    }
+  } else if (o.rejectText) {
+    platform.console.post({ cat: 'journal', src: brokerId, dir: 'in', level: 'error', msg: head + ' REJECTED -- ' + o.rejectText });
+  } else {
+    const px = o.price != null ? ' @ ' + o.price : '';
+    platform.console.post({ cat: 'journal', src: brokerId, dir: 'in', level: o.status === 'rejected' ? 'error' : 'info', msg: head + ' ' + o.type + px + ' - ' + o.status });
+  }
+}
+
 /** @param {string} brokerId @param {TradeEvent} ev @param {boolean} [quiet] */
 function feed(brokerId, ev, quiet) {
   const log = !quiet && live.get(brokerId);   // log to Console only for live events, never for snapshot seeds/replay
@@ -58,42 +99,8 @@ function feed(brokerId, ev, quiet) {
     // the order BOOK retains every order, including terminal ones (filled/cancelled/rejected) with their final
     // status + times -- positions are accumulations of these. A 'working orders' view is just a status filter.
     platform.orders.set(key, { broker: brokerId, ...o });
-    // TRIPWIRE (the intermittent "working orders vanished from the chart" hunt): an order whose SYMBOL is an
-    // unresolved placeholder ('contract N') or whose WORKING limit/stop carries no drawable price lands in the store
-    // fine -- the desk lists it -- but the chart overlay filters it out silently. Catch the corrupt event the moment
-    // it lands and name it in the Console (the next well-formed status self-heals the store, so this line is the
-    // only trace).
-    const drawPx = o.type === 'stop' ? (o.stopPrice != null ? o.stopPrice : o.price) : (o.limitPrice != null ? o.limitPrice : o.price);
-    const why = (!o.symbol || /^contract \d+$/.test(String(o.symbol))) ? 'unresolved symbol "' + o.symbol + '"'
-      : ((o.type === 'limit' || o.type === 'stop') && !isTerminal(o.status) && !Number.isFinite(Number(drawPx))) ? 'no drawable price on a working ' + o.type
-      : null;
-    if (why) {
-      const k = key + '|' + why;
-      if (!tripped.has(k)) {
-        tripped.add(k);
-        platform.console.post({ level: 'error', cat: 'journal', src: brokerId, msg: 'ORDER TRIPWIRE #' + o.id + ' ' + o.side + ' ' + o.type + ' ' + o.symbol + ' (' + o.status + '): ' + why + ' -- the chart cannot draw this order; raw ' + JSON.stringify({ price: o.price, limitPrice: o.limitPrice, stopPrice: o.stopPrice, time: o.time, updateTime: o.updateTime }) });
-      }
-    }
-    if (log) {   // Console = RAW broker comms. Print the broker's OWN per-transaction reports (ACK_PLACE / ACK_MODIFY /
-      // ACK_CANCEL / FILL / REJECTED ...) verbatim -- no app-synthesized status narrative. text is set by the broker
-      // mainly on rejects. Adapters without per-transaction comms (e.g. MT5) fall back to the plain status line.
-      const head = o.side + ' ' + o.qty + ' ' + o.symbol;
-      const txns = Array.isArray(o.txns) ? o.txns : [];
-      if (txns.length) {
-        const fillPx = o.avgFillPrice != null ? o.avgFillPrice : o.price;
-        for (const t of txns) {
-          const isRej = /REJECT/.test(t.type);
-          const fill = t.type === 'FILL' && t.fillQty != null ? ' ' + t.fillQty + (fillPx != null ? ' @ ' + fillPx : '') : '';
-          const text = t.text ? ' -- ' + t.text : (isRej && o.rejectText ? ' -- ' + o.rejectText : '');
-          platform.console.post({ cat: 'journal', src: brokerId, dir: 'in', level: isRej ? 'error' : 'info', msg: head + ' ' + t.type + fill + text });
-        }
-      } else if (o.rejectText) {
-        platform.console.post({ cat: 'journal', src: brokerId, dir: 'in', level: 'error', msg: head + ' REJECTED -- ' + o.rejectText });
-      } else {
-        const px = o.price != null ? ' @ ' + o.price : '';
-        platform.console.post({ cat: 'journal', src: brokerId, dir: 'in', level: o.status === 'rejected' ? 'error' : 'info', msg: head + ' ' + o.type + px + ' - ' + o.status });
-      }
-    }
+    tripwireCheck(brokerId, key, o);   // corrupt-event diagnostic (chart-drawability rules)
+    if (log) journalOrder(brokerId, o);
   } else if (ev.kind === 'position') {
     const p = ev.position, key = brokerId + ':' + p.symbol;
     if (Number(p.qty) > 0) platform.positions.set(key, { broker: brokerId, ...p });
