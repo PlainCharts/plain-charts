@@ -34,6 +34,12 @@
  * @property {number|null} ticks         realized ticks when contractInfo present; else null
  * @property {boolean} closed            true when net returned to 0
  * @property {FillLike[]} fills          the constituent fill records, in time order
+ * @property {{ isExit: boolean, points: number|null, gross: number|null, net: number|null }[]} fillPnl
+ *   per-fill realization, index-aligned with `fills`. Entries/adds realize nothing (isExit false, nulls).
+ *   A REDUCE fill realizes on the closed qty vs the running avg cost: points = price P&L per contract
+ *   (priceDiff * closedQty / entryQty), gross = the broker's exact per-fill realizedPnl when the fill
+ *   carries it, else the tickValue estimate from the FILL's own tickSize/tickValue stamps (null without
+ *   them), net = gross - the fill's commission. Children sum to the parent's realized totals.
  */
 
 /** @param {any} s @returns {number} */
@@ -108,9 +114,15 @@ function buildPosition(key, groupFills, info) {
   let realizedPrice = 0, realizedPnl = 0, ticks = 0, commission = 0;
   let brokerPnl = 0, hasBrokerPnl = false;   // exact per-fill realized P&L from the broker (MT5), when supplied
   const entryTime = first.time; let exitTime = first.time;
+  // per-fill realization, recorded during the same replay. pricePnl (priceDiff * closeQ) is divided by the
+  // FINAL entryQty after the loop -- a cross-zero remainder later in the group still grows entryQty.
+  /** @type {{ isExit: boolean, pricePnl: number, gross: number|null, net: number|null }[]} */
+  const perFill = [];
 
   for (const f of groupFills) {
     const q = Number(f.qty), px = Number(f.price), s = sideSign(f.side);
+    const row = { isExit: false, pricePnl: 0, gross: /** @type {number|null} */ (null), net: /** @type {number|null} */ (null) };
+    perFill.push(row);
     if (f.commission != null) commission += Number(f.commission) || 0;
     if (f.realizedPnl != null) { brokerPnl += Number(f.realizedPnl) || 0; hasBrokerPnl = true; }
     if (f.time != null) exitTime = f.time;
@@ -130,6 +142,13 @@ function buildPosition(key, groupFills, info) {
       realizedPrice += priceDiff * closeQ;
       closedQty += closeQ; exitPxQty += px * closeQ;
       if (canCurrency) { realizedPnl += (priceDiff / tickSize) * tickValue * closeQ; ticks += (priceDiff / tickSize) * closeQ; }
+      // per-fill row: prefer the broker's exact per-fill P&L; else estimate from the fill's OWN tick stamps
+      // (adapters stamp tickSize/tickValue on fills) -- null when the fill carries neither.
+      const fts = Number(/** @type {any} */ (f).tickSize), ftv = Number(/** @type {any} */ (f).tickValue);
+      const bp = /** @type {any} */ (f).realizedPnl;
+      const gross = bp != null ? Number(bp) : ((fts > 0 && ftv > 0) ? (priceDiff / fts) * ftv * closeQ : null);
+      row.isExit = true; row.pricePnl = priceDiff * closeQ;
+      row.gross = gross; row.net = gross != null ? gross - (Number(f.commission) || 0) : null;
       const oldSign = net > 0 ? 1 : -1;
       net += s * q;
       if (Math.abs(net) >= EPS && (net > 0 ? 1 : -1) !== oldSign) {   // crossed zero -> remainder re-opens the other way
@@ -157,5 +176,6 @@ function buildPosition(key, groupFills, info) {
     ticks: canCurrency ? ticks : null,
     closed,
     fills: groupFills,
+    fillPnl: perFill.map((r) => ({ isExit: r.isExit, points: r.isExit && entryQty ? r.pricePnl / entryQty : null, gross: r.gross, net: r.net })),
   };
 }

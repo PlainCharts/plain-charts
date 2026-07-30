@@ -9,6 +9,7 @@ import { getSetting, setSetting } from '../settings/settings.js';
 import { GEAR, openColumnPicker } from './column-picker.js';
 import { fmtDeskTime, onDeskConfigChange } from './desk-config.js';
 import { createAccountFilter } from './account-filter.js';
+import { unrealizedProfit } from './trade-derive.js';
 import { t } from '../i18n/i18n.js';   // vocabulary lookup for column labels
 
 /**
@@ -67,20 +68,9 @@ function changePct(r) {
   const sign = r.side === 'short' ? -1 : 1;
   return (mark - Number(entry)) / Number(entry) * 100 * sign;
 }
-// Unrealized P&L. The favorable price move x qty gives POINTS; multiplying by the contract's currency-per-point
-// (tickValue / tickSize) gives CURRENCY -- but only when the adapter puts tickSize/tickValue on the position
-// No tick data -> points, so the column always shows something.
+// Unrealized P&L (rule in trade-derive.js); this surface only resolves the mark from its quote feed
 /** @param {PosRow} r @returns {{ value: number, currency: boolean }|null} */
-function profitOf(r) {
-  const up = /** @type {any} */ (r).unrealizedPnl;
-  if (up != null) return { value: Number(up), currency: true };   // broker-reported live P&L (hedging lot) -- exact
-  const mark = r._mark != null ? r._mark : markOf(r), entry = r.avgPrice, qty = Number(r.qty);
-  if (mark == null || entry == null || !qty) return null;
-  const sign = r.side === 'short' ? -1 : 1;
-  const move = (mark - Number(entry)) * sign * qty;   // total favorable move, in points
-  const ts = Number(r.tickSize), tv = Number(r.tickValue);
-  return (ts && tv) ? { value: move * (tv / ts), currency: true } : { value: move, currency: false };
-}
+const profitOf = (r) => unrealizedProfit(r, r._mark != null ? r._mark : markOf(r));
 
 // reconciliation of the net-0 derived qty vs the broker's authoritative net
 /** @param {PosRow} r @returns {Cell} */

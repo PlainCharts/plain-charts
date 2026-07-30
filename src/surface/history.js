@@ -12,6 +12,7 @@ import { GEAR, openColumnPicker } from './column-picker.js';
 import { fmtDeskTime, fmtDeskTag, onDeskConfigChange, getDeskStats, getDeskBeThreshold } from './desk-config.js';
 import { createAccountFilter } from './account-filter.js';
 import { createDateFilter } from './date-filter.js';
+import { netOf, classifyNet, computeRunningBalances, computeTradeStats } from './trade-derive.js';
 import { t } from '../i18n/i18n.js';   // vocabulary lookup for column labels + status text
 
 /**
@@ -44,25 +45,20 @@ const decOf = (r) => { const f = r.fills && r.fills[0]; const d = f && /** @type
 // account NAME = the saved connection label, matched by protocol
 /** @param {Trade} r @returns {string} */
 const acctName = (r) => { const saved = accounts.listAccounts().find((a) => a.protocol === r.broker); return (saved && saved.name) || ''; };
-// a closed trade's NET in account currency: gross realized minus commission (null when no currency P&L)
-/** @param {Trade} r @returns {number|null} */
-const netOf = (r) => (r.realizedPnl != null ? r.realizedPnl - (r.commission || 0) : null);
-// a closed trade's STATUS by net vs the breakeven zone (Trade Desk > Configure > Breakeven threshold): above
-// +BE = Hit, below -BE = Miss, within = Breakeven. Answers "did we reach the target?" by degree above BE, so it
-// works without a TP/SL (netting, partials) -- the outcome is one of three, not a distance to a target.
+// a closed trade's STATUS (breakeven-zone rule in trade-derive.js), rendered as a colored cell
 /** @param {Trade} r @returns {Cell} */
 const statusOf = (r) => {
   const n = netOf(r);
   if (n == null) return { text: '—' };
-  const be = getDeskBeThreshold();
-  if (n > be) return { text: t('Hit'), cls: 'pos' };
-  if (n < -be) return { text: t('Miss'), cls: 'neg' };
+  const c = classifyNet(n, getDeskBeThreshold());
+  if (c === 'hit') return { text: t('Hit'), cls: 'pos' };
+  if (c === 'miss') return { text: t('Miss'), cls: 'neg' };
   return { text: t('Breakeven'), cls: 'dim' };
 };
-// running BALANCE per trade -- populated each render (chronological, per account) and read by the Balance
+// running BALANCE per trade -- rebuilt each render (trade-derive.js replay) and read by the Balance
 // column. Keys are the fresh DerivedPosition objects compute-positions returns each render, so no stale carry.
 /** @type {WeakMap<Trade, number>} */
-const balanceByTrade = new WeakMap();
+let balanceByTrade = new WeakMap();
 
 // the column catalog. get(row) returns { text, cls? }.
 /** @type {Column[]} */
@@ -114,41 +110,9 @@ const RAW = {
 /** @param {Trade} r @returns {string} */
 const rowId = (r) => r.key + ':' + r.entryTime;
 /** @typedef {import('../../data_engine/index.js').FillLike} FillLike */
-/** @param {any} s @returns {number} */
-const sideSign = (s) => (s === 'sell' || s === 'short' ? -1 : 1);
-// Per-fill realized P&L via the SAME running average-cost netting as compute-positions / dump_history.py: replay
-// the round-trip's fills; an ADD fill (same direction, or opening from flat) realizes nothing -- it is an entry;
-// a REDUCE fill realizes on the closed qty vs the RUNNING avg cost. Children sum to the parent (points ->
-// realizedPricePnl/entryQty, gross -> realizedPnl). The old "leading run = entry, rest = exit" wrongly booked
-// re-adds as profits (a BUY that adds to a long showed a gain), inflating the totals.
-/** @param {Trade} r @returns {{ f: FillLike, isExit: boolean, points: number|null, gross: number|null, net: number|null }[]} */
-const perFillPnl = (r) => {
-  const fills = r.fills || [];
-  const EPS = 1e-9, eq = Number(r.entryQty) || 0;
-  let net = 0, avgCost = 0;
-  return fills.map((f) => {
-    const q = Number(f.qty), px = Number(f.price), s = sideSign(f.side);
-    const none = { f, isExit: false, points: /** @type {number|null} */ (null), gross: /** @type {number|null} */ (null), net: /** @type {number|null} */ (null) };
-    if (!(q > 0)) return none;
-    if (Math.abs(net) < EPS) { avgCost = px; net = s * q; return none; }                       // open from flat
-    if ((net > 0) === (s > 0)) { avgCost = (avgCost * Math.abs(net) + px * q) / (Math.abs(net) + q); net += s * q; return none; }   // add
-    const closeQ = Math.min(q, Math.abs(net));                                                 // reduce -> realize
-    const dirPos = net > 0 ? 1 : -1;
-    const priceDiff = dirPos * (px - avgCost);
-    const ts = Number(/** @type {any} */ (f).tickSize), tv = Number(/** @type {any} */ (f).tickValue), canCur = ts > 0 && tv > 0;
-    const points = eq ? (priceDiff * closeQ) / eq : null;
-    // prefer the broker's exact per-fill realized P&L (when the adapter reports it) over the tickValue estimate
-    const bp = /** @type {any} */ (f).realizedPnl;
-    const gross = bp != null ? Number(bp) : (canCur ? (priceDiff / ts) * tv * closeQ : null);
-    const netv = gross != null ? gross - (Number(f.commission) || 0) : null;
-    const oldSign = net > 0 ? 1 : -1;
-    net += s * q;
-    if (Math.abs(net) >= EPS && (net > 0 ? 1 : -1) !== oldSign) avgCost = px;                  // crossed zero -> remainder re-based
-    return { f, isExit: true, points, gross, net: netv };
-  });
-};
 // a child (fill) cell for a given column key: fills fill the same columns where they map, blank elsewhere.
-// points/gross/net are precomputed per fill by perFillPnl (running avg-cost) and passed on ctx.
+// points/gross/net come per fill from the engine (DerivedPosition.fillPnl, the same avg-cost replay that
+// builds the round-trip) and are passed on ctx.
 /** @param {string} key @param {FillLike} f @param {{ dec: number, isExit: boolean, points: number|null, gross: number|null, net: number|null }} ctx @returns {Cell} */
 const fillCell = (key, f, ctx) => {
   const s = /** @type {any} */ (f);
@@ -220,19 +184,8 @@ export function mountHistory(root) {
     if (!scfg.enabled) { statsBar.style.display = 'none'; statsBar.innerHTML = ''; return; }
     statsBar.style.display = '';
 
-    // classify each round-trip by net vs the breakeven zone: > +BE = hit, < -BE = miss, within +/- BE = breakeven
-    // (scratch). BE trades are excluded from wins/losses (so hit rate + profit factor count real outcomes only).
-    const be = getDeskBeThreshold();
-    let net = 0, points = 0, comm = 0, wins = 0, losses = 0, bes = 0, grossWin = 0, grossLossAbs = 0;
-    vis.forEach((r) => {
-      const n = netOf(r);
-      if (n != null) { net += n; if (n > be) { wins++; grossWin += n; } else if (n < -be) { losses++; grossLossAbs += -n; } else { bes++; } }
-      if (r.realizedPricePnl != null && Number(r.entryQty)) points += Number(r.realizedPricePnl) / Number(r.entryQty);   // per-contract points, matching the Points column (sum of the rows)
-      comm += Number(r.commission) || 0;
-    });
-    const trades = vis.length, completed = wins + losses;
-    const hitRate = completed ? (wins / completed) * 100 : null;
-    const pf = grossLossAbs > 0 ? grossWin / grossLossAbs : (grossWin > 0 ? Infinity : null);
+    // aggregates + breakeven-zone classification live in trade-derive.js; this strip just formats them
+    const { net, points, comm, wins, losses, bes, trades, hitRate, profitFactor: pf } = computeTradeStats(vis, getDeskBeThreshold());
 
     // balance: sum start (saved account, by protocol) -> live balance over the accounts in the filter's scope
     let startBal = 0, curBal = 0, haveStart = false, haveCur = false;
@@ -273,23 +226,8 @@ export function mountHistory(root) {
     const tickBySym = new Map();
     for (const f of fills) { const s = /** @type {any} */ (f); if (s.symbol && !tickBySym.has(s.symbol) && (s.tickValue != null || s.tickSize != null)) tickBySym.set(s.symbol, { tickSize: s.tickSize, tickValue: s.tickValue }); }
     const { closed } = computePositions(fills, { contractInfo: (sym) => tickBySym.get(sym) });   // net-0 round-trips
-    // Running Balance per account, anchored to the LIVE account balance (we don't ask for a starting balance --
-    // the account already carries it). The current balance is AFTER all realized trades, so the base at the
-    // start of the loaded window is balance - sum(net over loaded closed trades); replaying oldest->newest then
-    // makes the most recent trade tie out to the live number. Mirrors the reference's balance += net replay,
-    // with base derived from the account instead of a configured user_balance.
-    /** @type {Map<string, Trade[]>} */
-    const byAcct = new Map();
-    for (const r of closed) { const k = r.broker + ':' + (r.accountId || ''); const g = byAcct.get(k); if (g) g.push(r); else byAcct.set(k, [r]); }
-    for (const [k, group] of byAcct) {
-      const acct = platform.accounts.get(k);
-      const liveBal = acct && acct.balance;
-      if (liveBal == null || Number.isNaN(Number(liveBal))) continue;   // no anchor -> Balance stays blank
-      const chrono = group.slice().sort((a, b) => (Number(a.entryTime) || 0) - (Number(b.entryTime) || 0));   // reference replays by entry time
-      let sum = 0; for (const r of chrono) { const n = netOf(r); if (n != null) sum += n; }
-      let running = Number(liveBal) - sum;   // balance at the start of the loaded window
-      for (const r of chrono) { const n = netOf(r); if (n != null) running += n; balanceByTrade.set(r, running); }
-    }
+    // running Balance per account, anchored to each account's LIVE balance (replay in trade-derive.js)
+    balanceByTrade = computeRunningBalances(closed, (k) => { const acct = platform.accounts.get(k); return acct && acct.balance; });
     // balance is replayed over the FULL set above (each trade's ending balance is range-independent); the FILTER
     // only narrows which rows are shown, by the trade's exit (close) time in the selected range.
     const visible = closed.filter((r) => acctFilter.matches(r) && dateFilter.matches(r.exitTime));
@@ -323,9 +261,11 @@ export function mountHistory(root) {
       });
       tbody.appendChild(tr);
       if (!isOpen) return;
-      // CHILD rows -- one per fill, entries plain, reduces carrying per-fill P&L (running avg-cost)
+      // CHILD rows -- one per fill, entries plain, reduces carrying per-fill P&L (engine's fillPnl,
+      // index-aligned with fills)
       const dec = decOf(r);
-      perFillPnl(r).forEach(({ f, isExit, points, gross, net }) => {
+      (r.fillPnl || []).forEach(({ isExit, points, gross, net }, i) => {
+        const f = r.fills[i];
         const ctr = document.createElement('tr'); ctr.className = 'hist-child';
         cols.forEach((k) => {
           const v = fillCell(k, f, { dec, isExit, points, gross, net });
