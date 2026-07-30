@@ -14,6 +14,7 @@ import { condLines, isAny, restartPatch, sourceOf, alertType } from './alert-rec
 import { statusText, timeAlertLine, tfSuffix, descOf, nameOf, cardScope, firedAt } from './alerts-format.js';   // pure display derivations (row descriptor, name, card scope, status, last-fired)
 import { SORT_GROUPS, cmpOf } from './alerts-sort.js';   // the toolbar sort model (comparator groups + key->comparator)
 import { menuRows } from './alerts-menu.js';   // shared dwg-menu row builders (item/check/combo/opt/pref) for the ⋯ menus
+import { createSymTfFilter } from './alerts-filter.js';   // the two-axis symbol/interval filter (one instance per tab)
 import { openCreateAlertDialog, openValueAlertDialog } from './create-alert-dialog.js';   // opens prefilled (edit mode) for an existing alert
 import { openCreateTimeAlertDialog } from './create-time-alert-dialog.js';   // the small time-alert dialog (Time tab "+")
 import { removeAlertAndDrawing } from './alert-drawing-sync.js';   // shared "delete alert + its drawing" cascade
@@ -64,14 +65,10 @@ export function initAlertsPanel() {
   let tab = 'price';
   let sortKey = 'created-desc';   // default = newest created first (matches the previous fixed order)
   let showFilter = 'all';         // which alerts the list shows: all | active | inactive
-  // symbol/interval scoping (the FILTER ALERTS section). Two ways to set each axis, mutually exclusive:
-  // "current" (track the active chart) OR an explicit pick from the values present in the list.
-  let curSym = false, bySym = '';   // symbol axis: active-chart symbol, or a chosen symbol ('' = any)
-  let curTf = false, byTf = '';     // interval axis: active-chart tf, or a chosen tf ('' = any)
-  // The Log tab's OWN symbol/interval filter (independent of the Price tab), same two-axis model over log entries.
-  let logCurSym = false, logBySym = '';
-  let logCurTf = false, logByTf = '';
-  let logExpandSym = false, logExpandTf = false;   // whether the Log menu's By-symbol / By-interval picker is open
+  // symbol/interval scoping (the FILTER ALERTS section) -- one two-axis filter per tab (alerts-filter.js);
+  // the Log tab's is independent of the Price tab's.
+  const filter = createSymTfFilter();
+  const logFilter = createSymTfFilter();
   /** @param {string} tb */
   const setTab = (tb) => {
     tab = tb;
@@ -141,9 +138,7 @@ export function initAlertsPanel() {
     let entries = alertLogMirror().recent();
     // symbol / interval scope: "current" resolves against the active chart, else the explicit pick -- both
     // matched against the LINKED alert (the entry itself carries no symbol/tf).
-    const active = getActivePane ? getActivePane() : null;
-    const symWanted = logCurSym ? (active && active.symbol) : (logBySym || null);
-    const tfWanted = logCurTf ? (active && active.tfId) : (logByTf || null);
+    const { sym: symWanted, tf: tfWanted } = logFilter.wanted(getActivePane ? getActivePane() : null);
     if (symWanted) entries = entries.filter((/** @type {any} */ e) => { const a = alertOf(e); return (e.symbol || (a && a.symbol)) === symWanted; });
     if (tfWanted) entries = entries.filter((/** @type {any} */ e) => { const a = alertOf(e); return a && a.tf === tfWanted; });
     // "Show events by type": hide the unchecked producer types (an orphan entry with no linked alert stays visible).
@@ -191,9 +186,7 @@ export function initAlertsPanel() {
     if (showFilter === 'active') list = list.filter((/** @type {any} */ a) => a.enabled);
     else if (showFilter === 'inactive') list = list.filter((/** @type {any} */ a) => !a.enabled);
     // symbol / interval scope: "current" resolves against the active chart, else the explicit pick.
-    const active = getActivePane ? getActivePane() : null;
-    const symWanted = curSym ? (active && active.symbol) : (bySym || null);
-    const tfWanted = curTf ? (active && active.tfId) : (byTf || null);
+    const { sym: symWanted, tf: tfWanted } = filter.wanted(getActivePane ? getActivePane() : null);
     if (symWanted) list = list.filter((/** @type {any} */ a) => a.symbol === symWanted);
     if (tfWanted) list = list.filter((/** @type {any} */ a) => a.tf === tfWanted);
     const alerts = list.slice().sort(cmpOf(sortKey));
@@ -296,8 +289,6 @@ export function initAlertsPanel() {
   /** @type {HTMLElement|null} */ let moreMenu = null;
   /** @type {((e: PointerEvent) => void)|null} */ let moreAway = null;
   const closeMoreMenu = () => { if (moreAway) { document.removeEventListener('pointerdown', moreAway, true); moreAway = null; } if (moreMenu) { moreMenu.remove(); moreMenu = null; } };
-  let expandSym = false, expandTf = false;   // whether a By-symbol / By-interval picker is expanded inline
-  const uniq = (/** @type {any[]} */ arr) => Array.from(new Set(arr.filter(Boolean)));
   const openMoreMenu = () => {
     closeMoreMenu();
     const m = el('div', 'dwg-menu'); moreMenu = m;
@@ -323,31 +314,7 @@ export function initAlertsPanel() {
       radio('inactive', 'Inactive only', inactiveN);
       m.appendChild(el('div', 'dwg-div'));
       m.appendChild(el('div', 'dwg-head', t('Filter alerts')));
-      // symbol axis: "Current symbol" checkbox + a "By symbol" custom dropdown (search input + present symbols).
-      check(curSym, 'Current symbol', () => { curSym = !curSym; if (curSym) bySym = ''; });
-      combo('By symbol', bySym, expandSym, () => { expandSym = !expandSym; if (expandSym) expandTf = false; build(); });
-      if (expandSym) {
-        const inp = /** @type {HTMLInputElement} */ (el('input', 'dwg-inp')); inp.placeholder = t('Search symbol…');
-        inp.onclick = (e) => e.stopPropagation();
-        const box = el('div', 'dwg-optbox');
-        const renderSyms = () => {
-          box.innerHTML = '';
-          const q = inp.value.trim().toLowerCase();
-          opt(t('Any symbol'), !bySym, () => { bySym = ''; render(); build(); }, box);
-          uniq(all.map((/** @type {any} */ a) => a.symbol)).filter((/** @type {string} */ s) => !q || s.toLowerCase().includes(q)).sort()
-            .forEach((/** @type {string} */ s) => opt(s, s === bySym, () => { bySym = s; curSym = false; render(); build(); }, box));
-        };
-        inp.oninput = renderSyms;
-        m.append(inp, box); renderSyms();
-        setTimeout(() => inp.focus(), 0);
-      }
-      // interval axis: "Current time interval" checkbox + a "By interval" dropdown of only the tfs present.
-      check(curTf, 'Current time interval', () => { curTf = !curTf; if (curTf) byTf = ''; });
-      combo('By interval', byTf, expandTf, () => { expandTf = !expandTf; if (expandTf) expandSym = false; build(); });
-      if (expandTf) {
-        opt(t('Any interval'), !byTf, () => { byTf = ''; render(); build(); });
-        uniq(all.map((/** @type {any} */ a) => a.tf)).forEach((/** @type {string} */ tf) => opt(tf, tf === byTf, () => { byTf = tf; curTf = false; render(); build(); }));
-      }
+      filter.section(m, { check, combo, opt }, { symbols: () => all.map((/** @type {any} */ a) => a.symbol), tfs: () => all.map((/** @type {any} */ a) => a.tf) }, { onChange: render, rebuild: build });
       // which columns each row shows -- persisted prefs; the 'alerts:display-changed' bus event re-renders the list.
       m.appendChild(el('div', 'dwg-div'));
       m.appendChild(el('div', 'dwg-head', t('Customize list')));
@@ -398,29 +365,7 @@ export function initAlertsPanel() {
       const linked = alertLogMirror().recent().map((/** @type {any} */ e) => alertOf(e)).filter(Boolean);
       m.appendChild(el('div', 'dwg-div'));
       m.appendChild(el('div', 'dwg-head', t('Filter alerts')));
-      check(logCurSym, 'Current symbol', () => { logCurSym = !logCurSym; if (logCurSym) logBySym = ''; });
-      combo('By symbol', logBySym, logExpandSym, () => { logExpandSym = !logExpandSym; if (logExpandSym) logExpandTf = false; build(); });
-      if (logExpandSym) {
-        const inp = /** @type {HTMLInputElement} */ (el('input', 'dwg-inp')); inp.placeholder = t('Search symbol…');
-        inp.onclick = (ev) => ev.stopPropagation();
-        const box = el('div', 'dwg-optbox');
-        const renderSyms = () => {
-          box.innerHTML = '';
-          const q = inp.value.trim().toLowerCase();
-          opt(t('Any symbol'), !logBySym, () => { logBySym = ''; render(); build(); }, box);
-          uniq(linked.map((/** @type {any} */ a) => a.symbol)).filter((/** @type {string} */ s) => !q || s.toLowerCase().includes(q)).sort()
-            .forEach((/** @type {string} */ s) => opt(s, s === logBySym, () => { logBySym = s; logCurSym = false; render(); build(); }, box));
-        };
-        inp.oninput = renderSyms;
-        m.append(inp, box); renderSyms();
-        setTimeout(() => inp.focus(), 0);
-      }
-      check(logCurTf, 'Current time interval', () => { logCurTf = !logCurTf; if (logCurTf) logByTf = ''; });
-      combo('By interval', logByTf, logExpandTf, () => { logExpandTf = !logExpandTf; if (logExpandTf) logExpandSym = false; build(); });
-      if (logExpandTf) {
-        opt(t('Any interval'), !logByTf, () => { logByTf = ''; render(); build(); });
-        uniq(linked.map((/** @type {any} */ a) => a.tf)).forEach((/** @type {string} */ tf) => opt(tf, tf === logByTf, () => { logByTf = tf; logCurTf = false; render(); build(); }));
-      }
+      logFilter.section(m, { check, combo, opt }, { symbols: () => linked.map((/** @type {any} */ a) => a.symbol), tfs: () => linked.map((/** @type {any} */ a) => a.tf) }, { onChange: render, rebuild: build });
       m.appendChild(el('div', 'dwg-div'));
       m.appendChild(el('div', 'dwg-head', t('Show events by type')));
       pref('Price', logTypePrice, 'logTypePrice');
