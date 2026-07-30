@@ -1,0 +1,3 @@
+# Prettier scope: the engine's authored JS (index.js, core/, skin/, studies/, examples/).
+node_modules/
+licenses/

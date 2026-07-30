@@ -4,7 +4,12 @@
   "description": "Zero-dependency, framework-free canvas charting engine — the render core of trading-vue-js. No build step required.",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write \"**/*.js\"",
+    "format:check": "prettier --check \"**/*.js\""
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
   },
   "main": "./index.js",
   "module": "./index.js",
