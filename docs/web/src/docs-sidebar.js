@@ -7,7 +7,7 @@
 export const SIDEBAR = [
 	{
 		links: [
-			{ href: '/docs/intro', label: 'Introduction' },
+			{ href: '/docs/overview', label: 'Overview' },
 		],
 	},
 	{
