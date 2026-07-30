@@ -11,17 +11,10 @@
 </h4>
 
 <div align="center">
-    <a href="#install">Install</a> |
-    <a href="#documentation">Documentation</a> |
-    <a href="#contributing">Contributing</a> |
-    <a href="#connect">Connect</a> |
-    <a href="#attributions">Attributions</a> |
-    <a href="#license">License</a>
-</div>
-
-<div align="center">
-    <a href="https://plaincharts.github.io" target="_blank" rel="noopener">Website</a> |
-    <a href="https://plaincharts.github.io/kapelka/" target="_blank" rel="noopener">Kapelka Charting Library</a>
+    <a href="https://plaincharts.github.io/">Home Page</a> |
+    <a href="https://plaincharts.github.io/start/">First Steps</a> |
+    <a href="https://plaincharts.github.io/docs/overview">Documentation</a> |
+    <a href="https://github.com/PlainCharts/plain-charts/releases">Download</a>
 </div>
 
 <br></br>
@@ -33,7 +26,7 @@
 
 ### Install
 
-Prebuilt desktop builds for Windows, macOS, and Linux are on the [Releases](https://github.com/PlainCharts/plain-charts/releases) page. Download and run.
+Prebuilt desktop builds for Windows, and Linux are on the [Releases](https://github.com/PlainCharts/plain-charts/releases) page. Download and run.
 
 From source:
 
