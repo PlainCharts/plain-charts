@@ -13,13 +13,15 @@
 /** @param {any} r open position row @param {number|null} mark @returns {{ value: number, currency: boolean }|null} */
 export function unrealizedProfit(r, mark) {
   const up = r.unrealizedPnl;
-  if (up != null) return { value: Number(up), currency: true };   // broker-reported live P&L (hedging lot) -- exact
-  const entry = r.avgPrice, qty = Number(r.qty);
+  if (up != null) return { value: Number(up), currency: true }; // broker-reported live P&L (hedging lot) -- exact
+  const entry = r.avgPrice,
+    qty = Number(r.qty);
   if (mark == null || entry == null || !qty) return null;
   const sign = r.side === 'short' ? -1 : 1;
-  const move = (mark - Number(entry)) * sign * qty;   // total favorable move, in points
-  const ts = Number(r.tickSize), tv = Number(r.tickValue);
-  return (ts && tv) ? { value: move * (tv / ts), currency: true } : { value: move, currency: false };
+  const move = (mark - Number(entry)) * sign * qty; // total favorable move, in points
+  const ts = Number(r.tickSize),
+    tv = Number(r.tickValue);
+  return ts && tv ? { value: move * (tv / ts), currency: true } : { value: move, currency: false };
 }
 
 // a closed trade's NET in account currency: gross realized minus commission (null when no currency P&L)
@@ -46,14 +48,27 @@ export function computeRunningBalances(closed, liveBalanceOf) {
   const balances = new WeakMap();
   /** @type {Map<string, Trade[]>} */
   const byAcct = new Map();
-  for (const r of closed) { const k = r.broker + ':' + (r.accountId || ''); const g = byAcct.get(k); if (g) g.push(r); else byAcct.set(k, [r]); }
+  for (const r of closed) {
+    const k = r.broker + ':' + (r.accountId || '');
+    const g = byAcct.get(k);
+    if (g) g.push(r);
+    else byAcct.set(k, [r]);
+  }
   for (const [k, group] of byAcct) {
     const liveBal = liveBalanceOf(k);
-    if (liveBal == null || Number.isNaN(Number(liveBal))) continue;   // no anchor -> balances stay absent
-    const chrono = group.slice().sort((a, b) => (Number(a.entryTime) || 0) - (Number(b.entryTime) || 0));   // reference replays by entry time
-    let sum = 0; for (const r of chrono) { const n = netOf(r); if (n != null) sum += n; }
-    let running = Number(liveBal) - sum;   // balance at the start of the loaded window
-    for (const r of chrono) { const n = netOf(r); if (n != null) running += n; balances.set(r, running); }
+    if (liveBal == null || Number.isNaN(Number(liveBal))) continue; // no anchor -> balances stay absent
+    const chrono = group.slice().sort((a, b) => (Number(a.entryTime) || 0) - (Number(b.entryTime) || 0)); // reference replays by entry time
+    let sum = 0;
+    for (const r of chrono) {
+      const n = netOf(r);
+      if (n != null) sum += n;
+    }
+    let running = Number(liveBal) - sum; // balance at the start of the loaded window
+    for (const r of chrono) {
+      const n = netOf(r);
+      if (n != null) running += n;
+      balances.set(r, running);
+    }
   }
   return balances;
 }
@@ -69,21 +84,46 @@ export function computeRunningBalances(closed, liveBalanceOf) {
  *   hitRate: number|null, profitFactor: number|null }}
  */
 export function computeTradeStats(vis, be) {
-  let net = 0, points = 0, comm = 0, wins = 0, losses = 0, bes = 0, grossWin = 0, grossLossAbs = 0;
+  let net = 0,
+    points = 0,
+    comm = 0,
+    wins = 0,
+    losses = 0,
+    bes = 0,
+    grossWin = 0,
+    grossLossAbs = 0;
   vis.forEach((r) => {
     const n = netOf(r);
     if (n != null) {
       net += n;
       const c = classifyNet(n, be);
-      if (c === 'hit') { wins++; grossWin += n; } else if (c === 'miss') { losses++; grossLossAbs += -n; } else { bes++; }
+      if (c === 'hit') {
+        wins++;
+        grossWin += n;
+      } else if (c === 'miss') {
+        losses++;
+        grossLossAbs += -n;
+      } else {
+        bes++;
+      }
     }
     if (r.realizedPricePnl != null && Number(r.entryQty)) points += Number(r.realizedPricePnl) / Number(r.entryQty);
     comm += Number(r.commission) || 0;
   });
-  const trades = vis.length, completed = wins + losses;
+  const trades = vis.length,
+    completed = wins + losses;
   return {
-    net, points, comm, wins, losses, bes, grossWin, grossLossAbs, trades, completed,
+    net,
+    points,
+    comm,
+    wins,
+    losses,
+    bes,
+    grossWin,
+    grossLossAbs,
+    trades,
+    completed,
     hitRate: completed ? (wins / completed) * 100 : null,
-    profitFactor: grossLossAbs > 0 ? grossWin / grossLossAbs : (grossWin > 0 ? Infinity : null),
+    profitFactor: grossLossAbs > 0 ? grossWin / grossLossAbs : grossWin > 0 ? Infinity : null,
   };
 }

@@ -51,24 +51,31 @@ const opposite = (side) => (side === 'long' ? 'sell' : 'buy');
 /** @param {WatcherOpts} [opts] */
 export function createWatcher({ execute, getPosition, threshold = 0 } = {}) {
   /** @type {Map<string, Rule>} */
-  const rules = new Map();          // id -> rule
+  const rules = new Map(); // id -> rule
   /** @type {Set<FireCb>} */
   const fireCbs = new Set();
-  let thr = Math.abs(Number(threshold)) || 0;   // vicinity in PRICE units
+  let thr = Math.abs(Number(threshold)) || 0; // vicinity in PRICE units
   /** @param {Rule} rule @param {Command|null} cmd */
-  const notify = (rule, cmd) => fireCbs.forEach((fn) => { try { fn(rule, cmd); } catch (_) {} });
+  const notify = (rule, cmd) =>
+    fireCbs.forEach((fn) => {
+      try {
+        fn(rule, cmd);
+      } catch (_) {}
+    });
 
   // translate an action into a market command using the LIVE position for closes. null = nothing to do.
   /** @param {Action|null|undefined} action @param {Position|null} pos @returns {Command|null} */
   function resolve(action, pos) {
     if (!action) return null;
-    if (action.do === 'buy') return /** @type {number} */ (action.qty) > 0 ? { side: 'buy', qty: /** @type {number} */ (action.qty) } : null;
-    if (action.do === 'sell') return /** @type {number} */ (action.qty) > 0 ? { side: 'sell', qty: /** @type {number} */ (action.qty) } : null;
+    if (action.do === 'buy')
+      return /** @type {number} */ (action.qty) > 0 ? { side: 'buy', qty: /** @type {number} */ (action.qty) } : null;
+    if (action.do === 'sell')
+      return /** @type {number} */ (action.qty) > 0 ? { side: 'sell', qty: /** @type {number} */ (action.qty) } : null;
     if (action.do === 'close') {
-      if (!pos || !(pos.qty > 0)) return null;                                  // already flat -> nothing
-      const full = action.qty == null;                                          // no qty -> close the whole live position
-      const qty = full ? pos.qty : Math.min(/** @type {number} */ (action.qty), pos.qty);  // partial or full
-      return qty > 0 ? { side: opposite(pos.side), qty, close: true, full } : null;   // close: EXIT the position account-aware (not a raw opposite order)
+      if (!pos || !(pos.qty > 0)) return null; // already flat -> nothing
+      const full = action.qty == null; // no qty -> close the whole live position
+      const qty = full ? pos.qty : Math.min(/** @type {number} */ (action.qty), pos.qty); // partial or full
+      return qty > 0 ? { side: opposite(pos.side), qty, close: true, full } : null; // close: EXIT the position account-aware (not a raw opposite order)
     }
     return null;
   }
@@ -77,31 +84,63 @@ export function createWatcher({ execute, getPosition, threshold = 0 } = {}) {
     /** @param {{ price: number|string, dir?: 'up'|'down'|null, action: Action, armed?: boolean }} rule @returns {string} */
     add(rule) {
       const id = 'w' + (++seq).toString(36);
-      rules.set(id, { id, price: Number(rule.price), dir: rule.dir || null, action: rule.action, armed: rule.armed !== false, fired: false });
+      rules.set(id, {
+        id,
+        price: Number(rule.price),
+        dir: rule.dir || null,
+        action: rule.action,
+        armed: rule.armed !== false,
+        fired: false,
+      });
       return id;
     },
     /** @param {string} id @param {{ price?: number|string, dir?: 'up'|'down'|null, action?: Action }} [patch] */
     update(id, patch = {}) {
-      const r = rules.get(id); if (!r) return;
+      const r = rules.get(id);
+      if (!r) return;
       if (patch.price != null) r.price = Number(patch.price);
       if (patch.dir !== undefined) r.dir = patch.dir;
       if (patch.action) r.action = patch.action;
     },
     /** @param {string} id */
-    arm(id) { const r = rules.get(id); if (r) { r.armed = true; r.fired = false; } },
+    arm(id) {
+      const r = rules.get(id);
+      if (r) {
+        r.armed = true;
+        r.fired = false;
+      }
+    },
     /** @param {string} id */
-    disarm(id) { const r = rules.get(id); if (r) r.armed = false; },
+    disarm(id) {
+      const r = rules.get(id);
+      if (r) r.armed = false;
+    },
     /** @param {string} id */
-    remove(id) { rules.delete(id); },
+    remove(id) {
+      rules.delete(id);
+    },
     /** @param {string} id @returns {Rule|null} */
-    get(id) { return rules.get(id) || null; },
-    rules() { return [...rules.values()]; },
+    get(id) {
+      return rules.get(id) || null;
+    },
+    rules() {
+      return [...rules.values()];
+    },
     /** @param {FireCb} fn @returns {() => boolean} */
-    onFire(fn) { fireCbs.add(fn); return () => fireCbs.delete(fn); },
-    clear() { rules.clear(); },
+    onFire(fn) {
+      fireCbs.add(fn);
+      return () => fireCbs.delete(fn);
+    },
+    clear() {
+      rules.clear();
+    },
     /** @param {number|string} t */
-    setThreshold(t) { thr = Math.abs(Number(t)) || 0; },
-    threshold() { return thr; },
+    setThreshold(t) {
+      thr = Math.abs(Number(t)) || 0;
+    },
+    threshold() {
+      return thr;
+    },
 
     // fire every armed, un-fired rule that price has REACHED OR PASSED on its trigger side. dir is a
     // HALF-LINE (up = fire at/above the level, down = fire at/below), so a level fires the instant price
@@ -112,11 +151,18 @@ export function createWatcher({ execute, getPosition, threshold = 0 } = {}) {
       if (px == null || !isFinite(px)) return;
       for (const r of rules.values()) {
         if (!r.armed || r.fired || !isFinite(r.price)) continue;
-        const hit = r.dir === 'up' ? px >= r.price - thr : r.dir === 'down' ? px <= r.price + thr : Math.abs(px - r.price) <= thr;
+        const hit =
+          r.dir === 'up' ? px >= r.price - thr : r.dir === 'down' ? px <= r.price + thr : Math.abs(px - r.price) <= thr;
         if (!hit) continue;
         const cmd = resolve(r.action, getPosition ? getPosition() : null);
-        r.fired = true; r.armed = false; rules.delete(r.id);              // one-shot: gone, can never re-fire
-        if (cmd && execute) { try { execute(cmd); } catch (_) {} }
+        r.fired = true;
+        r.armed = false;
+        rules.delete(r.id); // one-shot: gone, can never re-fire
+        if (cmd && execute) {
+          try {
+            execute(cmd);
+          } catch (_) {}
+        }
         notify(r, cmd);
       }
     },

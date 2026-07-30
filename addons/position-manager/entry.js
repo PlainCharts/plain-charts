@@ -20,8 +20,9 @@ export function createEntry(ot, { simpleSay }) {
   const placeMarket = (side, qty) => {
     qty = Math.abs(Number(qty) || 1);
     simpleSay(side.toUpperCase() + ' ' + qty + ' ' + cfg.symbol + ' ' + t('MARKET…'));
-    exec({ type: 'place', orderType: 'market', ctx: ctx(), side, qty })
-      .then((r) => simpleSay(r && r.error ? t('error:') + ' ' + r.error : side.toUpperCase() + ' ' + t('market sent')));
+    exec({ type: 'place', orderType: 'market', ctx: ctx(), side, qty }).then((r) =>
+      simpleSay(r && r.error ? t('error:') + ' ' + r.error : side.toUpperCase() + ' ' + t('market sent')),
+    );
   };
 
   return { placeMarket };

@@ -16,7 +16,7 @@ import { mergeToolStyle } from './tool-style.js';
 export const createMethods = {
   /** @this {Ix} @param {Tool} tool @param {number} x @param {number} y @param {PointerEvent} e */
   _beginCreate(tool, x, y, e) {
-    const data = this._anchorData(e, null, tool);   // first anchor on a bar (magnet -> OHLC price)
+    const data = this._anchorData(e, null, tool); // first anchor on a bar (magnet -> OHLC price)
     if (data.time == null || data.price == null) return;
     if (tool.points === 1) {
       // a 1-click tool may expand its single anchor into a full points array (e.g.
@@ -30,8 +30,17 @@ export const createMethods = {
     // second click (or a drag-release) completes it.
     this.mode = 'creating';
     this.creating = { tool, points: [data, { ...data }], downX: x, downY: y };
-    this.engine.draft = { tool: tool.id, points: this.creating.points, style: mergeToolStyle(/** @type {{ defaultStyle: Record<string, any>, identityStyle?: string[] }} */ (tool), (getToolDefaults(tool.id) || {}).style) };
-    try { this.overlay.setPointerCapture(e.pointerId); } catch (_) {}
+    this.engine.draft = {
+      tool: tool.id,
+      points: this.creating.points,
+      style: mergeToolStyle(
+        /** @type {{ defaultStyle: Record<string, any>, identityStyle?: string[] }} */ (tool),
+        (getToolDefaults(tool.id) || {}).style,
+      ),
+    };
+    try {
+      this.overlay.setPointerCapture(e.pointerId);
+    } catch (_) {}
     this.engine.requestUpdate();
   },
 
@@ -41,16 +50,30 @@ export const createMethods = {
   _createParams(tool, points) {
     const saved = getToolDefaults(tool.id);
     /** @type {Record<string, any>} */
-    const p = { points, style: mergeToolStyle(/** @type {{ defaultStyle: Record<string, any>, identityStyle?: string[] }} */ (tool), saved && saved.style), z: this.engine.nextZ(), sync: newDrawingSync() };
+    const p = {
+      points,
+      style: mergeToolStyle(
+        /** @type {{ defaultStyle: Record<string, any>, identityStyle?: string[] }} */ (tool),
+        saved && saved.style,
+      ),
+      z: this.engine.nextZ(),
+      sync: newDrawingSync(),
+    };
     if (saved && saved.textStyle) p.textStyle = { ...saved.textStyle };
     return p;
   },
 
   /** @this {Ix} */
   _commitCreate() {
-    const cr = /** @type {import('../interaction.js').Creating} */ (this.creating);   // called only while creating
+    const cr = /** @type {import('../interaction.js').Creating} */ (this.creating); // called only while creating
     const t = cr.tool;
-    const d = this.engine.add(t.id, this._createParams(t, cr.points.map((p) => ({ ...p }))));
+    const d = this.engine.add(
+      t.id,
+      this._createParams(
+        t,
+        cr.points.map((p) => ({ ...p })),
+      ),
+    );
     this._finishCreate(d.id);
   },
 
@@ -60,9 +83,11 @@ export const createMethods = {
     this.creating = null;
     this.engine.draft = null;
     if (newId) this.engine.select(newId);
-    setActiveTool('cursor');   // revert to cursor; the new shape is selected
-    const t = /** @type {Tool | undefined} */ (newId && getTool(/** @type {string} */ ((this.engine.get(newId) || {}).tool)));
-    if (t && t.editOnCreate) this._autoEditText(/** @type {string} */ (newId));   // text/callout: start typing immediately
+    setActiveTool('cursor'); // revert to cursor; the new shape is selected
+    const t = /** @type {Tool | undefined} */ (
+      newId && getTool(/** @type {string} */ ((this.engine.get(newId) || {}).tool))
+    );
+    if (t && t.editOnCreate) this._autoEditText(/** @type {string} */ (newId)); // text/callout: start typing immediately
   },
 
   // After a text-first tool is placed, open its in-place editor as soon as the label anchor is painted
@@ -72,7 +97,10 @@ export const createMethods = {
   _autoEditText(id, tries) {
     tries = tries || 0;
     const box = this.engine._textBox;
-    if (box && box.id === id) { this._startTextEdit(id); return; }
+    if (box && box.id === id) {
+      this._startTextEdit(id);
+      return;
+    }
     if (tries < 8) requestAnimationFrame(() => this._autoEditText(id, tries + 1));
   },
 
@@ -82,11 +110,19 @@ export const createMethods = {
   _finishPoly() {
     if (this.mode !== 'creating') return;
     const pts = /** @type {import('../interaction.js').Creating} */ (this.creating).points;
-    pts.pop();   // trailing rubber vertex
+    pts.pop(); // trailing rubber vertex
     /** @param {Anchor} a @param {Anchor} b */
     const same = (a, b) => a && b && a.time === b.time && a.price === b.price;
     while (pts.length >= 2 && same(pts[pts.length - 1], pts[pts.length - 2])) pts.pop();
-    if (pts.length < 2) { this.creating = null; this.engine.draft = null; this.mode = 'idle'; this.engine.requestUpdate(); setActiveTool('cursor'); this._disable(); return; }
+    if (pts.length < 2) {
+      this.creating = null;
+      this.engine.draft = null;
+      this.mode = 'idle';
+      this.engine.requestUpdate();
+      setActiveTool('cursor');
+      this._disable();
+      return;
+    }
     this._commitCreate();
   },
 };

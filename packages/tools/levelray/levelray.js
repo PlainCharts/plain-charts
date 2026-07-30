@@ -7,9 +7,9 @@ Tools.register({
   id: 'levelray',
   glyph: '⊢',
   kind: 'draw',
-  points: 1,                 // one click; onCreate expands it to a 2-point line
+  points: 1, // one click; onCreate expands it to a 2-point line
   sliceable: true,
-  shiftConstrain: 'angle',   // hold Shift while dragging an end → snap to 45° (re-straighten)
+  shiftConstrain: 'angle', // hold Shift while dragging an end → snap to 45° (re-straighten)
   defaultStyle: { color: '#2962ff', width: 2, lineStyle: 'solid', priceLabels: false },
   settings: {
     style: [
@@ -18,8 +18,16 @@ Tools.register({
     ],
     text: {
       defaults: { vAlign: 'top', hAlign: 'right' },
-      vAlign: [{ key: 'top', name: 'Top' }, { key: 'middle', name: 'Middle' }, { key: 'bottom', name: 'Bottom' }],
-      hAlign: [{ key: 'left', name: 'Left' }, { key: 'center', name: 'Center' }, { key: 'right', name: 'Right' }],
+      vAlign: [
+        { key: 'top', name: 'Top' },
+        { key: 'middle', name: 'Middle' },
+        { key: 'bottom', name: 'Bottom' },
+      ],
+      hAlign: [
+        { key: 'left', name: 'Left' },
+        { key: 'center', name: 'Center' },
+        { key: 'right', name: 'Right' },
+      ],
     },
   },
   // expand the single click into [A, B]. B = the first future bar whose range RETURNS to A's price
@@ -29,12 +37,15 @@ Tools.register({
   /** @param {ToolDataPoint} a @param {ToolPane} pane @returns {ToolDataPoint[]} */
   onCreate(a, pane) {
     const bars = pane.barArr || [];
-    let left = false;   // has price moved OFF the level yet?
+    let left = false; // has price moved OFF the level yet?
     for (const bar of bars) {
       if (bar.time <= a.time || bar.low == null || bar.high == null) continue;
       const contains = bar.low <= a.price && a.price <= bar.high;
-      if (!left) { if (!contains) left = true; continue; }   // wait for a clean departure
-      if (contains) return [{ ...a }, { time: bar.time, price: a.price }];   // first return = obstacle
+      if (!left) {
+        if (!contains) left = true;
+        continue;
+      } // wait for a clean departure
+      if (contains) return [{ ...a }, { time: bar.time, price: a.price }]; // first return = obstacle
     }
     const last = bars.length ? bars[bars.length - 1] : null;
     return [{ ...a }, { time: last ? last.time : a.time, price: a.price }];
@@ -45,10 +56,17 @@ Tools.register({
   marks(d) {
     if (!d.points || d.points.length < 2) return [];
     const s = d.style || {};
-    return [{
-      path: [{ t: d.points[0].time, p: d.points[0].price }, { t: d.points[1].time, p: d.points[1].price }],
-      stroke: s.color, width: s.width || 2, dash: Tools.dash(s.lineStyle),
-    }];
+    return [
+      {
+        path: [
+          { t: d.points[0].time, p: d.points[0].price },
+          { t: d.points[1].time, p: d.points[1].price },
+        ],
+        stroke: s.color,
+        width: s.width || 2,
+        dash: Tools.dash(s.lineStyle),
+      },
+    ];
   },
   // No hitTest: a pure recipe. The line mark gives the body and its two endpoints are the
   // default handles — both derived by engine.hitTestFromMarks.

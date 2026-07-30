@@ -15,10 +15,16 @@ export async function loadLibrary() {
   const d = await store.load();
   data.favorites = Array.isArray(d.favorites) ? d.favorites : [];
   data.categories = Array.isArray(d.categories) ? d.categories : [];
-  data.categories.forEach((/** @type {StudyCategory} */ c, i) => { if (!c.id) c.id = 'c' + (i + 1); if (!Array.isArray(c.items)) c.items = []; });
+  data.categories.forEach((/** @type {StudyCategory} */ c, i) => {
+    if (!c.id) c.id = 'c' + (i + 1);
+    if (!Array.isArray(c.items)) c.items = [];
+  });
   return data;
 }
-const save = () => { store.set('favorites', data.favorites); store.set('categories', data.categories); };
+const save = () => {
+  store.set('favorites', data.favorites);
+  store.set('categories', data.categories);
+};
 
 // favorites
 export const favorites = () => data.favorites;
@@ -40,11 +46,23 @@ export function addCategory(name) {
   return id;
 }
 /** @param {string} id @param {string} name */
-export function renameCategory(id, name) { const c = data.categories.find((c) => c.id === id); if (c) { c.name = name; save(); } }
+export function renameCategory(id, name) {
+  const c = data.categories.find((c) => c.id === id);
+  if (c) {
+    c.name = name;
+    save();
+  }
+}
 /** @param {string} id */
-export function deleteCategory(id) { data.categories = data.categories.filter((c) => c.id !== id); save(); }
+export function deleteCategory(id) {
+  data.categories = data.categories.filter((c) => c.id !== id);
+  save();
+}
 /** @param {string} catId @param {string} id */
-export const inCategory = (catId, id) => { const c = data.categories.find((c) => c.id === catId); return !!c && c.items.includes(id); };
+export const inCategory = (catId, id) => {
+  const c = data.categories.find((c) => c.id === catId);
+  return !!c && c.items.includes(id);
+};
 /** @param {string} catId @param {string} id */
 export function toggleMember(catId, id) {
   const c = data.categories.find((c) => c.id === catId);

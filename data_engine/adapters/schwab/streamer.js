@@ -9,7 +9,7 @@
 // changed fields, so we keep a per-symbol snapshot and emit the merged delta.
 
 import { log } from '/data_engine/status.js';
-import { emitRaw } from '/data_engine/data/raw-tap.js';   // diagnostic tap (Data Interceptor); no-op when unused
+import { emitRaw } from '/data_engine/data/raw-tap.js'; // diagnostic tap (Data Interceptor); no-op when unused
 
 /** @param {string} sym */
 const serviceFor = (sym) => (sym.startsWith('/') ? 'LEVELONE_FUTURES' : 'LEVELONE_EQUITIES');
@@ -31,12 +31,12 @@ export function createStreamer() {
   let info = null;
   let loggedIn = false;
   /** @type {boolean|null} */
-  let available = null;        // null=untested, true/false after first connect()
+  let available = null; // null=untested, true/false after first connect()
   let reqId = 0;
   /** @type {Promise<boolean>|null} */
   let connecting = null;
   /** @type {Map<string, StreamSub>} */
-  const subs = new Map();      // symbol -> { cbs:Set, last:{bid,ask,last} }
+  const subs = new Map(); // symbol -> { cbs:Set, last:{bid,ask,last} }
 
   /** @param {string} service */
   const symbolsFor = (service) => [...subs.keys()].filter((s) => serviceFor(s) === service);
@@ -44,13 +44,20 @@ export function createStreamer() {
   /** @param {string} service @param {string} command @param {any} parameters */
   function send(service, command, parameters) {
     if (!ws || ws.readyState !== 1) return;
-    ws.send(JSON.stringify({
-      requests: [{
-        service, command, requestid: String(++reqId),
-        SchwabClientCustomerId: /** @type {StreamInfo} */ (info).customerId, SchwabClientCorrelId: /** @type {StreamInfo} */ (info).correlId,
-        parameters,
-      }],
-    }));
+    ws.send(
+      JSON.stringify({
+        requests: [
+          {
+            service,
+            command,
+            requestid: String(++reqId),
+            SchwabClientCustomerId: /** @type {StreamInfo} */ (info).customerId,
+            SchwabClientCorrelId: /** @type {StreamInfo} */ (info).correlId,
+            parameters,
+          },
+        ],
+      }),
+    );
   }
 
   // (re)subscribe the full key set for a service — SUBS replaces, so this is idempotent
@@ -65,8 +72,12 @@ export function createStreamer() {
   function onMessage(ev) {
     /** @type {any} */
     let msg;
-    try { msg = JSON.parse(ev.data); } catch (_) { return; }
-    emitRaw('schwab', 'quote', msg);   // raw stream envelope (only fields in FIELDS arrive today)
+    try {
+      msg = JSON.parse(ev.data);
+    } catch (_) {
+      return;
+    }
+    emitRaw('schwab', 'quote', msg); // raw stream envelope (only fields in FIELDS arrive today)
 
     (msg.data || []).forEach((/** @type {any} */ d) => {
       (d.content || []).forEach((/** @type {any} */ c) => {
@@ -90,29 +101,46 @@ export function createStreamer() {
     return new Promise((resolve) => {
       let settled = false;
       /** @param {boolean} ok */
-      const finish = (ok) => { if (!settled) { settled = true; resolve(ok); } };
+      const finish = (ok) => {
+        if (!settled) {
+          settled = true;
+          resolve(ok);
+        }
+      };
       ws = new WebSocket(/** @type {StreamInfo} */ (info).socketUrl);
-      ws.onopen = () => send('ADMIN', 'LOGIN', {
-        Authorization: /** @type {StreamInfo} */ (info).accessToken,
-        SchwabClientChannel: /** @type {StreamInfo} */ (info).channel,
-        SchwabClientFunctionId: /** @type {StreamInfo} */ (info).functionId,
-      });
+      ws.onopen = () =>
+        send('ADMIN', 'LOGIN', {
+          Authorization: /** @type {StreamInfo} */ (info).accessToken,
+          SchwabClientChannel: /** @type {StreamInfo} */ (info).channel,
+          SchwabClientFunctionId: /** @type {StreamInfo} */ (info).functionId,
+        });
       ws.onmessage = (ev) => {
         /** @type {any} */
-        let msg; try { msg = JSON.parse(ev.data); } catch (_) { msg = {}; }
+        let msg;
+        try {
+          msg = JSON.parse(ev.data);
+        } catch (_) {
+          msg = {};
+        }
         const lr = (msg.response || []).find((/** @type {any} */ r) => r.command === 'LOGIN');
         if (lr) {
           if (lr.content && lr.content.code === 0) {
             loggedIn = true;
             new Set([...subs.keys()].map(serviceFor)).forEach(syncService);
             finish(true);
-          } else { finish(false); }
+          } else {
+            finish(false);
+          }
         }
         onMessage(ev);
       };
-      ws.onclose = () => { loggedIn = false; ws = null; finish(false); };
+      ws.onclose = () => {
+        loggedIn = false;
+        ws = null;
+        finish(false);
+      };
       ws.onerror = () => finish(false);
-      setTimeout(() => finish(loggedIn), 6000);   // safety: don't hang if no LOGIN reply
+      setTimeout(() => finish(loggedIn), 6000); // safety: don't hang if no LOGIN reply
     });
   }
 
@@ -121,9 +149,12 @@ export function createStreamer() {
     if (loggedIn) return true;
     if (connecting) return connecting;
     connecting = (async () => {
-      const r = await fetch('/api/schwab/stream-info').then((x) => x.json()).catch((e) => ({ error: 'fetch ' + e }));
+      const r = await fetch('/api/schwab/stream-info')
+        .then((x) => x.json())
+        .catch((e) => ({ error: 'fetch ' + e }));
       if (!r || r.error || !r.socketUrl) {
-        available = false; connecting = null;
+        available = false;
+        connecting = null;
         log('Streamer: no stream-info (' + ((r && r.error) || 'empty') + ') — using polling.', true);
         return false;
       }
@@ -144,7 +175,10 @@ export function createStreamer() {
     /** @param {string} sym @param {(q: Quote) => void} cb */
     async subscribe(sym, cb) {
       let sub = subs.get(sym);
-      if (!sub) { sub = { cbs: new Set(), last: {} }; subs.set(sym, sub); }
+      if (!sub) {
+        sub = { cbs: new Set(), last: {} };
+        subs.set(sym, sub);
+      }
       sub.cbs.add(cb);
       if (sub.last.bid != null || sub.last.ask != null || sub.last.last != null) cb(sub.last);
       const ok = await connect();
@@ -163,8 +197,12 @@ export function createStreamer() {
     },
     // hard stop: close the socket and drop all subscriptions (called on broker disconnect)
     close() {
-      subs.clear(); loggedIn = false; connecting = null;
-      try { if (ws) ws.close(); } catch (_) {}
+      subs.clear();
+      loggedIn = false;
+      connecting = null;
+      try {
+        if (ws) ws.close();
+      } catch (_) {}
       ws = null;
     },
   };

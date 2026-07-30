@@ -6,7 +6,7 @@ import { getStudy } from './registry.js';
 import { reloadUserFile, studyIdForFile } from './user-loader.js';
 import { getActivePane } from '../chart/layout.js';
 import { log } from '../dom.js';
-import { t } from '../i18n/i18n.js';   // vocabulary lookup (the code TEMPLATE stays as example source)
+import { t } from '../i18n/i18n.js'; // vocabulary lookup (the code TEMPLATE stays as example source)
 
 /**
  * The small API the shell hands to the caller's onSave.
@@ -21,50 +21,97 @@ import { t } from '../i18n/i18n.js';   // vocabulary lookup (the code TEMPLATE s
 /** @type {HTMLElement | null} */
 let overlay = null;
 
-export function closeEditor() { if (overlay) { overlay.remove(); overlay = null; } }
+export function closeEditor() {
+  if (overlay) {
+    overlay.remove();
+    overlay = null;
+  }
+}
 
 /** @param {CodeEditorOpts} opts */
-export function openCodeEditor({ title = 'Editor', name = '', code = '', nameLabel = 'File name', saveLabel = 'Save & load', onSave }) {
+export function openCodeEditor({
+  title = 'Editor',
+  name = '',
+  code = '',
+  nameLabel = 'File name',
+  saveLabel = 'Save & load',
+  onSave,
+}) {
   closeEditor();
   overlay = document.createElement('div');
-  overlay.className = 'modal open'; overlay.style.zIndex = '65';
-  overlay.onclick = (e) => { if (e.target === overlay) closeEditor(); };
+  overlay.className = 'modal open';
+  overlay.style.zIndex = '65';
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeEditor();
+  };
 
-  const dlg = document.createElement('div'); dlg.className = 'dialog editor';
-  const h = document.createElement('h3'); h.textContent = t(title);
+  const dlg = document.createElement('div');
+  dlg.className = 'dialog editor';
+  const h = document.createElement('h3');
+  h.textContent = t(title);
 
-  const nameRow = document.createElement('div'); nameRow.className = 'row';
+  const nameRow = document.createElement('div');
+  nameRow.className = 'row';
   nameRow.append(Object.assign(document.createElement('label'), { textContent: t(nameLabel) }));
   const nameInp = document.createElement('input');
-  nameInp.value = name; nameInp.placeholder = t('my_name'); nameInp.autocomplete = 'off';
+  nameInp.value = name;
+  nameInp.placeholder = t('my_name');
+  nameInp.autocomplete = 'off';
   if (name) nameInp.disabled = true;
   nameRow.append(nameInp);
 
-  const ta = document.createElement('textarea'); ta.className = 'editor-code'; ta.value = code; ta.spellcheck = false;
+  const ta = document.createElement('textarea');
+  ta.className = 'editor-code';
+  ta.value = code;
+  ta.spellcheck = false;
   ta.onkeydown = (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
-      const s = ta.selectionStart, en = ta.selectionEnd;
+      const s = ta.selectionStart,
+        en = ta.selectionEnd;
       ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(en);
       ta.selectionStart = ta.selectionEnd = s + 2;
     }
   };
 
-  const conLabel = document.createElement('div'); conLabel.className = 'editor-con-label'; conLabel.textContent = t('Console');
-  const con = document.createElement('div'); con.className = 'editor-console';
+  const conLabel = document.createElement('div');
+  conLabel.className = 'editor-con-label';
+  conLabel.textContent = t('Console');
+  const con = document.createElement('div');
+  con.className = 'editor-console';
   /** @param {string} text @param {string} [kind] */
-  const setCon = (text, kind) => { con.textContent = text; con.className = 'editor-console' + (kind ? ' ' + kind : ''); };
+  const setCon = (text, kind) => {
+    con.textContent = text;
+    con.className = 'editor-console' + (kind ? ' ' + kind : '');
+  };
   setCon(t('Press') + ' ' + t(saveLabel) + ' ' + t('to save and check.'));
 
-  const actions = document.createElement('div'); actions.className = 'dlg-actions';
-  const closeBtn = document.createElement('button'); closeBtn.textContent = t('Close'); closeBtn.onclick = closeEditor;
-  const save = document.createElement('button'); save.className = 'primary'; save.textContent = t(saveLabel);
-  const api = { setCon, close: closeEditor, lockName: () => { nameInp.disabled = true; } };
+  const actions = document.createElement('div');
+  actions.className = 'dlg-actions';
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = t('Close');
+  closeBtn.onclick = closeEditor;
+  const save = document.createElement('button');
+  save.className = 'primary';
+  save.textContent = t(saveLabel);
+  const api = {
+    setCon,
+    close: closeEditor,
+    lockName: () => {
+      nameInp.disabled = true;
+    },
+  };
   save.onclick = async () => {
     const fn = (name || nameInp.value).trim();
-    if (!fn) { setCon(t('Enter a name.'), 'err'); return; }
-    try { await onSave(fn, ta.value, api); }
-    catch (/** @type {any} */ e) { setCon('✗ ' + ((e && e.message) || e), 'err'); }
+    if (!fn) {
+      setCon(t('Enter a name.'), 'err');
+      return;
+    }
+    try {
+      await onSave(fn, ta.value, api);
+    } catch (/** @type {any} */ e) {
+      setCon('✗ ' + ((e && e.message) || e), 'err');
+    }
   };
   actions.append(closeBtn, save);
 
@@ -107,16 +154,26 @@ Studies.register({
 const STUB_SERIES = { feed() {}, configure() {} };
 const STUB_CHART = { addPlot: () => STUB_SERIES, removePlot() {} };
 /** @param {StudySpec} study @returns {Record<string, any>} */
-const defaultParams = (study) => { const p = /** @type {Record<string, any>} */ ({}); (study.inputs || []).forEach((i) => { p[i.key] = i.default; }); return p; };
+const defaultParams = (study) => {
+  const p = /** @type {Record<string, any>} */ ({});
+  (study.inputs || []).forEach((i) => {
+    p[i.key] = i.default;
+  });
+  return p;
+};
 
 function sampleBars() {
   const pane = getActivePane();
   const b = pane && pane.studies && pane.studies.bars;
   if (b && b.length) return b;
-  const out = []; let price = 100;
+  const out = [];
+  let price = 100;
   for (let i = 0; i < 200; i++) {
     price += Math.sin(i / 7) * 0.6;
-    const o = price, c = price + 0.2, h = Math.max(o, c) + 0.3, l = Math.min(o, c) - 0.3;
+    const o = price,
+      c = price + 0.2,
+      h = Math.max(o, c) + 0.3,
+      l = Math.min(o, c) - 0.3;
     out.push({ time: 1700000000 + i * 60, open: o, high: h, low: l, close: c, volume: 1000 });
   }
   return out;
@@ -126,24 +183,60 @@ function sampleBars() {
 export function openEditor({ name = '', code = TEMPLATE, onSaved } = {}) {
   openCodeEditor({
     title: name ? t('Edit indicator') : t('New indicator'),
-    name, code: code || TEMPLATE,
+    name,
+    code: code || TEMPLATE,
     onSave: async (fn, src, api) => {
       api.setCon('Saving…');
-      const r = await fetch('/api/user-studies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: fn, code: src }) })
-        .then((x) => x.json()).catch((e) => ({ error: String(e) }));
-      if (r.error) { api.setCon('✗ Could not save: ' + r.error, 'err'); return; }
-      try { await reloadUserFile(r.file); }
-      catch (/** @type {any} */ e) { api.setCon('✗ Load error\n' + (e.stack || e.message || e), 'err'); return; }
+      const r = await fetch('/api/user-studies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: fn, code: src }),
+      })
+        .then((x) => x.json())
+        .catch((e) => ({ error: String(e) }));
+      if (r.error) {
+        api.setCon('✗ Could not save: ' + r.error, 'err');
+        return;
+      }
+      try {
+        await reloadUserFile(r.file);
+      } catch (/** @type {any} */ e) {
+        api.setCon('✗ Load error\n' + (e.stack || e.message || e), 'err');
+        return;
+      }
       const id = studyIdForFile(r.file);
       const study = id && getStudy(id);
-      if (!study) { api.setCon('✗ Loaded, but nothing registered.\nDid you call Studies.register({ id, name, calc }) ?', 'err'); return; }
-      if (typeof study.calc !== 'function') { api.setCon('✗ "' + (study.name || id) + '" has no calc(bars, p) function.', 'err'); return; }
+      if (!study) {
+        api.setCon('✗ Loaded, but nothing registered.\nDid you call Studies.register({ id, name, calc }) ?', 'err');
+        return;
+      }
+      if (typeof study.calc !== 'function') {
+        api.setCon('✗ "' + (study.name || id) + '" has no calc(bars, p) function.', 'err');
+        return;
+      }
       try {
-        const ctx = { params: defaultParams(study), chart: STUB_CHART, decimals: 2, fetch: (/** @type {string} */ u) => fetch(u).then((x) => x.json()) };
+        const ctx = {
+          params: defaultParams(study),
+          chart: STUB_CHART,
+          decimals: 2,
+          fetch: (/** @type {string} */ u) => fetch(u).then((x) => x.json()),
+        };
         const out = await study.calc(sampleBars(), ctx.params, ctx);
         if (!out || !Array.isArray(out.plots)) throw new Error('calc must return { plots: [ ... ] }');
-        const pts = out.plots.reduce((/** @type {number} */ n, /** @type {StudyPlot} */ pl) => n + ((pl.data && pl.data.length) || 0), 0);
-        api.setCon('✓ Compiled and ran OK\n' + study.name + ' — ' + out.plots.length + ' plot(s), ' + pts + ' points. Applied to charts.', 'ok');
+        const pts = out.plots.reduce(
+          (/** @type {number} */ n, /** @type {StudyPlot} */ pl) => n + ((pl.data && pl.data.length) || 0),
+          0,
+        );
+        api.setCon(
+          '✓ Compiled and ran OK\n' +
+            study.name +
+            ' — ' +
+            out.plots.length +
+            ' plot(s), ' +
+            pts +
+            ' points. Applied to charts.',
+          'ok',
+        );
       } catch (/** @type {any} */ e) {
         api.setCon('✗ Runtime error in calc()\n' + (e.stack || e.message || e), 'err');
         return;

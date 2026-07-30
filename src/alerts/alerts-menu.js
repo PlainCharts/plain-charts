@@ -6,7 +6,12 @@ import { t } from '../i18n/i18n.js';
 import { setAlertDisplay } from './alert-display.js';
 
 /** @param {string} tag @param {string} [cls] @param {string} [txt] @returns {HTMLElement} */
-const el = (tag, cls, txt) => { const d = document.createElement(tag); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
+const el = (tag, cls, txt) => {
+  const d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (txt != null) d.textContent = txt;
+  return d;
+};
 
 /**
  * The row helpers bound to one menu element.
@@ -19,21 +24,32 @@ export function menuRows(m, { render, rerender, close }) {
   const item = (glyph, label, on, run) => {
     const it = el('div', 'dwg-item' + (on ? '' : ' disabled'));
     it.append(el('span', 'dwg-check', glyph), el('span', 'dwg-label', t(label)));
-    if (on) it.onclick = () => { close(); run(); };
+    if (on)
+      it.onclick = () => {
+        close();
+        run();
+      };
     m.appendChild(it);
   };
   /** a checkbox filter row (☑/☐). @param {boolean} on @param {string} label @param {() => void} toggle */
   const check = (on, label, toggle) => {
     const it = el('div', 'dwg-item');
     it.append(el('span', 'dwg-check', on ? '☑' : '☐'), el('span', 'dwg-label', t(label)));
-    it.onclick = () => { toggle(); render(); rerender(); };
+    it.onclick = () => {
+      toggle();
+      render();
+      rerender();
+    };
     m.appendChild(it);
   };
   /** a combobox row: label + the current value (or "Any") + caret; click toggles its inline picker.
    * @param {string} label @param {string} value @param {boolean} open @param {() => void} toggle */
   const combo = (label, value, open, toggle) => {
     const it = el('div', 'dwg-item');
-    it.append(el('span', 'dwg-label', t(label)), el('span', 'dwg-arrow', (value || t('Any')) + '  ' + (open ? '▴' : '▾')));
+    it.append(
+      el('span', 'dwg-label', t(label)),
+      el('span', 'dwg-arrow', (value || t('Any')) + '  ' + (open ? '▴' : '▾')),
+    );
     it.onclick = toggle;
     m.appendChild(it);
     return it;
@@ -51,7 +67,10 @@ export function menuRows(m, { render, rerender, close }) {
   const pref = (label, get, key) => {
     const it = el('div', 'dwg-item');
     it.append(el('span', 'dwg-check', get() ? '☑' : '☐'), el('span', 'dwg-label', t(label)));
-    it.onclick = () => { setAlertDisplay({ [key]: !get() }); rerender(); };
+    it.onclick = () => {
+      setAlertDisplay({ [key]: !get() });
+      rerender();
+    };
     m.appendChild(it);
   };
   return { item, check, combo, opt, pref };

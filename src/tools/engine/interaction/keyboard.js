@@ -4,7 +4,7 @@
 // (vertical by whole ticks, horizontal by pixels), Delete/Backspace (remove, alerts included), and
 // the Ctrl/Shift modifier tracking that arms the marquee / measure capture. Part of the Interaction
 // class, split out as a prototype mixin -- these methods run with `this` bound to the instance.
-import { removeDrawingsWithAlerts } from '../../../alerts/alert-drawing-sync.js';   // delete a drawing's alert with it
+import { removeDrawingsWithAlerts } from '../../../alerts/alert-drawing-sync.js'; // delete a drawing's alert with it
 import { getActiveTool, setActiveTool } from '../../controller.js';
 import { drawingsLocked } from '../../toolbar-store.js';
 import { toData, toScreen } from '../geometry.js';
@@ -16,22 +16,50 @@ export const keyboardMethods = {
   // space draws a selection marquee (otherwise an empty-space drag pans the chart).
   /** @this {Ix} @param {KeyboardEvent} e */
   _onMod(e) {
-    const ctrl = !!(e.ctrlKey || e.metaKey), shift = !!e.shiftKey;
+    const ctrl = !!(e.ctrlKey || e.metaKey),
+      shift = !!e.shiftKey;
     if (ctrl === this._ctrlHeld && shift === this._shiftHeld) return;
-    this._ctrlHeld = ctrl; this._shiftHeld = shift;
+    this._ctrlHeld = ctrl;
+    this._shiftHeld = shift;
     if (this.mode === 'idle' && this._last) this._hover(this._last.x, this._last.y);
   },
 
   /** @this {Ix} @param {KeyboardEvent} e */
   _onKey(e) {
-    if (e.key === 'Enter' && this.mode === 'creating') { e.preventDefault(); this._finishPoly(); return; }
+    if (e.key === 'Enter' && this.mode === 'creating') {
+      e.preventDefault();
+      this._finishPoly();
+      return;
+    }
     if (e.key === 'Escape') {
-      if (this.mode === 'marquee') { this.engine.marqueeRect = null; this.mode = 'idle'; this.marquee = null; this.engine.requestUpdate(); }
-      else if (this.mode === 'zooming') { this.engine.marqueeRect = null; this.mode = 'idle'; this.marquee = null; this.engine.requestUpdate(); setActiveTool('cursor'); this._disable(); }
-      else if (this.mode === 'slicing') { this._endSlice(); }
-      else if (this.mode === 'creating') { this.creating = null; this.engine.draft = null; this.mode = 'idle'; this.engine.requestUpdate(); setActiveTool('cursor'); this._disable(); }
-      else if (this.mode === 'measuring' || this.mode === 'measured') { this._clearMeasure(); }   // drop the ephemeral ruler
-      else if (getActiveTool() !== 'cursor') { setActiveTool('cursor'); this._disable(); }   // any armed tool -> cancel, back to cursor
+      if (this.mode === 'marquee') {
+        this.engine.marqueeRect = null;
+        this.mode = 'idle';
+        this.marquee = null;
+        this.engine.requestUpdate();
+      } else if (this.mode === 'zooming') {
+        this.engine.marqueeRect = null;
+        this.mode = 'idle';
+        this.marquee = null;
+        this.engine.requestUpdate();
+        setActiveTool('cursor');
+        this._disable();
+      } else if (this.mode === 'slicing') {
+        this._endSlice();
+      } else if (this.mode === 'creating') {
+        this.creating = null;
+        this.engine.draft = null;
+        this.mode = 'idle';
+        this.engine.requestUpdate();
+        setActiveTool('cursor');
+        this._disable();
+      } else if (this.mode === 'measuring' || this.mode === 'measured') {
+        this._clearMeasure();
+      } // drop the ephemeral ruler
+      else if (getActiveTool() !== 'cursor') {
+        setActiveTool('cursor');
+        this._disable();
+      } // any armed tool -> cancel, back to cursor
       else if (this.engine.selection.size) this.engine.select(null);
       return;
     }
@@ -41,18 +69,23 @@ export const keyboardMethods = {
     // so only the pane holding it acts; the rest fall through.
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       if (!this.engine.selection.size) return;
-      const a = /** @type {HTMLElement|null} */ (document.activeElement), tag = a && a.tagName;
+      const a = /** @type {HTMLElement|null} */ (document.activeElement),
+        tag = a && a.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (a && a.isContentEditable)) return;
       if (drawingsLocked()) return;
-      const ids = this.engine.selectedIds().filter((id) => { const d = this.engine.get(id); return d && !this.engine.isLocked(id); });
+      const ids = this.engine.selectedIds().filter((id) => {
+        const d = this.engine.get(id);
+        return d && !this.engine.isLocked(id);
+      });
       if (!ids.length) return;
       e.preventDefault();
       const step = e.shiftKey ? 10 : 1;
       const horiz = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
-      const tick = /** @type {number} */ (this.pane.tickSize);   // may be undefined; the `tick > 0` gate handles that
+      const tick = /** @type {number} */ (this.pane.tickSize); // may be undefined; the `tick > 0` gate handles that
       const ser = this.engine.series;
       ids.forEach((id) => {
-        const d = this.engine.get(id); if (!d) return;
+        const d = this.engine.get(id);
+        if (!d) return;
         d.points = d.points.map((p) => {
           // Vertical nudge on a known tick grid: move by whole ticks (Up = higher price) so the drawing
           // stays EXACTLY on the grid -- no pixel round-trip, no drift; _snapPrice also pulls a legacy
@@ -71,24 +104,36 @@ export const keyboardMethods = {
           const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
           const base = toData(this.pane, s.x, s.y, ser);
           const moved = toData(this.pane, s.x + dx, s.y + dy, ser);
-          const dtime = (base.time != null && moved.time != null) ? moved.time - base.time : 0;
-          const dprice = (base.price != null && moved.price != null) ? moved.price - base.price : 0;
-          return { ...p, time: /** @type {number} */ (p.time) + dtime, price: /** @type {number} */ (p.price) + dprice };
+          const dtime = base.time != null && moved.time != null ? moved.time - base.time : 0;
+          const dprice = base.price != null && moved.price != null ? moved.price - base.price : 0;
+          return {
+            ...p,
+            time: /** @type {number} */ (p.time) + dtime,
+            price: /** @type {number} */ (p.price) + dprice,
+          };
         });
         this.engine.liveUpdate(d);
       });
       // coalesce a burst of nudges (incl. key-repeat) into ONE undo step: persist once the keys settle
       clearTimeout(this._nudgeTimer);
-      this._nudgeTimer = setTimeout(() => { try { this.engine.persist(); } catch (_) {} }, 350);
+      this._nudgeTimer = setTimeout(() => {
+        try {
+          this.engine.persist();
+        } catch (_) {}
+      }, 350);
       return;
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && this.engine.selection.size) {
-      const a = /** @type {HTMLElement|null} */ (document.activeElement), tag = a && a.tagName;
+      const a = /** @type {HTMLElement|null} */ (document.activeElement),
+        tag = a && a.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (a && a.isContentEditable)) return;
-      if (drawingsLocked()) return;   // can't delete while locked
+      if (drawingsLocked()) return; // can't delete while locked
       e.preventDefault();
-      const ids = this.engine.selectedIds().filter((/** @type {string} */ id) => { const dd = this.engine.get(id); return dd && !this.engine.isLocked(id); });
-      removeDrawingsWithAlerts(this.engine, ids);   // deletes any attached alert too (with confirm)
+      const ids = this.engine.selectedIds().filter((/** @type {string} */ id) => {
+        const dd = this.engine.get(id);
+        return dd && !this.engine.isLocked(id);
+      });
+      removeDrawingsWithAlerts(this.engine, ids); // deletes any attached alert too (with confirm)
     }
   },
 };

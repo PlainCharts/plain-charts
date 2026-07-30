@@ -29,10 +29,14 @@ function handleUserStudies(req, res, urlPath, query) {
   }
   if (urlPath === '/api/user-studies/file' && req.method === 'GET') {
     const id = sanitizeModName(query.get('name'));
-    try { return sendJson(res, 200, { code: fs.readFileSync(path.join(STUDIES_DIR, id, id + '.js'), 'utf-8') }); }
-    catch (_) { return sendJson(res, 404, { error: 'not found' }); }
+    try {
+      return sendJson(res, 200, { code: fs.readFileSync(path.join(STUDIES_DIR, id, id + '.js'), 'utf-8') });
+    } catch (_) {
+      return sendJson(res, 404, { error: 'not found' });
+    }
   }
-  if (urlPath === '/api/user-studies' && req.method === 'POST') {   // create / edit a study package
+  if (urlPath === '/api/user-studies' && req.method === 'POST') {
+    // create / edit a study package
     return readBody(req, (d) => {
       const name = sanitizeModName(d.name);
       if (!name) return sendJson(res, 400, { error: 'invalid name' });
@@ -42,7 +46,8 @@ function handleUserStudies(req, res, urlPath, query) {
       return sendJson(res, 200, { ok: true, file: name });
     });
   }
-  if (urlPath === '/api/user-studies/package' && req.method === 'POST') {   // install a whole study FOLDER, tree intact
+  if (urlPath === '/api/user-studies/package' && req.method === 'POST') {
+    // install a whole study FOLDER, tree intact
     return readBody(req, (d) => {
       const id = sanitizeModName(d.id);
       if (!id) return sendJson(res, 400, { error: 'invalid id' });
@@ -51,21 +56,25 @@ function handleUserStudies(req, res, urlPath, query) {
       try {
         for (const f of d.files) {
           const rel = String((f && f.path) || '').replace(/\\/g, '/');
-          if (!rel || rel.split('/')[0] !== id) continue;           // every file must live under the package folder
+          if (!rel || rel.split('/')[0] !== id) continue; // every file must live under the package folder
           const dest = path.join(STUDIES_DIR, rel);
-          if (dest !== base && !dest.startsWith(base + path.sep)) continue;   // no traversal outside the package
+          if (dest !== base && !dest.startsWith(base + path.sep)) continue; // no traversal outside the package
           fs.mkdirSync(path.dirname(dest), { recursive: true });
           if (typeof f.b64 === 'string') fs.writeFileSync(dest, Buffer.from(f.b64, 'base64'));
           else fs.writeFileSync(dest, String(f.text || ''));
         }
-      } catch (e) { return sendJson(res, 500, { error: String((e && e.message) || e) }); }
+      } catch (e) {
+        return sendJson(res, 500, { error: String((e && e.message) || e) });
+      }
       return sendJson(res, 200, { ok: true, id });
     });
   }
   if (urlPath === '/api/user-studies/delete' && req.method === 'POST') {
     return readBody(req, (d) => {
       const name = sanitizeModName(d.name);
-      try { fs.rmSync(path.join(STUDIES_DIR, name), { recursive: true, force: true }); } catch (_) {}
+      try {
+        fs.rmSync(path.join(STUDIES_DIR, name), { recursive: true, force: true });
+      } catch (_) {}
       return sendJson(res, 200, { ok: true });
     });
   }
@@ -77,7 +86,8 @@ function handleUserStudies(req, res, urlPath, query) {
 const TOOLS_DIR = path.join(ROOT, 'packages', 'tools');
 function handleUserTools(req, res, urlPath, query) {
   if (urlPath === '/api/user-tools' && req.method === 'GET') {
-    const tools = [], icons = [];
+    const tools = [],
+      icons = [];
     try {
       for (const e of fs.readdirSync(TOOLS_DIR, { withFileTypes: true })) {
         if (!e.isDirectory()) continue;
@@ -87,12 +97,21 @@ function handleUserTools(req, res, urlPath, query) {
         if (hasIcon) icons.push(e.name);
         const toolFile = path.join(f, e.name + '.js');
         const meta = readMeta(f);
-        if (fs.existsSync(toolFile)) tools.push({ folder: e.name, name: meta.name || '', description: meta.description || '', icon: meta.icon || '', hasIcon, hasVocab });
+        if (fs.existsSync(toolFile))
+          tools.push({
+            folder: e.name,
+            name: meta.name || '',
+            description: meta.description || '',
+            icon: meta.icon || '',
+            hasIcon,
+            hasVocab,
+          });
       }
     } catch (_) {}
     return sendJson(res, 200, { tools, icons });
   }
-  if (urlPath === '/api/user-tools' && req.method === 'POST') {   // create / edit a tool package
+  if (urlPath === '/api/user-tools' && req.method === 'POST') {
+    // create / edit a tool package
     return readBody(req, (d) => {
       const name = sanitizeModName(d.name);
       if (!name) return sendJson(res, 400, { error: 'invalid name' });
@@ -104,10 +123,14 @@ function handleUserTools(req, res, urlPath, query) {
   }
   if (urlPath === '/api/user-tools/file' && req.method === 'GET') {
     const name = sanitizeModName(query.get('name'));
-    try { return sendJson(res, 200, { code: fs.readFileSync(path.join(TOOLS_DIR, name, name + '.js'), 'utf-8') }); }
-    catch (_) { return sendJson(res, 404, { error: 'not found' }); }
+    try {
+      return sendJson(res, 200, { code: fs.readFileSync(path.join(TOOLS_DIR, name, name + '.js'), 'utf-8') });
+    } catch (_) {
+      return sendJson(res, 404, { error: 'not found' });
+    }
   }
-  if (urlPath === '/api/user-tools/package' && req.method === 'POST') {   // install a whole tool FOLDER (<id>.js + icon.png + vocab.json), tree intact
+  if (urlPath === '/api/user-tools/package' && req.method === 'POST') {
+    // install a whole tool FOLDER (<id>.js + icon.png + vocab.json), tree intact
     return readBody(req, (d) => {
       const id = sanitizeModName(d.id);
       if (!id) return sendJson(res, 400, { error: 'invalid id' });
@@ -116,31 +139,41 @@ function handleUserTools(req, res, urlPath, query) {
       try {
         for (const f of d.files) {
           const rel = String((f && f.path) || '').replace(/\\/g, '/');
-          if (!rel || rel.split('/')[0] !== id) continue;                 // every file must live under the package folder
+          if (!rel || rel.split('/')[0] !== id) continue; // every file must live under the package folder
           const dest = path.join(TOOLS_DIR, rel);
-          if (dest !== base && !dest.startsWith(base + path.sep)) continue;   // no traversal outside the package
+          if (dest !== base && !dest.startsWith(base + path.sep)) continue; // no traversal outside the package
           fs.mkdirSync(path.dirname(dest), { recursive: true });
           if (typeof f.b64 === 'string') fs.writeFileSync(dest, Buffer.from(f.b64, 'base64'));
           else fs.writeFileSync(dest, String(f.text || ''));
         }
-      } catch (e) { return sendJson(res, 500, { error: String((e && e.message) || e) }); }
+      } catch (e) {
+        return sendJson(res, 500, { error: String((e && e.message) || e) });
+      }
       return sendJson(res, 200, { ok: true, id });
     });
   }
   if (urlPath === '/api/user-tools/delete' && req.method === 'POST') {
     return readBody(req, (d) => {
       const name = sanitizeModName(d.name);
-      try { fs.rmSync(path.join(TOOLS_DIR, name), { recursive: true, force: true }); } catch (_) {}
+      try {
+        fs.rmSync(path.join(TOOLS_DIR, name), { recursive: true, force: true });
+      } catch (_) {}
       return sendJson(res, 200, { ok: true });
     });
   }
-  if (urlPath === '/api/user-tools/open' && req.method === 'POST') {   // open the tools folder (drop packages in)
+  if (urlPath === '/api/user-tools/open' && req.method === 'POST') {
+    // open the tools folder (drop packages in)
     openFolder(TOOLS_DIR);
     return sendJson(res, 200, { ok: true });
   }
-  if (urlPath === '/api/user-tools/icon' && req.method === 'DELETE') {   // remove a tool's package icon.png (revert to glyph)
+  if (urlPath === '/api/user-tools/icon' && req.method === 'DELETE') {
+    // remove a tool's package icon.png (revert to glyph)
     const name = sanitizeModName(query.get('name'));
-    if (name) { try { fs.unlinkSync(path.join(TOOLS_DIR, name, 'icon.png')); } catch (_) {} }
+    if (name) {
+      try {
+        fs.unlinkSync(path.join(TOOLS_DIR, name, 'icon.png'));
+      } catch (_) {}
+    }
     return sendJson(res, 200, { ok: true });
   }
   return sendJson(res, 404, { error: 'unknown endpoint' });
@@ -160,7 +193,9 @@ function handleToolIcon(req, res) {
       const dir = path.join(ROOT, 'packages', 'tools', folder);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, id + '.png'), Buffer.from(m[1], 'base64'));
-    } catch (e) { return sendJson(res, 500, { error: String((e && e.message) || e) }); }
+    } catch (e) {
+      return sendJson(res, 500, { error: String((e && e.message) || e) });
+    }
     return sendJson(res, 200, { ok: true, path: '/packages/tools/' + folder + '/' + id + '.png' });
   });
 }

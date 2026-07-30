@@ -10,7 +10,7 @@ let offsetMin = 0;
 /** @returns {number} */
 export function loadTimezone() {
   const v = getSetting('tzOffsetMin');
-  offsetMin = (typeof v === 'number') ? v : -new Date().getTimezoneOffset();   // default: local
+  offsetMin = typeof v === 'number' ? v : -new Date().getTimezoneOffset(); // default: local
   return offsetMin;
 }
 

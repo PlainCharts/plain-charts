@@ -11,7 +11,7 @@
 import { registerBroker } from '/data_engine/data/adapter-sdk.js';
 import { bus } from '/data_engine/bus.js';
 import { setConn, log } from '/data_engine/status.js';
-import { emitRaw } from '/data_engine/data/raw-tap.js';   // diagnostic tap (Data Interceptor); no-op when unused
+import { emitRaw } from '/data_engine/data/raw-tap.js'; // diagnostic tap (Data Interceptor); no-op when unused
 import { barMs } from '/data_engine/timeframes.js';
 import { foldExtras } from '/data_engine/bar-fields.js';
 
@@ -20,25 +20,34 @@ import { foldExtras } from '/data_engine/bar-fields.js';
 
 // resilient JSON fetch: never throws. Non-JSON / network error -> { error }.
 /** @param {string} url @param {RequestInit} [opts] @returns {Promise<any>} */
-const j = (url, opts) => fetch(url, opts)
-  .then(async (r) => {
-    const text = await r.text();
-    try { return JSON.parse(text); }
-    catch (_) { return { error: (text || '').slice(0, 200) || ('HTTP ' + r.status) }; }
-  })
-  .catch((e) => ({ error: String((e && e.message) || e) }));
+const j = (url, opts) =>
+  fetch(url, opts)
+    .then(async (r) => {
+      const text = await r.text();
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        return { error: (text || '').slice(0, 200) || 'HTTP ' + r.status };
+      }
+    })
+    .catch((e) => ({ error: String((e && e.message) || e) }));
 
 // decimals from a sample price string (fallback when displayPrecision is absent)
 /** @param {any} p @returns {number} */
 function decimalsOf(p) {
   if (p == null || !isFinite(p)) return 5;
-  const s = String(p), i = s.indexOf('.');
+  const s = String(p),
+    i = s.indexOf('.');
   return i < 0 ? 0 : Math.min(8, s.length - i - 1);
 }
 
 // OANDA instrument format is BASE_QUOTE (EUR_USD, XAU_USD, SPX500_USD)
 /** @param {any} s @returns {string} */
-const normInst = (s) => String(s || '').trim().toUpperCase().replace(/[/\s-]+/g, '_');
+const normInst = (s) =>
+  String(s || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[/\s-]+/g, '_');
 
 const NATIVE_MIN = [1, 2, 4, 5, 10, 15, 30];
 const NATIVE_HR = [1, 2, 3, 4, 6, 8, 12];
@@ -48,11 +57,17 @@ const pollMs = (tf) => (tf.unit === 'm' || tf.unit === 'h' ? 3000 : 60000);
 // neutral tf -> { granularity code, aggregation bucket secs (0 = native), base bar ms }
 /** @param {TF} tf @returns {{ g: string, bucket: number, baseMs: number }} */
 function granularity(tf) {
-  if (tf.unit === 'm') return NATIVE_MIN.includes(tf.n) ? { g: 'M' + tf.n, bucket: 0, baseMs: tf.n * 60000 } : { g: 'M1', bucket: tf.n * 60, baseMs: 60000 };
-  if (tf.unit === 'h') return NATIVE_HR.includes(tf.n) ? { g: 'H' + tf.n, bucket: 0, baseMs: tf.n * 3600000 } : { g: 'H1', bucket: tf.n * 3600, baseMs: 3600000 };
+  if (tf.unit === 'm')
+    return NATIVE_MIN.includes(tf.n)
+      ? { g: 'M' + tf.n, bucket: 0, baseMs: tf.n * 60000 }
+      : { g: 'M1', bucket: tf.n * 60, baseMs: 60000 };
+  if (tf.unit === 'h')
+    return NATIVE_HR.includes(tf.n)
+      ? { g: 'H' + tf.n, bucket: 0, baseMs: tf.n * 3600000 }
+      : { g: 'H1', bucket: tf.n * 3600, baseMs: 3600000 };
   if (tf.unit === 'D') return { g: 'D', bucket: 0, baseMs: 86400000 };
   if (tf.unit === 'W') return { g: 'W', bucket: 0, baseMs: 7 * 86400000 };
-  return { g: 'M', bucket: 0, baseMs: 30 * 86400000 };   // monthly
+  return { g: 'M', bucket: 0, baseMs: 30 * 86400000 }; // monthly
 }
 
 // bucket native candles up to a coarser interval (for non-native minute/hour counts)
@@ -66,9 +81,16 @@ function aggregate(bars, secs) {
   bars.forEach((b) => {
     const t = Math.floor(b.time / secs) * secs;
     let o = out.get(t);
-    if (!o) { o = { time: t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 }; out.set(t, o); }
-    else { o.high = Math.max(o.high, b.high); o.low = Math.min(o.low, b.low); o.close = b.close; o.volume += b.volume || 0; }
-    foldExtras(o, b);   // carry extra fields (liquidity/etc.) through aggregation
+    if (!o) {
+      o = { time: t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+      out.set(t, o);
+    } else {
+      o.high = Math.max(o.high, b.high);
+      o.low = Math.min(o.low, b.low);
+      o.close = b.close;
+      o.volume += b.volume || 0;
+    }
+    foldExtras(o, b); // carry extra fields (liquidity/etc.) through aggregation
   });
   return [...out.values()].sort((a, b) => a.time - b.time);
 }
@@ -80,8 +102,11 @@ function aggregate(bars, secs) {
 const NY_TZ = 'America/New_York';
 /** @param {number} utcMs @returns {number} */
 function nyOffsetHours(utcMs) {
-  const tzn = /** @type {Intl.DateTimeFormatPart} */ (new Intl.DateTimeFormat('en-US', { timeZone: NY_TZ, timeZoneName: 'shortOffset' })
-    .formatToParts(new Date(utcMs)).find((p) => p.type === 'timeZoneName')).value;   // "GMT-4" / "GMT-5"
+  const tzn = /** @type {Intl.DateTimeFormatPart} */ (
+    new Intl.DateTimeFormat('en-US', { timeZone: NY_TZ, timeZoneName: 'shortOffset' })
+      .formatToParts(new Date(utcMs))
+      .find((p) => p.type === 'timeZoneName')
+  ).value; // "GMT-4" / "GMT-5"
   const m = /GMT([+-]\d+)/.exec(tzn);
   return m ? parseInt(m[1], 10) : -5;
 }
@@ -99,19 +124,29 @@ function nyClockUtc(y, mo, d, hour) {
 function fxTradingDays(end, count) {
   /** @type {MarketDay[]} */
   const days = [];
-  const startNy = new Date(end + nyOffsetHours(end) * 3600000);   // NY calendar date of `end`
-  let y = startNy.getUTCFullYear(), mo = startNy.getUTCMonth(), d = startNy.getUTCDate();
+  const startNy = new Date(end + nyOffsetHours(end) * 3600000); // NY calendar date of `end`
+  let y = startNy.getUTCFullYear(),
+    mo = startNy.getUTCMonth(),
+    d = startNy.getUTCDate();
   let guard = 0;
   while (days.length < count && guard++ < 800) {
-    const wd = new Date(Date.UTC(y, mo, d)).getUTCDay();   // weekday of this NY date
-    if (wd >= 1 && wd <= 5) {                              // FX closes Mon..Fri; Sat/Sun have no close
+    const wd = new Date(Date.UTC(y, mo, d)).getUTCDay(); // weekday of this NY date
+    if (wd >= 1 && wd <= 5) {
+      // FX closes Mon..Fri; Sat/Sun have no close
       days.push({
-        tradeDate: Date.UTC(y, mo, d), open: nyClockUtc(y, mo, d - 1, 17), close: nyClockUtc(y, mo, d, 17),
-        preOpen: null, postClose: null, rthOpen: null, rthClose: null,
+        tradeDate: Date.UTC(y, mo, d),
+        open: nyClockUtc(y, mo, d - 1, 17),
+        close: nyClockUtc(y, mo, d, 17),
+        preOpen: null,
+        postClose: null,
+        rthOpen: null,
+        rthClose: null,
       });
     }
     const prev = new Date(Date.UTC(y, mo, d - 1));
-    y = prev.getUTCFullYear(); mo = prev.getUTCMonth(); d = prev.getUTCDate();
+    y = prev.getUTCFullYear();
+    mo = prev.getUTCMonth();
+    d = prev.getUTCDate();
   }
   return days.sort((a, z) => a.open - z.open);
 }
@@ -131,27 +166,33 @@ async function fetchCandles(inst, tf, fromMs, toMs) {
   if (toMs < Date.now() - 5 * 60 * 1000) params.to = (toMs / 1000).toFixed(0);
   const qs = new URLSearchParams(params);
   const data = await oj('/api/oanda/md/v3/instruments/' + encodeURIComponent(inst) + '/candles?' + qs.toString());
-  emitRaw('oanda', 'bars', data);   // raw candles response (mid-only until price='MBA')
+  emitRaw('oanda', 'bars', data); // raw candles response (mid-only until price='MBA')
   if (!data || data.error || data.errorMessage || !Array.isArray(data.candles)) {
     return { bars: [], error: (data && (data.errorMessage || data.error)) || 'no data' };
   }
-  const bars = data.candles.filter((/** @type {any} */ c) => c.mid).map((/** @type {any} */ c) => ({
-    time: Math.floor(parseFloat(c.time)),
-    open: +c.mid.o, high: +c.mid.h, low: +c.mid.l, close: +c.mid.c, volume: c.volume || 0,
-  }));
+  const bars = data.candles
+    .filter((/** @type {any} */ c) => c.mid)
+    .map((/** @type {any} */ c) => ({
+      time: Math.floor(parseFloat(c.time)),
+      open: +c.mid.o,
+      high: +c.mid.h,
+      low: +c.mid.l,
+      close: +c.mid.c,
+      volume: c.volume || 0,
+    }));
   return { bars: aggregate(bars, bucket) };
 }
 
 /** @typedef {{ cbs: Set<Function>, timer: any }} QuotePoller */
 /** @type {Map<string, QuotePoller>} */
-const quotePollers = new Map();   // inst -> { timer, cbs:Set }
+const quotePollers = new Map(); // inst -> { timer, cbs:Set }
 /** @type {Map<Function, any>} */
-const tradePollers = new Map();   // trade-event cb -> interval timer (OnTrade polling)
+const tradePollers = new Map(); // trade-event cb -> interval timer (OnTrade polling)
 /** @type {Set<{ stop: () => void }>} */
-const barStops = new Set();       // active bar-subscription stop handles (so disconnect can kill them)
+const barStops = new Set(); // active bar-subscription stop handles (so disconnect can kill them)
 let connected = false;
 /** @type {any[]|null} */
-let instrCache = null;   // cached full instrument list for symbol search
+let instrCache = null; // cached full instrument list for symbol search
 // the token lives on the account (accounts.json); we pass it to our proxy per
 // request as headers, so there's no duplicate server-side credential file.
 const cfg = { token: '', accountId: '', environment: 'practice' };
@@ -159,14 +200,17 @@ const cfg = { token: '', accountId: '', environment: 'practice' };
 const oj = (url) => j(url, { headers: { 'X-OANDA-Token': cfg.token, 'X-OANDA-Env': cfg.environment } });
 // trading request (POST/PUT) through the /tx/ proxy; same token headers + a JSON body
 /** @param {string} txPath @param {string} method @param {any} [body] @returns {Promise<any>} */
-const ojx = (txPath, method, body) => j('/api/oanda/tx/' + txPath, {
-  method, headers: { 'X-OANDA-Token': cfg.token, 'X-OANDA-Env': cfg.environment, 'Content-Type': 'application/json' },
-  body: body ? JSON.stringify(body) : undefined,
-});
+const ojx = (txPath, method, body) =>
+  j('/api/oanda/tx/' + txPath, {
+    method,
+    headers: { 'X-OANDA-Token': cfg.token, 'X-OANDA-Env': cfg.environment, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
 /** @param {string} suffix @returns {string} */
 const acctPath = (suffix) => 'v3/accounts/' + encodeURIComponent(cfg.accountId) + suffix;
 /** @param {string} inst @returns {string} */
-const pricingUrl = (inst) => '/api/oanda/md/v3/accounts/' + encodeURIComponent(cfg.accountId) + '/pricing?instruments=' + encodeURIComponent(inst);
+const pricingUrl = (inst) =>
+  '/api/oanda/md/v3/accounts/' + encodeURIComponent(cfg.accountId) + '/pricing?instruments=' + encodeURIComponent(inst);
 
 /** @param {string} inst @param {Function} cb */
 function pollSubscribe(inst, cb) {
@@ -176,11 +220,11 @@ function pollSubscribe(inst, cb) {
     quotePollers.set(inst, s);
     const poll = async () => {
       const data = await oj(pricingUrl(inst)).catch(() => null);
-      emitRaw('oanda', 'quote', data);   // raw pricing response (bids/asks incl. liquidity, closeout, time)
+      emitRaw('oanda', 'quote', data); // raw pricing response (bids/asks incl. liquidity, closeout, time)
       const px = data && data.prices && data.prices[0];
       if (!px) return;
-      const bid = px.bids && px.bids[0] ? +px.bids[0].price : (px.closeoutBid != null ? +px.closeoutBid : null);
-      const ask = px.asks && px.asks[0] ? +px.asks[0].price : (px.closeoutAsk != null ? +px.closeoutAsk : null);
+      const bid = px.bids && px.bids[0] ? +px.bids[0].price : px.closeoutBid != null ? +px.closeoutBid : null;
+      const ask = px.asks && px.asks[0] ? +px.asks[0].price : px.closeoutAsk != null ? +px.closeoutAsk : null;
       /** @type {import('/data_engine/data/adapter-contract.js').Quote} */
       const out = {};
       if (bid != null) out.bid = bid;
@@ -198,7 +242,10 @@ function pollUnsubscribe(inst, cb) {
   const s = quotePollers.get(inst);
   if (!s) return;
   s.cbs.delete(cb);
-  if (!s.cbs.size) { clearInterval(s.timer); quotePollers.delete(inst); }
+  if (!s.cbs.size) {
+    clearInterval(s.timer);
+    quotePollers.delete(inst);
+  }
 }
 
 const adapter = {
@@ -212,10 +259,10 @@ const adapter = {
 
   /** @param {any} account */
   async connect(account) {
-    cfg.token = (account && account.token || '').trim();
-    cfg.accountId = (account && account.accountId || '').trim();
+    cfg.token = ((account && account.token) || '').trim();
+    cfg.accountId = ((account && account.accountId) || '').trim();
     cfg.environment = ((account && account.server) || '').toLowerCase() === 'live' ? 'live' : 'practice';
-    instrCache = null;   // refetch instruments for the new account
+    instrCache = null; // refetch instruments for the new account
     const st = await oj('/api/oanda/status').catch(() => ({}));
     if (!st.authorized) {
       connected = false;
@@ -226,37 +273,58 @@ const adapter = {
     connected = true;
     setConn('connected', '#6c6');
     log('OANDA connected (' + cfg.environment + ') — polling quotes & candles.');
-    bus.emit('logon');     // panes resolve their symbols
+    bus.emit('logon'); // panes resolve their symbols
   },
   // hard stop: kill every poller (quotes, bars, trade events) so nothing keeps fetching after disconnect.
   disconnect() {
     connected = false;
-    quotePollers.forEach((s) => clearInterval(s.timer)); quotePollers.clear();
-    tradePollers.forEach((t) => clearInterval(t)); tradePollers.clear();
-    [...barStops].forEach((h) => { try { h.stop(); } catch (_) { /* ignore */ } });
+    quotePollers.forEach((s) => clearInterval(s.timer));
+    quotePollers.clear();
+    tradePollers.forEach((t) => clearInterval(t));
+    tradePollers.clear();
+    [...barStops].forEach((h) => {
+      try {
+        h.stop();
+      } catch (_) {
+        /* ignore */
+      }
+    });
     setConn('not connected', '#888');
   },
-  isConnected() { return connected; },
-  serverNow() { return null; },
+  isConnected() {
+    return connected;
+  },
+  serverNow() {
+    return null;
+  },
 
   /** @param {string} symbol @param {(inst: import('/data_engine/data/adapter-contract.js').Instrument|null, meta?: any) => void} cb */
   resolveSymbol(symbol, cb) {
     const inst = normInst(symbol);
-    oj('/api/oanda/md/v3/accounts/' + encodeURIComponent(cfg.accountId) + '/instruments?instruments=' + encodeURIComponent(inst)).then((data) => {
-      const row = data && Array.isArray(data.instruments) && data.instruments[0];
-      if (row && row.displayPrecision != null) {
-        const decimals = Math.min(8, Math.max(0, row.displayPrecision));
-        return cb({ id: inst, priceDecimals: decimals, tickSize: Math.pow(10, -decimals) });
-      }
-      // fallback: infer precision from a pricing snapshot
-      oj(pricingUrl(inst)).then((pd) => {
-        const px = pd && pd.prices && pd.prices[0];
-        const p = px && ((px.bids && px.bids[0] && px.bids[0].price) || px.closeoutBid);
-        if (p == null) return cb(null, { status: (data && data.errorMessage) || 'not found' });
-        const decimals = decimalsOf(+p);
-        cb({ id: inst, priceDecimals: decimals, tickSize: Math.pow(10, -decimals) });
-      }).catch(() => cb(null, {}));
-    }).catch(() => cb(null, {}));
+    oj(
+      '/api/oanda/md/v3/accounts/' +
+        encodeURIComponent(cfg.accountId) +
+        '/instruments?instruments=' +
+        encodeURIComponent(inst),
+    )
+      .then((data) => {
+        const row = data && Array.isArray(data.instruments) && data.instruments[0];
+        if (row && row.displayPrecision != null) {
+          const decimals = Math.min(8, Math.max(0, row.displayPrecision));
+          return cb({ id: inst, priceDecimals: decimals, tickSize: Math.pow(10, -decimals) });
+        }
+        // fallback: infer precision from a pricing snapshot
+        oj(pricingUrl(inst))
+          .then((pd) => {
+            const px = pd && pd.prices && pd.prices[0];
+            const p = px && ((px.bids && px.bids[0] && px.bids[0].price) || px.closeoutBid);
+            if (p == null) return cb(null, { status: (data && data.errorMessage) || 'not found' });
+            const decimals = decimalsOf(+p);
+            cb({ id: inst, priceDecimals: decimals, tickSize: Math.pow(10, -decimals) });
+          })
+          .catch(() => cb(null, {}));
+      })
+      .catch(() => cb(null, {}));
   },
 
   // live bars: seed with REST history, then refresh the trailing window on a timer
@@ -266,15 +334,24 @@ const adapter = {
     const inst = normInst(id);
     fetchCandles(inst, tf, fromMs, Date.now()).then(({ bars, error }) => {
       if (stopped) return;
-      if (error) { cb({ bars: [], complete: true, error }); return; }
-      cb({ bars, complete: true });        // seeds + fits the view
+      if (error) {
+        cb({ bars: [], complete: true, error });
+        return;
+      }
+      cb({ bars, complete: true }); // seeds + fits the view
     });
     const timer = setInterval(async () => {
       if (stopped) return;
       const { bars } = await fetchCandles(inst, tf, Date.now() - Math.max(barMs(tf) * 3, 60000), Date.now());
       if (!stopped && bars.length) cb({ bars, complete: true });
     }, pollMs(tf));
-    const handle = { stop: () => { stopped = true; clearInterval(timer); barStops.delete(handle); } };
+    const handle = {
+      stop: () => {
+        stopped = true;
+        clearInterval(timer);
+        barStops.delete(handle);
+      },
+    };
     barStops.add(handle);
     return handle;
   },
@@ -285,7 +362,10 @@ const adapter = {
   /** @param {{ id: string, tf: TF, fromMs: number, toMs: number }} req @param {Function} cb */
   getBars({ id, tf, fromMs, toMs }, cb) {
     fetchCandles(normInst(id), tf, fromMs, toMs).then(({ bars, error }) => {
-      if (error) { cb({ bars: [], complete: true, error }); return; }
+      if (error) {
+        cb({ bars: [], complete: true, error });
+        return;
+      }
       cb({ bars, complete: true });
     });
   },
@@ -295,19 +375,27 @@ const adapter = {
   /** @param {{ fromMs?: number, toMs?: number, count?: number }} [req] @param {Function} [cb] */
   getMarketHours({ toMs, count } = {}, cb) {
     try {
-      const end = (toMs != null ? toMs : Date.now());
+      const end = toMs != null ? toMs : Date.now();
       const n = Math.max(1, count != null ? count : 60);
       cb && cb({ days: fxTradingDays(end, n) });
-    } catch (e) { cb && cb({ error: 'market hours: ' + (e && /** @type {any} */ (e).message || e) }); }
+    } catch (e) {
+      cb && cb({ error: 'market hours: ' + ((e && /** @type {any} */ (e).message) || e) });
+    }
   },
 
   /** @param {any} handle */
-  drop(handle) { if (handle && handle.stop) handle.stop(); },
+  drop(handle) {
+    if (handle && handle.stop) handle.stop();
+  },
 
   /** @param {string|number} id @param {Function} cb */
-  subscribeQuotes(id, cb) { pollSubscribe(normInst(id), cb); },
+  subscribeQuotes(id, cb) {
+    pollSubscribe(normInst(id), cb);
+  },
   /** @param {string|number} id @param {Function} cb */
-  unsubscribeQuotes(id, cb) { pollUnsubscribe(normInst(id), cb); },
+  unsubscribeQuotes(id, cb) {
+    pollUnsubscribe(normInst(id), cb);
+  },
 
   // ---- trading (neutral order contract) ----
   // placeOrder({ symbol, side:'buy'|'sell', qty, type:'market'|'limit'|'stop', price?, tif? }, cb)
@@ -315,15 +403,28 @@ const adapter = {
   /** @param {{ symbol?: string, side?: any, qty?: any, type?: string, price?: number, tif?: string }} order @param {Function} [cb] */
   placeOrder({ symbol, side, qty, type = 'market', price, tif } = {}, cb) {
     /** @type {{ instrument: string, units: string, type?: string, price?: string, timeInForce?: string }} */
-    const order = { instrument: normInst(symbol), units: String((String(side).toLowerCase() === 'sell' ? -1 : 1) * Math.abs(Number(qty) || 0)) };
+    const order = {
+      instrument: normInst(symbol),
+      units: String((String(side).toLowerCase() === 'sell' ? -1 : 1) * Math.abs(Number(qty) || 0)),
+    };
     const T = String(type).toLowerCase();
-    if (T === 'limit' || T === 'stop') { order.type = T.toUpperCase(); order.price = String(price); order.timeInForce = tif || 'GTC'; }
-    else order.type = 'MARKET';
+    if (T === 'limit' || T === 'stop') {
+      order.type = T.toUpperCase();
+      order.price = String(price);
+      order.timeInForce = tif || 'GTC';
+    } else order.type = 'MARKET';
     ojx(acctPath('/orders'), 'POST', { order }).then((r) => {
       const err = r && (r.error || r.errorMessage);
       if (!r || err) return cb && cb({ error: err || 'order failed' });
-      const fill = r.orderFillTransaction, create = r.orderCreateTransaction;
-      cb && cb({ id: (create && create.id) || (fill && (fill.orderID || fill.id)), status: fill ? 'filled' : 'submitted', price: fill && fill.price, raw: r });
+      const fill = r.orderFillTransaction,
+        create = r.orderCreateTransaction;
+      cb &&
+        cb({
+          id: (create && create.id) || (fill && (fill.orderID || fill.id)),
+          status: fill ? 'filled' : 'submitted',
+          price: fill && fill.price,
+          raw: r,
+        });
     });
   },
   /** @param {any} orderId @param {Function} [cb] */
@@ -336,22 +437,54 @@ const adapter = {
   /** @param {Function} [cb] */
   getOrders(cb) {
     oj('/api/oanda/md/' + acctPath('/pendingOrders')).then((r) => {
-      cb && cb(((r && r.orders) || []).map((/** @type {any} */ o) => ({ id: o.id, symbol: o.instrument, side: Number(o.units) < 0 ? 'sell' : 'buy', qty: Math.abs(Number(o.units)), type: (o.type || '').toLowerCase(), price: o.price, status: (o.state || '').toLowerCase() })));
+      cb &&
+        cb(
+          ((r && r.orders) || []).map((/** @type {any} */ o) => ({
+            id: o.id,
+            symbol: o.instrument,
+            side: Number(o.units) < 0 ? 'sell' : 'buy',
+            qty: Math.abs(Number(o.units)),
+            type: (o.type || '').toLowerCase(),
+            price: o.price,
+            status: (o.state || '').toLowerCase(),
+          })),
+        );
     });
   },
   // OnTrade for OANDA (REST, no push): poll positions + account and emit on change.
   /** @param {Function} cb */
   subscribeTrade(cb) {
-    let lastPos = '', lastAcct = '';
+    let lastPos = '',
+      lastAcct = '';
     const tick = () => {
-      this.getPositions((/** @type {any[]} */ ps) => { const s = JSON.stringify(ps); if (s !== lastPos) { lastPos = s; ps.forEach((/** @type {any} */ p) => cb({ kind: 'position', position: p })); } });
-      this.getAccount((/** @type {any} */ a) => { if (a && !a.error) { const s = JSON.stringify(a); if (s !== lastAcct) { lastAcct = s; cb({ kind: 'account', account: a }); } } });
+      this.getPositions((/** @type {any[]} */ ps) => {
+        const s = JSON.stringify(ps);
+        if (s !== lastPos) {
+          lastPos = s;
+          ps.forEach((/** @type {any} */ p) => cb({ kind: 'position', position: p }));
+        }
+      });
+      this.getAccount((/** @type {any} */ a) => {
+        if (a && !a.error) {
+          const s = JSON.stringify(a);
+          if (s !== lastAcct) {
+            lastAcct = s;
+            cb({ kind: 'account', account: a });
+          }
+        }
+      });
     };
     tick();
     tradePollers.set(cb, setInterval(tick, 2500));
   },
   /** @param {Function} cb */
-  unsubscribeTrade(cb) { const t = tradePollers.get(cb); if (t) { clearInterval(t); tradePollers.delete(cb); } },
+  unsubscribeTrade(cb) {
+    const t = tradePollers.get(cb);
+    if (t) {
+      clearInterval(t);
+      tradePollers.delete(cb);
+    }
+  },
 
   // account info (balance / equity / margin / P&L) — the EA "account" surface
   /** @param {Function} [cb] */
@@ -359,28 +492,37 @@ const adapter = {
     oj('/api/oanda/md/' + acctPath('/summary')).then((r) => {
       const a = r && r.account;
       if (!a) return cb && cb({ error: (r && (r.error || r.errorMessage)) || 'no account' });
-      cb && cb({
-        currency: a.currency,
-        balance: Number(a.balance),
-        equity: Number(a.NAV),
-        unrealizedPL: Number(a.unrealizedPL),
-        realizedPL: Number(a.pl),
-        marginUsed: Number(a.marginUsed),
-        marginAvailable: Number(a.marginAvailable),
-        leverage: a.marginRate ? Math.round(1 / Number(a.marginRate)) : null,
-        openPositions: Number(a.openPositionCount || 0),
-        openTrades: Number(a.openTradeCount || 0),
-        raw: a,
-      });
+      cb &&
+        cb({
+          currency: a.currency,
+          balance: Number(a.balance),
+          equity: Number(a.NAV),
+          unrealizedPL: Number(a.unrealizedPL),
+          realizedPL: Number(a.pl),
+          marginUsed: Number(a.marginUsed),
+          marginAvailable: Number(a.marginAvailable),
+          leverage: a.marginRate ? Math.round(1 / Number(a.marginRate)) : null,
+          openPositions: Number(a.openPositionCount || 0),
+          openTrades: Number(a.openTradeCount || 0),
+          raw: a,
+        });
     });
   },
   /** @param {Function} [cb] */
   getPositions(cb) {
     oj('/api/oanda/md/' + acctPath('/openPositions')).then((r) => {
-      cb && cb(((r && r.positions) || []).map((/** @type {any} */ pp) => {
-        const net = Number((pp.long && pp.long.units) || 0) + Number((pp.short && pp.short.units) || 0);
-        return { symbol: pp.instrument, qty: Math.abs(net), side: net < 0 ? 'short' : 'long', pl: Number(pp.pl || 0) };
-      }));
+      cb &&
+        cb(
+          ((r && r.positions) || []).map((/** @type {any} */ pp) => {
+            const net = Number((pp.long && pp.long.units) || 0) + Number((pp.short && pp.short.units) || 0);
+            return {
+              symbol: pp.instrument,
+              qty: Math.abs(net),
+              side: net < 0 ? 'short' : 'long',
+              pl: Number(pp.pl || 0),
+            };
+          }),
+        );
     });
   },
   // close an open position entirely (market) — convenience for "flatten". OANDA rejects closing
@@ -411,16 +553,27 @@ const adapter = {
     /** @type {Record<string, string>} */
     const CLASS = { CURRENCY: 'Forex', INDEX: 'Indices', COMMODITY: 'Commodities', METAL: 'Metals', BOND: 'Bonds' };
     /** @param {any} i @returns {string} */
-    const cat = (i) => { const t = (i.tags || []).find((/** @type {any} */ x) => x.type === 'ASSET_CLASS'); return (t && CLASS[t.name]) || (i.type === 'METAL' ? 'Metals' : 'Forex'); };
+    const cat = (i) => {
+      const t = (i.tags || []).find((/** @type {any} */ x) => x.type === 'ASSET_CLASS');
+      return (t && CLASS[t.name]) || (i.type === 'METAL' ? 'Metals' : 'Forex');
+    };
     /** @param {any[]|null} list */
-    const done = (list) => cb((list || [])
-      .filter((/** @type {any} */ i) => !q || i.name.toUpperCase().includes(q) || (i.displayName || '').toUpperCase().includes(q))
-      .map((/** @type {any} */ i) => ({ symbol: i.name, name: i.displayName || '', category: cat(i) })));
+    const done = (list) =>
+      cb(
+        (list || [])
+          .filter(
+            (/** @type {any} */ i) =>
+              !q || i.name.toUpperCase().includes(q) || (i.displayName || '').toUpperCase().includes(q),
+          )
+          .map((/** @type {any} */ i) => ({ symbol: i.name, name: i.displayName || '', category: cat(i) })),
+      );
     if (instrCache) return done(instrCache);
-    oj('/api/oanda/md/v3/accounts/' + encodeURIComponent(cfg.accountId) + '/instruments').then((data) => {
-      instrCache = (data && Array.isArray(data.instruments)) ? data.instruments : [];
-      done(instrCache);
-    }).catch(() => cb([]));
+    oj('/api/oanda/md/v3/accounts/' + encodeURIComponent(cfg.accountId) + '/instruments')
+      .then((data) => {
+        instrCache = data && Array.isArray(data.instruments) ? data.instruments : [];
+        done(instrCache);
+      })
+      .catch(() => cb([]));
   },
 };
 

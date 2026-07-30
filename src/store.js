@@ -36,10 +36,17 @@ export function createStore(endpoint, defaults) {
     }, 150);
   };
   return {
-    async load() { data = { ...defaults, ...(await getJSON(endpoint)) }; return data; },
+    async load() {
+      data = { ...defaults, ...(await getJSON(endpoint)) };
+      return data;
+    },
     /** @param {string} key @returns {any} */
     get: (key) => data[key],
     /** @param {string} key @param {any} value */
-    set: (key, value) => { data[key] = value; dirty.add(key); save(); },
+    set: (key, value) => {
+      data[key] = value;
+      dirty.add(key);
+      save();
+    },
   };
 }

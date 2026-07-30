@@ -10,16 +10,27 @@
 import { getSetting, setSetting } from '../settings/settings.js';
 import { getCommand, listCommands } from './registry.js';
 
-const KEY = 'commandKeybindings';   // settings.js key: { [commandId]: combo | '' }
+const KEY = 'commandKeybindings'; // settings.js key: { [commandId]: combo | '' }
 
 /** @type {Set<() => void>} */
 const listeners = new Set();
 /** Subscribe to binding changes (the dispatcher rebuilds its index on these). @param {() => void} fn */
-export function onKeybindingsChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-function notify() { listeners.forEach((fn) => { try { fn(); } catch (_) {} }); }
+export function onKeybindingsChange(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+function notify() {
+  listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (_) {}
+  });
+}
 
 /** @returns {Record<string, string>} */
-function overrides() { return getSetting(KEY) || {}; }
+function overrides() {
+  return getSetting(KEY) || {};
+}
 
 /**
  * The resolved combo for a command: a user override wins (including '' = unbound); otherwise the
@@ -28,7 +39,7 @@ function overrides() { return getSetting(KEY) || {}; }
  */
 export function keyFor(id) {
   const o = overrides();
-  if (Object.prototype.hasOwnProperty.call(o, id)) return o[id];   // '' means the user cleared it
+  if (Object.prototype.hasOwnProperty.call(o, id)) return o[id]; // '' means the user cleared it
   const c = getCommand(id);
   return (c && c.defaultKey) || '';
 }
@@ -42,7 +53,9 @@ export function setKeybinding(id, combo) {
   if (!combo) {
     o[id] = '';
   } else {
-    for (const c of listCommands()) { if (c.id !== id && keyFor(c.id) === combo) o[c.id] = ''; }
+    for (const c of listCommands()) {
+      if (c.id !== id && keyFor(c.id) === combo) o[c.id] = '';
+    }
     o[id] = combo;
   }
   setSetting(KEY, o);
@@ -61,7 +74,10 @@ export function resetKeybinding(id) {
 export function comboBindings() {
   /** @type {Map<string, string>} */
   const map = new Map();
-  for (const c of listCommands()) { const k = keyFor(c.id); if (k) map.set(k, c.id); }
+  for (const c of listCommands()) {
+    const k = keyFor(c.id);
+    if (k) map.set(k, c.id);
+  }
   return map;
 }
 
@@ -69,6 +85,8 @@ export function comboBindings() {
 export function wildcardBindings() {
   /** @type {{ letter: string | null, number: string | null }} */
   const w = { letter: null, number: null };
-  for (const c of listCommands()) { if (c.wildcard) w[c.wildcard] = c.id; }
+  for (const c of listCommands()) {
+    if (c.wildcard) w[c.wildcard] = c.id;
+  }
   return w;
 }

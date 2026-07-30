@@ -10,15 +10,27 @@
 // (the ONLY writer); the host persists + broadcasts to every window's read-only mirror.
 import { t } from '../i18n/i18n.js';
 import { getTool } from '../tools/registry.js';
-import { studyLabel } from '../../lib/kapelka/skin/legend.js';   // label attached indicators like the chart legend
-import { el, roundPrice, section, field, selectOf, enableToggle, expirationControl, conditionsControl, actionsControl, messageControl, intervalControl } from './dialog-controls.js';   // pure DOM form-control builders (view leaf)
-import { anchorLevel, compileConditions, isRelativeConds, condsUseTf } from './alert-conditions.js';   // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
-import { priceDecimalsOf } from './alert-record.js';   // a record's Value precision (schema's one home)
-import { cadenceOf } from './eval.js';   // compile the Trigger label -> stable cadence key (host reads the field, not the label)
-import { alertForObject } from './alert-drawing-sync.js';   // edit mode: the existing alert on this drawing (drawing<->alert glue lives there)
-import { alertCommand } from './funnel.js';   // the single mutator path to the alert-host
-import { byId as tfById, listIntervals, favTimeframes, firstTf } from '../workspace/timeframes.js';   // the alert's own interval picker + tf id -> {id,unit,n}
-import { getJSON } from '../api.js';   // read the persisted watchlists to list in "Apply to" (placeholder, no logic yet)
+import { studyLabel } from '../../lib/kapelka/skin/legend.js'; // label attached indicators like the chart legend
+import {
+  el,
+  roundPrice,
+  section,
+  field,
+  selectOf,
+  enableToggle,
+  expirationControl,
+  conditionsControl,
+  actionsControl,
+  messageControl,
+  intervalControl,
+} from './dialog-controls.js'; // pure DOM form-control builders (view leaf)
+import { anchorLevel, compileConditions, isRelativeConds, condsUseTf } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
+import { priceDecimalsOf } from './alert-record.js'; // a record's Value precision (schema's one home)
+import { cadenceOf } from './eval.js'; // compile the Trigger label -> stable cadence key (host reads the field, not the label)
+import { alertForObject } from './alert-drawing-sync.js'; // edit mode: the existing alert on this drawing (drawing<->alert glue lives there)
+import { alertCommand } from './funnel.js'; // the single mutator path to the alert-host
+import { byId as tfById, listIntervals, favTimeframes, firstTf } from '../workspace/timeframes.js'; // the alert's own interval picker + tf id -> {id,unit,n}
+import { getJSON } from '../api.js'; // read the persisted watchlists to list in "Apply to" (placeholder, no logic yet)
 
 /** the active chart's current price (last bar close), rounded to instrument decimals; null if unknown. @param {any} pane */
 function lastPrice(pane) {
@@ -36,7 +48,10 @@ const TRIGGERS = ['Once only', 'Once per bar', 'Once per bar close', 'Once per m
 let panel = null;
 
 export function closeCreateAlertDialog() {
-  if (panel) { panel.remove(); panel = null; }
+  if (panel) {
+    panel.remove();
+    panel = null;
+  }
 }
 
 /**
@@ -84,14 +99,36 @@ export function buildDraft(f) {
   const d = f.drawing;
   const listName = f.applyText.replace(/\s*\(\d+\)\s*$/, '').trim();
   const apply = /** @type {{ kind:'symbol', symbol:string } | { kind:'watchlist', listId:string, name:string }} */ (
-    f.applyVal.indexOf('wl:') === 0 ? { kind: 'watchlist', listId: f.applyVal.slice(3), name: listName } : { kind: 'symbol', symbol: f.symbol });
+    f.applyVal.indexOf('wl:') === 0
+      ? { kind: 'watchlist', listId: f.applyVal.slice(3), name: listName }
+      : { kind: 'symbol', symbol: f.symbol }
+  );
   return {
-    symbol: apply.kind === 'watchlist' ? '' : f.symbol, tf: f.chosenTf, tfObj: tfById(f.chosenTf) || null, broker: f.brokerId, priceDecimals: f.dec, apply,
-    objectId: d ? d.id : null, tool: d ? d.tool : null,
-    anchor: d ? { tool: d.tool, points: (d.points || []).map((/** @type {any} */ p) => ({ time: p.time, price: p.price })), level: f.level } : null,
-    name: f.name, enabled: f.enabled, trigger: f.trigger, cadence: cadenceOf(f.trigger), expiration: f.expiration,
-    expiryMs: f.expiryMs, conditions: f.uiConds, compiled: compileConditions(f.uiConds, t('Price'), f.objectName, f.level),
-    message: f.message, actions: f.actions,
+    symbol: apply.kind === 'watchlist' ? '' : f.symbol,
+    tf: f.chosenTf,
+    tfObj: tfById(f.chosenTf) || null,
+    broker: f.brokerId,
+    priceDecimals: f.dec,
+    apply,
+    objectId: d ? d.id : null,
+    tool: d ? d.tool : null,
+    anchor: d
+      ? {
+          tool: d.tool,
+          points: (d.points || []).map((/** @type {any} */ p) => ({ time: p.time, price: p.price })),
+          level: f.level,
+        }
+      : null,
+    name: f.name,
+    enabled: f.enabled,
+    trigger: f.trigger,
+    cadence: cadenceOf(f.trigger),
+    expiration: f.expiration,
+    expiryMs: f.expiryMs,
+    conditions: f.uiConds,
+    compiled: compileConditions(f.uiConds, t('Price'), f.objectName, f.level),
+    message: f.message,
+    actions: f.actions,
   };
 }
 
@@ -136,22 +173,24 @@ export function openWatchlistAlertDialog(list, pane) {
 function openAlertDialog(ctx) {
   closeCreateAlertDialog();
   const pane = ctx.pane || {};
-  const d = ctx.drawing;                     // null => Value-based alert (no chart object)
-  const wl = ctx.watchlist || null;          // set => a whole-watchlist alert (Moving % preset)
+  const d = ctx.drawing; // null => Value-based alert (no chart object)
+  const wl = ctx.watchlist || null; // set => a whole-watchlist alert (Moving % preset)
   const isWatch = !!wl;
   const isValue = !d;
   const existing = ctx.existing || null;
   const editing = !!existing;
   // EDITING keeps the alert's OWN symbol/tf -- never re-point it at whatever chart happens to be open; CREATION
   // takes them from the pane (the current chart). Fix for "editing an alert changed its symbol to the open chart's".
-  const symbol = editing ? (existing.symbol || '') : (pane.symbol || '');
-  const tf = editing ? (existing.tf || '') : (pane.tfId || '');
+  const symbol = editing ? existing.symbol || '' : pane.symbol || '';
+  const tf = editing ? existing.tf || '' : pane.tfId || '';
   // A watchlist alert's SUBJECT is the list name (its scope is the whole list, not a symbol); the record's own
   // symbol is left blank and the display reads the list. A plain alert's subject is its symbol.
   const scopeLabel = isWatch ? wl.name : symbol;
 
   // Floating (non-modal) panel so the chart stays interactive while it's open — no click-away close.
-  const dlg = el('div', 'dialog alert-dlg'); panel = dlg; dlg.style.zIndex = '72';
+  const dlg = el('div', 'dialog alert-dlg');
+  panel = dlg;
+  dlg.style.zIndex = '72';
 
   // ---- header: "Create/Edit alert on SYMBOL, TF"  ✕
   const head = el('div', 'aldlg-head');
@@ -160,13 +199,15 @@ function openAlertDialog(ctx) {
   title.append(document.createTextNode(t(editing ? 'Edit alert on' : 'Create alert on') + ' '), symSpan);
   // the title tracks the live scope (Apply to) + interval; the real implementation is wired once both exist.
   let refreshTitle = () => {};
-  const x = el('span', 'lib-x', '✕'); x.onclick = closeCreateAlertDialog;
+  const x = el('span', 'lib-x', '✕');
+  x.onclick = closeCreateAlertDialog;
   head.append(title, x);
   dlg.appendChild(head);
 
   // ---- General fields (prefilled from the existing alert in edit mode)
-  const nameIn = /** @type {HTMLInputElement} */ (el('input', 'aldlg-in')); nameIn.type = 'text';
-  nameIn.value = editing ? (existing.name || '') : scopeLabel + ' ' + t('alert');
+  const nameIn = /** @type {HTMLInputElement} */ (el('input', 'aldlg-in'));
+  nameIn.type = 'text';
+  nameIn.value = editing ? existing.name || '' : scopeLabel + ' ' + t('alert');
   const enable = enableToggle(editing ? !!existing.enabled : true);
   // "Apply to" -- the alert's SCOPE: the single symbol it watches, or every symbol in one of the user's
   // watchlists. A watchlist scope applies the condition to each list member with its own per-symbol latch. It's
@@ -176,36 +217,46 @@ function openAlertDialog(ctx) {
   // from the panel and always current.
   const applySel = /** @type {HTMLSelectElement} */ (el('select', 'aldlg-sel'));
   const symOpt = /** @type {HTMLOptionElement} */ (el('option', null, symbol + (tf ? ', ' + tf : '')));
-  symOpt.value = 'symbol'; applySel.appendChild(symOpt); applySel.value = 'symbol';
-  applySel.addEventListener('change', () => refreshTitle());   // scope change -> live title
+  symOpt.value = 'symbol';
+  applySel.appendChild(symOpt);
+  applySel.value = 'symbol';
+  applySel.addEventListener('change', () => refreshTitle()); // scope change -> live title
   /** enable watchlist scope only when the conditions are symbol-relative (isRelativeConds, the rule's one
    * home beside the compiler); revert a stale pick. @param {any} uiConds */
   const applyGuard = (uiConds) => {
     const rel = isRelativeConds(uiConds);
-    applySel.querySelectorAll('optgroup option').forEach((o) => { /** @type {HTMLOptionElement} */ (o).disabled = !rel; });
+    applySel.querySelectorAll('optgroup option').forEach((o) => {
+      /** @type {HTMLOptionElement} */ (o).disabled = !rel;
+    });
     if (!rel && applySel.value.indexOf('wl:') === 0) applySel.value = 'symbol';
   };
   getJSON('/api/watchlist').then((doc) => {
     const lists = (doc && doc.lists) || [];
     if (!lists.length || !applySel.isConnected) return;
-    const grp = document.createElement('optgroup'); grp.label = t('Watchlists');
+    const grp = document.createElement('optgroup');
+    grp.label = t('Watchlists');
     lists.forEach((/** @type {any} */ l) => {
-      const n = ((l.items || []).filter((/** @type {any} */ it) => it && it.type === 'symbol')).length;
+      const n = (l.items || []).filter((/** @type {any} */ it) => it && it.type === 'symbol').length;
       const o = /** @type {HTMLOptionElement} */ (el('option', null, (l.name || 'Watchlist') + '  (' + n + ')'));
       o.value = 'wl:' + l.id;
       grp.appendChild(o);
     });
     applySel.appendChild(grp);
-    applyGuard(conds.get());   // set the initial enabled state from the current conditions
+    applyGuard(conds.get()); // set the initial enabled state from the current conditions
     // preselect the list: edit mode restores a saved watchlist scope; the "Add alert on the list" flow selects
     // the list it was opened from. Both keep the option enabled (their conditions are relative).
-    const wantId = (editing && existing.apply && existing.apply.kind === 'watchlist') ? existing.apply.listId : (isWatch ? wl.id : null);
-    if (wantId) { const want = 'wl:' + wantId; if ([...applySel.options].some((o) => o.value === want)) applySel.value = want; }
-    refreshTitle();   // the preselected scope is now known -> reflect it in the title
+    const wantId =
+      editing && existing.apply && existing.apply.kind === 'watchlist' ? existing.apply.listId : isWatch ? wl.id : null;
+    if (wantId) {
+      const want = 'wl:' + wantId;
+      if ([...applySel.options].some((o) => o.value === want)) applySel.value = want;
+    }
+    refreshTitle(); // the preselected scope is now known -> reflect it in the title
   });
-  const trigSel = selectOf(TRIGGERS); if (editing && existing.trigger) trigSel.value = existing.trigger;
+  const trigSel = selectOf(TRIGGERS);
+  if (editing && existing.trigger) trigSel.value = existing.trigger;
   const exp = expirationControl(editing ? existing.expiration : undefined, editing ? existing.expiryMs : undefined);
-  const objectName = isValue ? '' : (/** @type {any} */ (getTool(d.tool)) || {}).name || d.tool;
+  const objectName = isValue ? '' : /** @type {any} */ (getTool(d.tool) || {}).name || d.tool;
   // Object dropdown options. Drawing alert: Price, the drawing, attached indicators (SMA, FVG, …), Value.
   // Value alert (from the manager, no chart object): just Price and Value.
   let objects;
@@ -213,18 +264,29 @@ function openAlertDialog(ctx) {
     objects = [t('Price'), t('Value')];
   } else {
     const attached = (pane.studies && /** @type {any} */ (pane.studies).attached) || [];
-    const studyLabels = attached.map((/** @type {any} */ a) => { try { return studyLabel(a); } catch (_) { return (a.study && a.study.name) || 'Study'; } });
+    const studyLabels = attached.map((/** @type {any} */ a) => {
+      try {
+        return studyLabel(a);
+      } catch (_) {
+        return (a.study && a.study.name) || 'Study';
+      }
+    });
     objects = [t('Price'), objectName, ...studyLabels, t('Value')];
   }
   // A new Value alert prefills the Value column with the symbol's current price (last bar close on the active
   // chart), rounded to the instrument's decimals — so the user tweaks a number instead of starting from blank.
-  const initRows = (editing && existing.conditions) ? existing.conditions.conditions
-    : isWatch ? [{ left: t('Price'), op: 'Moving Up %', right: '', value: null, percent: 1, lookback: 1 }]
-    : (isValue ? [{ left: t('Price'), op: 'Crossing', right: t('Value'), value: lastPrice(pane) }] : undefined);
+  const initRows =
+    editing && existing.conditions
+      ? existing.conditions.conditions
+      : isWatch
+        ? [{ left: t('Price'), op: 'Moving Up %', right: '', value: null, percent: 1, lookback: 1 }]
+        : isValue
+          ? [{ left: t('Price'), op: 'Crossing', right: t('Value'), value: lastPrice(pane) }]
+          : undefined;
   // decimals for rounding the Value: the current chart's for a NEW alert; for an EDIT, the record's own
   // precision (priceDecimalsOf: stamped at creation, legacy fallback to the stored values' precision).
   const dec = editing ? priceDecimalsOf(existing) : pane.priceDecimals;
-  const initMatch = (editing && existing.conditions) ? existing.conditions.match : undefined;
+  const initMatch = editing && existing.conditions ? existing.conditions.match : undefined;
   // condition changes drive the watchlist-scope guard, the interval picker's visibility (TF only matters for the
   // Moving family), and the live title. Extended once the interval control exists.
   let onCondsChange = (/** @type {any} */ ui) => applyGuard(ui);
@@ -232,22 +294,41 @@ function openAlertDialog(ctx) {
   // The alert's OWN interval (the bar granularity it watches) -- set here, defaulting to the chart's current tf,
   // never silently bound to it. This is the alert's tf/tfObj; a Moving % window is measured over bars at it.
   // The segment row is a SHORT few; the full list lives under "Other" (never dump every interval as a segment).
-  const interval = intervalControl(tf || firstTf() || '', favTimeframes().slice(0, 4).map((tf2) => tf2.id), listIntervals(), () => refreshTitle());
+  const interval = intervalControl(
+    tf || firstTf() || '',
+    favTimeframes()
+      .slice(0, 4)
+      .map((tf2) => tf2.id),
+    listIntervals(),
+    () => refreshTitle(),
+  );
   // TF only matters for the Moving family (condsUseTf, beside the compiler) -- hide the interval picker,
   // and drop it from the title, for pure price-level conditions (Crossing / Greater / Less).
   const usesTf = () => condsUseTf(conds.get());
-  const syncTf = () => { interval.el.style.display = usesTf() ? '' : 'none'; };
+  const syncTf = () => {
+    interval.el.style.display = usesTf() ? '' : 'none';
+  };
   // Live dialog title: "<verb> alert on <scope>[, <interval>]" -- scope from Apply to, interval from the picker
   // (only when the condition uses one), updating as either changes.
   const scopeText = () => {
-    if (applySel.value.indexOf('wl:') === 0) { const o = applySel.options[applySel.selectedIndex]; return (o ? o.text : t('Watchlists')).replace(/\s*\(\d+\)\s*$/, '').trim(); }
+    if (applySel.value.indexOf('wl:') === 0) {
+      const o = applySel.options[applySel.selectedIndex];
+      return (o ? o.text : t('Watchlists')).replace(/\s*\(\d+\)\s*$/, '').trim();
+    }
     return symbol || '';
   };
-  refreshTitle = () => { const iv = usesTf() ? interval.get() : ''; symSpan.textContent = scopeText() + (iv ? ', ' + iv : ''); };
-  onCondsChange = (/** @type {any} */ ui) => { applyGuard(ui); syncTf(); refreshTitle(); };
+  refreshTitle = () => {
+    const iv = usesTf() ? interval.get() : '';
+    symSpan.textContent = scopeText() + (iv ? ', ' + iv : '');
+  };
+  onCondsChange = (/** @type {any} */ ui) => {
+    applyGuard(ui);
+    syncTf();
+    refreshTitle();
+  };
   syncTf();
   refreshTitle();
-  const msg = messageControl(editing ? (existing.message || '') : '');
+  const msg = messageControl(editing ? existing.message || '' : '');
   const actions = actionsControl(editing ? existing.actions : undefined);
 
   // ---- body: two columns — General + Message (left) | Conditions + Actions (right)
@@ -255,43 +336,66 @@ function openAlertDialog(ctx) {
   const colL = el('div', 'aldlg-col');
   const colR = el('div', 'aldlg-col');
   colL.append(
-    section(t('General'), (b) => {
-      b.append(
-        field(t('Name'), nameIn),
-        field(t('Apply to'), applySel),
-        field(t('Trigger'), trigSel),
-        field(t('Expiration'), exp.el),
-      );
-    }, enable.el),
-    section(t('Message'), (b) => { b.appendChild(msg.el); }),
+    section(
+      t('General'),
+      (b) => {
+        b.append(
+          field(t('Name'), nameIn),
+          field(t('Apply to'), applySel),
+          field(t('Trigger'), trigSel),
+          field(t('Expiration'), exp.el),
+        );
+      },
+      enable.el,
+    ),
+    section(t('Message'), (b) => {
+      b.appendChild(msg.el);
+    }),
   );
   colR.append(
-    section(t('Conditions'), (b) => { b.append(interval.el, conds.el); }),
-    section(t('Actions'), (b) => { b.appendChild(actions.el); }),
+    section(t('Conditions'), (b) => {
+      b.append(interval.el, conds.el);
+    }),
+    section(t('Actions'), (b) => {
+      b.appendChild(actions.el);
+    }),
   );
   body.append(colL, colR);
   dlg.appendChild(body);
 
   // ---- footer: Cancel · Create
   const foot = el('div', 'aldlg-foot');
-  const cancel = el('button', null, t('Cancel')); cancel.onclick = closeCreateAlertDialog;
+  const cancel = el('button', null, t('Cancel'));
+  cancel.onclick = closeCreateAlertDialog;
   const create = el('button', 'primary', t(editing ? 'Save' : 'Create'));
-  const brokerId = editing ? ((existing && existing.broker) || null) : (/** @type {any} */ (pane).broker || null);
+  const brokerId = editing ? (existing && existing.broker) || null : /** @type {any} */ (pane).broker || null;
   const level = d ? anchorLevel(d) : null;
   create.onclick = () => {
     // gather the form and dispatch; the draft schema itself is buildDraft's (module level, testable)
     const draft = buildDraft({
-      symbol, applyVal: applySel.value,
+      symbol,
+      applyVal: applySel.value,
       applyText: applySel.options[applySel.selectedIndex] ? applySel.options[applySel.selectedIndex].text : '',
-      chosenTf: interval.get(),   // the alert's own interval (from the picker), not the chart's
-      brokerId, dec, drawing: d, level, objectName,
-      name: nameIn.value, enabled: enable.get(), trigger: trigSel.value,
-      expiration: exp.kind(), expiryMs: exp.ms(), uiConds: conds.get(),
-      message: msg.get(), actions: actions.get(),
+      chosenTf: interval.get(), // the alert's own interval (from the picker), not the chart's
+      brokerId,
+      dec,
+      drawing: d,
+      level,
+      objectName,
+      name: nameIn.value,
+      enabled: enable.get(),
+      trigger: trigSel.value,
+      expiration: exp.kind(),
+      expiryMs: exp.ms(),
+      uiConds: conds.get(),
+      message: msg.get(),
+      actions: actions.get(),
     });
     if (editing) {
       // UPDATE the existing alert; reset the fired latch (rt) so an edited alert re-arms.
-      alertCommand('update', { id: existing.id, patch: { ...draft, rt: {} } }).catch((err) => console.error('[alert] update failed', err));
+      alertCommand('update', { id: existing.id, patch: { ...draft, rt: {} } }).catch((err) =>
+        console.error('[alert] update failed', err),
+      );
       closeCreateAlertDialog();
     } else {
       onCreate(draft);
@@ -303,7 +407,8 @@ function openAlertDialog(ctx) {
   document.body.appendChild(dlg);
 
   // float + drag by the header (same gesture as the drawing settings dialog)
-  dlg.style.position = 'fixed'; dlg.style.margin = '0';
+  dlg.style.position = 'fixed';
+  dlg.style.margin = '0';
   dlg.style.left = Math.max(8, (window.innerWidth - dlg.offsetWidth) / 2) + 'px';
   dlg.style.top = Math.max(8, (window.innerHeight - dlg.offsetHeight) / 3) + 'px';
   /** @type {{ dx: number, dy: number } | null} */
@@ -319,7 +424,10 @@ function openAlertDialog(ctx) {
     dlg.style.left = Math.max(0, Math.min(window.innerWidth - 80, e.clientX - drag.dx)) + 'px';
     dlg.style.top = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - drag.dy)) + 'px';
   });
-  head.addEventListener('pointerup', () => { drag = null; });
+  head.addEventListener('pointerup', () => {
+    drag = null;
+  });
 
-  nameIn.focus(); nameIn.select();
+  nameIn.focus();
+  nameIn.select();
 }

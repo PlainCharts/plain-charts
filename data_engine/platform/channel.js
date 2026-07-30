@@ -25,7 +25,7 @@
  * @property {() => T[]} history
  * @property {() => void} clear
  */
-import { IPC } from '../ipc.js';   // the engine's cross-window channel names (single source of truth)
+import { IPC } from '../ipc.js'; // the engine's cross-window channel names (single source of truth)
 
 /**
  * @template T
@@ -37,20 +37,66 @@ export function channel(name, { retain = 0 } = {}) {
   /** @type {T[]} */
   const ring = [];
   /** @type {Set<ChannelSub<T>>} */
-  const subs = new Set();   // { onMsg, onReset }
+  const subs = new Set(); // { onMsg, onReset }
   /** @type {BroadcastChannel | null} */
-  let bc = null; try { bc = new BroadcastChannel(IPC.CHANNEL_PREFIX + name); } catch (_) {}
+  let bc = null;
+  try {
+    bc = new BroadcastChannel(IPC.CHANNEL_PREFIX + name);
+  } catch (_) {}
 
   /** @param {T} msg */
-  const fanMsg = (msg) => { if (retain > 0) { ring.push(msg); if (ring.length > retain) ring.shift(); } for (const s of subs) { try { s.onMsg && s.onMsg(msg); } catch (_) {} } };
-  const fanReset = () => { ring.length = 0; for (const s of subs) { try { s.onReset && s.onReset(); } catch (_) {} } };
+  const fanMsg = (msg) => {
+    if (retain > 0) {
+      ring.push(msg);
+      if (ring.length > retain) ring.shift();
+    }
+    for (const s of subs) {
+      try {
+        s.onMsg && s.onMsg(msg);
+      } catch (_) {}
+    }
+  };
+  const fanReset = () => {
+    ring.length = 0;
+    for (const s of subs) {
+      try {
+        s.onReset && s.onReset();
+      } catch (_) {}
+    }
+  };
 
-  if (bc) bc.onmessage = (e) => { const d = e && e.data; if (!d) return; if (d.__reset) fanReset(); else fanMsg(d.msg); };
+  if (bc)
+    bc.onmessage = (e) => {
+      const d = e && e.data;
+      if (!d) return;
+      if (d.__reset) fanReset();
+      else fanMsg(d.msg);
+    };
 
   return {
-    post(msg) { fanMsg(msg); if (bc) { try { bc.postMessage({ msg }); } catch (_) {} } },
-    subscribe(onMsg, onReset) { const s = { onMsg, onReset }; subs.add(s); return () => subs.delete(s); },
-    history() { return ring.slice(); },
-    clear() { fanReset(); if (bc) { try { bc.postMessage({ __reset: true }); } catch (_) {} } },
+    post(msg) {
+      fanMsg(msg);
+      if (bc) {
+        try {
+          bc.postMessage({ msg });
+        } catch (_) {}
+      }
+    },
+    subscribe(onMsg, onReset) {
+      const s = { onMsg, onReset };
+      subs.add(s);
+      return () => subs.delete(s);
+    },
+    history() {
+      return ring.slice();
+    },
+    clear() {
+      fanReset();
+      if (bc) {
+        try {
+          bc.postMessage({ __reset: true });
+        } catch (_) {}
+      }
+    },
   };
 }

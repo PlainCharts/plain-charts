@@ -12,31 +12,51 @@ import { getTool } from '../../../src/tools/registry.js';
 import { getActiveTool, setActiveTool } from '../../../src/tools/controller.js';
 import { getToolDefaults, saveToolDefaults } from '../../../src/tools/tool-defaults.js';
 
-export const DEFAULT_GLYPH = '★';   // ★
+export const DEFAULT_GLYPH = '★'; // ★
 // force text (non-emoji) presentation so the glyph is monochrome + recolourable
 /** @param {string} [g] */
 export const renderGlyph = (g) => (g || DEFAULT_GLYPH) + '︎';
 
 // curated, monochrome-capable Unicode glyphs (have text glyphs in common system fonts)
 const CATEGORIES = [
-  { name: 'Shapes', glyphs: ['●', '○', '◉', '◍', '◆', '◇', '■', '□', '▪', '▫', '▲', '△', '▼', '▽', '◀', '▶', '◈', '⬟'] },
-  { name: 'Stars & marks', glyphs: ['★', '☆', '✦', '✧', '✱', '✳', '❉', '✓', '✔', '✗', '✘', '☑', '☒', '☐', '⊕', '⊖', '⊗', '⊛'] },
-  { name: 'Arrows', glyphs: ['←', '→', '↑', '↓', '↔', '↕', '↖', '↗', '↘', '↙', '⇐', '⇒', '⇑', '⇓', '➤', '➔', '➜', '⟶'] },
+  {
+    name: 'Shapes',
+    glyphs: ['●', '○', '◉', '◍', '◆', '◇', '■', '□', '▪', '▫', '▲', '△', '▼', '▽', '◀', '▶', '◈', '⬟'],
+  },
+  {
+    name: 'Stars & marks',
+    glyphs: ['★', '☆', '✦', '✧', '✱', '✳', '❉', '✓', '✔', '✗', '✘', '☑', '☒', '☐', '⊕', '⊖', '⊗', '⊛'],
+  },
+  {
+    name: 'Arrows',
+    glyphs: ['←', '→', '↑', '↓', '↔', '↕', '↖', '↗', '↘', '↙', '⇐', '⇒', '⇑', '⇓', '➤', '➔', '➜', '⟶'],
+  },
   { name: 'Flags & alerts', glyphs: ['⚑', '⚐', '⌖', '⚠', '‼', '⁇', '!', '?', '¡', '¿', '★', 'ⓘ'] },
   { name: 'Currency', glyphs: ['€', '£', '$', '¢', '¥', '₹', '₽', '₩', '₪', '₺', '₴', '฿', '₿'] },
-  { name: 'Misc', glyphs: ['☼', '☾', '☽', '♥', '♦', '♠', '♣', '♪', '♫', '⚙', '⚡', '☘', '⚓', '✈', '☂', '⚖', '∞', '§'] },
+  {
+    name: 'Misc',
+    glyphs: ['☼', '☾', '☽', '♥', '♦', '♠', '♣', '♪', '♫', '⚙', '⚡', '☘', '⚓', '✈', '☂', '⚖', '∞', '§'],
+  },
 ];
 
 // ---- recently used (per-browser; simple localStorage, capped to ONE row = the grid's 8 columns) ----
 const RKEY = 'plainCharts.symbolRecent';
-const RECENT_MAX = 8;   // one row; the newest push in, the oldest drop off
+const RECENT_MAX = 8; // one row; the newest push in, the oldest drop off
 /** @returns {string[]} */
-function getRecent() { try { return JSON.parse(/** @type {string} */ (localStorage.getItem(RKEY))) || []; } catch (_) { return []; } }
+function getRecent() {
+  try {
+    return JSON.parse(/** @type {string} */ (localStorage.getItem(RKEY))) || [];
+  } catch (_) {
+    return [];
+  }
+}
 /** @param {string} g */
 function pushRecent(g) {
   const r = getRecent().filter((x) => x !== g);
   r.unshift(g);
-  try { localStorage.setItem(RKEY, JSON.stringify(r.slice(0, RECENT_MAX))); } catch (_) {}
+  try {
+    localStorage.setItem(RKEY, JSON.stringify(r.slice(0, RECENT_MAX)));
+  } catch (_) {}
 }
 
 /** @type {HTMLElement | null} */
@@ -45,8 +65,14 @@ let picker = null;
 let away = null;
 
 function closePicker() {
-  if (away) { document.removeEventListener('pointerdown', away, true); away = null; }
-  if (picker) { picker.remove(); picker = null; }
+  if (away) {
+    document.removeEventListener('pointerdown', away, true);
+    away = null;
+  }
+  if (picker) {
+    picker.remove();
+    picker = null;
+  }
 }
 
 // store the chosen glyph as the Symbol tool's default appearance, remember it, close.
@@ -57,17 +83,23 @@ function choose(g) {
   const style = { ...(tool && tool.defaultStyle), ...cur.style, glyph: g };
   saveToolDefaults('symbol', style, cur.textStyle);
   pushRecent(g);
-  closePicker();   // tool stays active → next chart click drops the glyph
+  closePicker(); // tool stays active → next chart click drops the glyph
 }
 
 /** @param {string} name @param {string[]} glyphs */
 function section(name, glyphs) {
   const wrap = document.createElement('div');
-  const head = document.createElement('div'); head.className = 'sym-cat'; head.textContent = name;
-  const grid = document.createElement('div'); grid.className = 'sym-grid';
+  const head = document.createElement('div');
+  head.className = 'sym-cat';
+  head.textContent = name;
+  const grid = document.createElement('div');
+  grid.className = 'sym-grid';
   glyphs.forEach((g) => {
-    const cell = document.createElement('button'); cell.className = 'sym-cell'; cell.type = 'button';
-    cell.textContent = renderGlyph(g); cell.title = g;
+    const cell = document.createElement('button');
+    cell.className = 'sym-cell';
+    cell.type = 'button';
+    cell.textContent = renderGlyph(g);
+    cell.title = g;
     cell.onclick = () => choose(g);
     grid.appendChild(cell);
   });
@@ -77,10 +109,11 @@ function section(name, glyphs) {
 
 function openPicker() {
   closePicker();
-  const p = document.createElement('div'); p.className = 'sym-picker';
+  const p = document.createElement('div');
+  p.className = 'sym-picker';
   picker = p;
 
-  const recent = getRecent().slice(0, RECENT_MAX);   // one row, even if an older store had more
+  const recent = getRecent().slice(0, RECENT_MAX); // one row, even if an older store had more
   if (recent.length) p.appendChild(section('Recently used', recent));
   CATEGORIES.forEach((c) => p.appendChild(section(c.name, c.glyphs)));
 
@@ -89,7 +122,7 @@ function openPicker() {
   // anchor next to the Symbol button on the left toolbar (fall back to a fixed spot)
   const btn = document.querySelector('.tool-btn[title="Symbol"]');
   const r = btn ? btn.getBoundingClientRect() : { right: 48, top: 90 };
-  p.style.left = (r.right + 8) + 'px';
+  p.style.left = r.right + 8 + 'px';
   p.style.top = Math.max(8, Math.min(r.top, window.innerHeight - p.offsetHeight - 8)) + 'px';
 
   // click outside (and not on the Symbol button) → dismiss + revert to cursor
@@ -109,5 +142,8 @@ let wired = false;
 export function initSymbolPicker() {
   if (wired) return;
   wired = true;
-  bus.on('tool:active', (id) => { if (id === 'symbol') openPicker(); else closePicker(); });
+  bus.on('tool:active', (id) => {
+    if (id === 'symbol') openPicker();
+    else closePicker();
+  });
 }

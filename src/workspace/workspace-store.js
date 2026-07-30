@@ -43,7 +43,7 @@ export async function listWorkspaces() {
 export async function readWorkspace(id) {
   if (!id) return null;
   const r = await getJSON(EP + '/' + encodeURIComponent(id));
-  return (r && r.id) ? r : null;
+  return r && r.id ? r : null;
 }
 
 // create a brand-new workspace from a getWorkspace() payload; returns the stored record. An explicit
@@ -65,32 +65,51 @@ const _timers = new Map();
 export function saveWorkspace(id, name, ws, createdMs) {
   if (!id) return;
   clearTimeout(_timers.get(id));
-  _timers.set(id, setTimeout(() => {
-    postJSON(EP + '/save', { id, name: name || 'Untitled', createdMs: createdMs || Date.now(), updatedMs: Date.now(), ws: ws || {} });
-  }, 300));
+  _timers.set(
+    id,
+    setTimeout(() => {
+      postJSON(EP + '/save', {
+        id,
+        name: name || 'Untitled',
+        createdMs: createdMs || Date.now(),
+        updatedMs: Date.now(),
+        ws: ws || {},
+      });
+    }, 300),
+  );
 }
 
 // flush any pending autosave for an id immediately (e.g. before closing a tab / switching away)
 /** @param {string=} id @param {string=} name @param {import('../chart/layout.js').Workspace=} ws @param {number=} createdMs @returns {Promise<void>} */
 export async function flushWorkspace(id, name, ws, createdMs) {
   if (!id) return;
-  clearTimeout(_timers.get(id)); _timers.delete(id);
-  await postJSON(EP + '/save', { id, name: name || 'Untitled', createdMs: createdMs || Date.now(), updatedMs: Date.now(), ws: ws || {} });
+  clearTimeout(_timers.get(id));
+  _timers.delete(id);
+  await postJSON(EP + '/save', {
+    id,
+    name: name || 'Untitled',
+    createdMs: createdMs || Date.now(),
+    updatedMs: Date.now(),
+    ws: ws || {},
+  });
 }
 
 /** @param {string} id @param {string=} name @returns {Promise<Workspace|null>} */
 export async function renameWorkspace(id, name) {
-  const rec = await readWorkspace(id); if (!rec) return null;
-  rec.name = name || rec.name; rec.updatedMs = Date.now();
+  const rec = await readWorkspace(id);
+  if (!rec) return null;
+  rec.name = name || rec.name;
+  rec.updatedMs = Date.now();
   await postJSON(EP + '/save', rec);
   return rec;
 }
 
 /** @param {string} id @param {string=} newName @returns {Promise<Workspace|null>} */
 export async function copyWorkspace(id, newName) {
-  const rec = await readWorkspace(id); if (!rec) return null;
+  const rec = await readWorkspace(id);
+  if (!rec) return null;
   const now = Date.now();
-  const copy = { id: newId(), name: newName || (rec.name + ' copy'), createdMs: now, updatedMs: now, ws: rec.ws };
+  const copy = { id: newId(), name: newName || rec.name + ' copy', createdMs: now, updatedMs: now, ws: rec.ws };
   await postJSON(EP + '/save', copy);
   return copy;
 }
@@ -98,9 +117,12 @@ export async function copyWorkspace(id, newName) {
 /** @param {string=} id @returns {Promise<void>} */
 export async function deleteWorkspace(id) {
   if (!id) return;
-  clearTimeout(_timers.get(id)); _timers.delete(id);
+  clearTimeout(_timers.get(id));
+  _timers.delete(id);
   await postJSON(EP + '/delete', { id });
 }
 
 /** @returns {Promise<any>} */
-export function openWorkspacesFolder() { return postJSON(EP + '/open', {}); }
+export function openWorkspacesFolder() {
+  return postJSON(EP + '/open', {});
+}

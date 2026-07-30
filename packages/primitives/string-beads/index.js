@@ -13,7 +13,7 @@ import { createThread } from '../../../src/chart/thread.js';
 import { registerPrimitive } from '../../../src/chart/order-view/primitive-registry.js';
 import { primitiveConfig } from '../../../src/chart/order-primitives-config.js';
 import { colorSwatch } from '../../../src/ui/colorpicker.js';
-import { t } from '../../../src/i18n/i18n.js';   // vocabulary lookup -- every dot label is an overridable word
+import { t } from '../../../src/i18n/i18n.js'; // vocabulary lookup -- every dot label is an overridable word
 
 // canonical dot colours (semantic order roles, not theme chrome -- one source of truth instead of scattered hexes).
 // LIVE (book) stop is yellow; the PLAN (pre-trade bracket) stop is red -- so a plan reads differently from a live order.
@@ -65,18 +65,50 @@ export function createPositionView(pane, opts = {}) {
   // dynamic dots (order legs / plan rungs, count varies) are reconciled in set() via addBead/removeBead.
   const thread = createThread(pane, {
     time: opts.time,
-    onMove: (tm) => { try { opts.onAnchor && opts.onAnchor(Number(tm), false); } catch (_) {} },        // dragging the string through time (live)
-    onMoveCommit: (tm) => { try { opts.onAnchor && opts.onAnchor(Number(tm), true); } catch (_) {} },   // released -> persist the new anchor
+    onMove: (tm) => {
+      try {
+        opts.onAnchor && opts.onAnchor(Number(tm), false);
+      } catch (_) {}
+    }, // dragging the string through time (live)
+    onMoveCommit: (tm) => {
+      try {
+        opts.onAnchor && opts.onAnchor(Number(tm), true);
+      } catch (_) {}
+    }, // released -> persist the new anchor
     style: { color: 'rgba(150,160,170,0.35)', width: 1 },
     beads: [
       // PLANNING -- the gray projection entry (draggable: pick the pending entry level). DROP semantics: the level
       // registers on release only (no onDrag) -- the bead follows the pointer on its own, and a mid-drag pass over
       // the market price must never move a live trigger. Same feel as the broker-order dots.
-      { id: 'proj', price: 0, color: C.projection, tag: t('Market'), visible: false, onClick: opts.onProjection, onCommit: opts.onProjectionMove },
+      {
+        id: 'proj',
+        price: 0,
+        color: C.projection,
+        tag: t('Market'),
+        visible: false,
+        onClick: opts.onProjection,
+        onCommit: opts.onProjectionMove,
+      },
       // LIVE -- the position entry + the hedging SL/TP (position attributes, no order id)
       { id: 'entry', price: 0, color: C.entry, tag: t('Entry'), visible: false, onClick: opts.onEntry },
-      { id: 'hedgeStop', price: 0, color: C.stop, tag: t('Stop'), visible: false, onClick: opts.onEntry, onCommit: opts.onHedgeStop },
-      { id: 'hedgeTarget', price: 0, color: C.target, tag: t('Target'), visible: false, onClick: opts.onEntry, onCommit: opts.onHedgeTarget },
+      {
+        id: 'hedgeStop',
+        price: 0,
+        color: C.stop,
+        tag: t('Stop'),
+        visible: false,
+        onClick: opts.onEntry,
+        onCommit: opts.onHedgeStop,
+      },
+      {
+        id: 'hedgeTarget',
+        price: 0,
+        color: C.target,
+        tag: t('Target'),
+        visible: false,
+        onClick: opts.onEntry,
+        onCommit: opts.onHedgeTarget,
+      },
       // (PLAN ladder stop/target rungs are DYNAMIC -> reconciled in drawPlan like order legs)
     ],
   });
@@ -104,16 +136,30 @@ export function createPositionView(pane, opts = {}) {
       const beadId = 'ord:' + o.id;
       want.add(beadId);
       const color = o.type === 'stop' ? C.stop : o.type === 'limit' ? C.target : C.entry;
-      const kind = o.type === 'stop' ? t('Stop') : o.type === 'limit' ? t('Limit') : (o.side === 'buy' ? t('Buy') : t('Sell'));
+      const kind =
+        o.type === 'stop' ? t('Stop') : o.type === 'limit' ? t('Limit') : o.side === 'buy' ? t('Buy') : t('Sell');
       const tag = kind + (o.qty != null ? ' ' + o.qty : '');
-      if (thread.hasBead(beadId)) { thread.update(beadId, { price: o.price, color, tag, visible: true }); }
-      else {
-        const id = o.id;   // capture for the handlers
-        thread.addBead({ id: beadId, price: o.price, color, tag, onCommit: (px) => opts.onOrderCommit && opts.onOrderCommit(id, px), onClick: () => opts.onOrderClick && opts.onOrderClick(id) });
+      if (thread.hasBead(beadId)) {
+        thread.update(beadId, { price: o.price, color, tag, visible: true });
+      } else {
+        const id = o.id; // capture for the handlers
+        thread.addBead({
+          id: beadId,
+          price: o.price,
+          color,
+          tag,
+          onCommit: (px) => opts.onOrderCommit && opts.onOrderCommit(id, px),
+          onClick: () => opts.onOrderClick && opts.onOrderClick(id),
+        });
         liveOrders.add(beadId);
       }
     }
-    for (const beadId of [...liveOrders]) { if (!want.has(beadId)) { thread.removeBead(beadId); liveOrders.delete(beadId); } }
+    for (const beadId of [...liveOrders]) {
+      if (!want.has(beadId)) {
+        thread.removeBead(beadId);
+        liveOrders.delete(beadId);
+      }
+    }
   };
   /** draw the LIVE compartment from the book state @param {PositionViewState} s */
   const drawLive = (s) => {
@@ -121,7 +167,7 @@ export function createPositionView(pane, opts = {}) {
     setDot('entry', s.entry, label);
     setDot('hedgeStop', s.hedgeStop, t('Stop') + (s.hedgeStopQty != null ? ' ' + s.hedgeStopQty : ''));
     setDot('hedgeTarget', s.hedgeTarget, t('Target') + (s.hedgeTargetQty != null ? ' ' + s.hedgeTargetQty : ''));
-    reconcileOrders(s.orders || []);   // one bead per working order (all of them)
+    reconcileOrders(s.orders || []); // one bead per working order (all of them)
   };
 
   // ============================================================================================
@@ -136,39 +182,54 @@ export function createPositionView(pane, opts = {}) {
   let planCount = 0;
   /** @param {PlanLevel[]} levels @param {boolean} [armed]  live -> yellow stop instead of the red plan stop */
   const reconcilePlanLevels = (levels, armed) => {
-    if (levels.length !== planCount) { for (const id of [...livePlan]) thread.removeBead(id); livePlan.clear(); planCount = levels.length; }
+    if (levels.length !== planCount) {
+      for (const id of [...livePlan]) thread.removeBead(id);
+      livePlan.clear();
+      planCount = levels.length;
+    }
     const multi = levels.length > 1;
-    const stopColor = armed ? C.stop : C.planStop;   // armed (live) stops read yellow like a real stop; a plan stop is red
+    const stopColor = armed ? C.stop : C.planStop; // armed (live) stops read yellow like a real stop; a plan stop is red
     const want = new Set();
     levels.forEach((lv, i) => {
       const num = multi ? String(i + 1) : '';
       /** @param {'stop'|'target'} kind @param {number|null|undefined} price @param {string} color @param {(i: number, px: number) => void} [on] */
       const rung = (kind, price, color, on) => {
         if (price == null || Number.isNaN(Number(price))) return;
-        const id = 'plan:' + kind + ':' + i; want.add(id);
+        const id = 'plan:' + kind + ':' + i;
+        want.add(id);
         const tag = (kind === 'stop' ? t('Stop') : t('Target')) + (multi ? ' ' + (i + 1) : '');
-        if (thread.hasBead(id)) { thread.update(id, { price: Number(price), tag, color, visible: true }); }   // color too: an arm/disarm restyles the same bead
+        if (thread.hasBead(id)) {
+          thread.update(id, { price: Number(price), tag, color, visible: true });
+        } // color too: an arm/disarm restyles the same bead
         // DROP semantics (no onDrag): the level registers on release only. The bead tracks the pointer itself and the
         // thread ignores external repricing mid-drag, so an ARMED rung never fires from a pass-over while dragging.
-        else { thread.addBead({ id, price: Number(price), color, tag, label: num, onCommit: (px) => on && on(i, px) }); livePlan.add(id); }
+        else {
+          thread.addBead({ id, price: Number(price), color, tag, label: num, onCommit: (px) => on && on(i, px) });
+          livePlan.add(id);
+        }
       };
       rung('stop', lv.stop, stopColor, opts.onPlanStop);
       rung('target', lv.target, C.target, opts.onPlanTarget);
     });
-    for (const id of [...livePlan]) { if (!want.has(id)) { thread.removeBead(id); livePlan.delete(id); } }
+    for (const id of [...livePlan]) {
+      if (!want.has(id)) {
+        thread.removeBead(id);
+        livePlan.delete(id);
+      }
+    }
   };
   /** draw the PLANNING compartment (gray/armed projection + the plan ladder) @param {PositionViewState} s */
   const drawPlan = (s) => {
-    setDot('proj', s.entry == null ? s.projection : null, s.planArmed ? t('Entry') : t('Market'));   // gray entry only while flat
+    setDot('proj', s.entry == null ? s.projection : null, s.planArmed ? t('Entry') : t('Market')); // gray entry only while flat
     thread.update('proj', { color: s.planArmed ? C.entry : C.projection });
-    reconcilePlanLevels(s.planLevels || [], !!s.planArmed);   // 0..N stop/target rungs (numbered when >1); armed -> yellow stops
+    reconcilePlanLevels(s.planLevels || [], !!s.planArmed); // 0..N stop/target rungs (numbered when >1); armed -> yellow stops
   };
 
   /** @param {PositionViewState} [s] */
   const set = (s = {}) => {
     if (s.time != null) thread.setTime(s.time);
-    drawLive(s);   // LIVE compartment
-    drawPlan(s);   // PLANNING compartment
+    drawLive(s); // LIVE compartment
+    drawPlan(s); // PLANNING compartment
   };
 
   return { set, setTime: (tm) => thread.setTime(tm), remove: () => thread.remove() };
@@ -180,15 +241,35 @@ export function createPositionView(pane, opts = {}) {
 function renderSettings(host, cfg, save) {
   const colors = cfg.colors || (cfg.colors = {});
   /** @type {[keyof typeof DOT, string][]} */
-  const rows = [['projection', 'Projection'], ['entry', 'Entry'], ['stop', 'Stop'], ['target', 'Target'], ['planStop', 'Plan stop']];
+  const rows = [
+    ['projection', 'Projection'],
+    ['entry', 'Entry'],
+    ['stop', 'Stop'],
+    ['target', 'Target'],
+    ['planStop', 'Plan stop'],
+  ];
   rows.forEach(([key, label]) => {
-    const r = document.createElement('div'); r.className = 'sd-row';
-    const l = document.createElement('span'); l.className = 'sd-label'; l.textContent = t(label);
-    r.append(l, colorSwatch(colors[key] || DOT[key], (/** @type {string} */ v) => { colors[key] = v; save(); }));
+    const r = document.createElement('div');
+    r.className = 'sd-row';
+    const l = document.createElement('span');
+    l.className = 'sd-label';
+    l.textContent = t(label);
+    r.append(
+      l,
+      colorSwatch(colors[key] || DOT[key], (/** @type {string} */ v) => {
+        colors[key] = v;
+        save();
+      }),
+    );
     host.appendChild(r);
   });
 }
 
 // PRIMITIVE #1 -- the string-and-beads registers itself as an order primitive (primitive-contract.js). It is
 // the DEFAULT: always available (imported by the overlay), so the chart never lacks an order renderer.
-registerPrimitive({ id: 'string-beads', capabilities: { anchor: true, plan: true }, create: createPositionView, renderSettings });
+registerPrimitive({
+  id: 'string-beads',
+  capabilities: { anchor: true, plan: true },
+  create: createPositionView,
+  renderSettings,
+});

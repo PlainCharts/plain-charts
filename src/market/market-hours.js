@@ -28,8 +28,8 @@ import { getCachedHours, putCachedHours } from './market-hours-store.js';
  *   | { state: 'unknown' }} MarketState */
 
 const DAY = 86400000;
-const MAINT_MAX = 4 * 3600 * 1000;   // a close->next-open gap this short is the daily maintenance halt; longer = closed
-const GAP_SEC = 40 * 60;             // an intraday jump longer than this = the market was shut (halt/overnight/weekend)
+const MAINT_MAX = 4 * 3600 * 1000; // a close->next-open gap this short is the daily maintenance halt; longer = closed
+const GAP_SEC = 40 * 60; // an intraday jump longer than this = the market was shut (halt/overnight/weekend)
 
 // US-exchange local time (America/New_York -- CME Central and US Eastern share DST transitions, so an
 // open expressed in NY local time is stable across the year regardless of the exchange). DST-aware.
@@ -38,15 +38,22 @@ const NY_TZ = 'America/New_York';
 // them. Constructing one per call inside the future-projection loop (thousands of calls per redraw) was a
 // catastrophic per-tick cost.
 const _offsetFmt = new Intl.DateTimeFormat('en-US', { timeZone: NY_TZ, timeZoneName: 'shortOffset' });
-const _todFmt = new Intl.DateTimeFormat('en-US', { timeZone: NY_TZ, hour12: false, hour: '2-digit', minute: '2-digit' });
+const _todFmt = new Intl.DateTimeFormat('en-US', {
+  timeZone: NY_TZ,
+  hour12: false,
+  hour: '2-digit',
+  minute: '2-digit',
+});
 /** @type {Map<number, number>} */
-const _offCache = new Map();   // day bucket -> NY offset hours (offset only changes at DST boundaries)
+const _offCache = new Map(); // day bucket -> NY offset hours (offset only changes at DST boundaries)
 /** @param {number} utcMs @returns {number} */
 function nyOffsetHours(utcMs) {
   const day = Math.floor(utcMs / 86400000);
   const hit = _offCache.get(day);
   if (hit !== undefined) return hit;
-  const tzn = /** @type {Intl.DateTimeFormatPart} */ (_offsetFmt.formatToParts(new Date(utcMs)).find((p) => p.type === 'timeZoneName')).value;   // "GMT-4"
+  const tzn = /** @type {Intl.DateTimeFormatPart} */ (
+    _offsetFmt.formatToParts(new Date(utcMs)).find((p) => p.type === 'timeZoneName')
+  ).value; // "GMT-4"
   const m = /GMT([+-]\d+)/.exec(tzn);
   const off = m ? parseInt(m[1], 10) : -5;
   _offCache.set(day, off);
@@ -63,7 +70,7 @@ function nyClockUtc(y, mo, d, hh, mm) {
 function nyTimeOfDay(utcMs) {
   const s = _todFmt.format(new Date(utcMs));
   const [h, m] = s.split(':');
-  return { hh: (+h) % 24, mm: +m };
+  return { hh: +h % 24, mm: +m };
 }
 
 export class MarketHours {
@@ -71,23 +78,32 @@ export class MarketHours {
   constructor(api, contractId, persistKey) {
     this.api = api;
     this.contractId = contractId;
-    this._key = persistKey || null;   // `${broker}:${symbol}` -- the persistent open-rule cache key
+    this._key = persistKey || null; // `${broker}:${symbol}` -- the persistent open-rule cache key
     /** @type {Session[]} */
-    this.days = [];                  // derived sessions, ascending by open: [{ open, close, ongoing? }] (ms)
+    this.days = []; // derived sessions, ascending by open: [{ open, close, ongoing? }] (ms)
     /** @type {OpenRule | null} */
-    this.openRule = null;            // { hh, mm } -- recurring open time-of-day in NY local time
+    this.openRule = null; // { hh, mm } -- recurring open time-of-day in NY local time
     this._sessionLen = 23 * 3600000; // typical session length (for projecting the live/next close)
     /** @type {number | null} */
     this._loadedAt = null;
     this._pending = false;
-    this._retryAfter = 0;            // after a failed fetch, don't retry until this ms (broker backoff)
+    this._retryAfter = 0; // after a failed fetch, don't retry until this ms (broker backoff)
     /** @type {Set<() => void>} */
     this._listeners = new Set();
   }
 
   /** @param {() => void} cb @returns {() => boolean} */
-  onUpdate(cb) { this._listeners.add(cb); return () => this._listeners.delete(cb); }
-  _emit() { for (const cb of this._listeners) { try { cb(); } catch (_) {} } }
+  onUpdate(cb) {
+    this._listeners.add(cb);
+    return () => this._listeners.delete(cb);
+  }
+  _emit() {
+    for (const cb of this._listeners) {
+      try {
+        cb();
+      } catch (_) {}
+    }
+  }
 
   // Fetch ~10 days of a fine intraday TF (guarantees a weekend gap) and learn the sessions + open rule.
   // Anchored on NOW (the pane may pass a forward margin in its args -- ignored). One fetch; refetch only
@@ -95,28 +111,38 @@ export class MarketHours {
   ensure(/* fromMs, toMs */) {
     if (!this.api || !this.api.getBars || this.contractId == null || this._pending) return;
     const now = Date.now();
-    if (this._loadedAt != null && now - this._loadedAt < 2 * DAY) return;   // learned this session -> done
+    if (this._loadedAt != null && now - this._loadedAt < 2 * DAY) return; // learned this session -> done
     // PERSISTENT cache first: the open rule is DST-stable and barely ever changes, so if a recent entry is
     // on disk we adopt it and make NO historical fetch. This is the whole point -- one learn per symbol
     // every week or two, shared across every window and restart, instead of a look-back fetch per open.
     if (this._key) {
       const cached = getCachedHours(this._key);
-      if (cached) { this.openRule = cached.openRule; if (cached.sessionLen) this._sessionLen = cached.sessionLen; this._loadedAt = now; this._emit(); return; }
+      if (cached) {
+        this.openRule = cached.openRule;
+        if (cached.sessionLen) this._sessionLen = cached.sessionLen;
+        this._loadedAt = now;
+        this._emit();
+        return;
+      }
     }
-    if (this._retryAfter && now < this._retryAfter) return;                 // a recent fetch failed -> back off
+    if (this._retryAfter && now < this._retryAfter) return; // a recent fetch failed -> back off
     const tf = byId('15m') || { unit: 'm', n: 15, id: '15m' };
     /** @type {Bar[]} */
     const acc = [];
     this._pending = true;
     this.api.getBars({ id: this.contractId, tf, fromMs: now - 10 * DAY, toMs: now }, (res) => {
       if (!res) return;
-      if (res.error) { this._pending = false; this._retryAfter = Date.now() + 60000; return; }   // back off 60s, don't hammer
+      if (res.error) {
+        this._pending = false;
+        this._retryAfter = Date.now() + 60000;
+        return;
+      } // back off 60s, don't hammer
       if (Array.isArray(res.bars)) acc.push(...res.bars);
       if (res.complete) {
         this._pending = false;
         this._deriveFromIntraday(acc);
         this._loadedAt = now;
-        if (this._key && this.openRule) putCachedHours(this._key, this.openRule, this._sessionLen);   // remember it
+        if (this._key && this.openRule) putCachedHours(this._key, this.openRule, this._sessionLen); // remember it
         this._emit();
       }
     });
@@ -130,23 +156,34 @@ export class MarketHours {
     if (b.length < 3) return;
     /** @type {Session[]} */
     const sessions = [];
-    let openSec = b[0].time, maxGap = 0, maxReopenSec = null;
+    let openSec = b[0].time,
+      maxGap = 0,
+      maxReopenSec = null;
     for (let i = 1; i < b.length; i++) {
       const dt = b[i].time - b[i - 1].time;
       if (dt > GAP_SEC) {
-        sessions.push({ open: openSec * 1000, close: b[i - 1].time * 1000 });   // a completed session
-        if (dt > maxGap) { maxGap = dt; maxReopenSec = b[i].time; }
+        sessions.push({ open: openSec * 1000, close: b[i - 1].time * 1000 }); // a completed session
+        if (dt > maxGap) {
+          maxGap = dt;
+          maxReopenSec = b[i].time;
+        }
         openSec = b[i].time;
       }
     }
-    sessions.push({ open: openSec * 1000, close: b[b.length - 1].time * 1000, ongoing: true });   // live tail
+    sessions.push({ open: openSec * 1000, close: b[b.length - 1].time * 1000, ongoing: true }); // live tail
     this.days = sessions;
-    if (maxReopenSec != null) this.openRule = nyTimeOfDay(maxReopenSec * 1000);   // reopen after the weekend
-    const lens = sessions.filter((s) => !s.ongoing).map((s) => s.close - s.open).filter((x) => x > 0).sort((x, y) => x - y);
-    if (lens.length) this._sessionLen = lens[Math.floor(lens.length / 2)];   // median completed session
+    if (maxReopenSec != null) this.openRule = nyTimeOfDay(maxReopenSec * 1000); // reopen after the weekend
+    const lens = sessions
+      .filter((s) => !s.ongoing)
+      .map((s) => s.close - s.open)
+      .filter((x) => x > 0)
+      .sort((x, y) => x - y);
+    if (lens.length) this._sessionLen = lens[Math.floor(lens.length / 2)]; // median completed session
   }
 
-  hasData() { return this.days.length > 0 || this.openRule != null; }   // the rule alone is enough to anchor
+  hasData() {
+    return this.days.length > 0 || this.openRule != null;
+  } // the rule alone is enough to anchor
 
   // The trading weekday a session opening at openMs BELONGS to (0=Sun..6=Sat). Evening opens (>=12:00
   // local, futures/forex) own the NEXT day; morning opens (equities) own the same day. Skip Sat/Sun.
@@ -154,16 +191,20 @@ export class MarketHours {
   _ownsWeekday(openMs) {
     const local = new Date(openMs + nyOffsetHours(openMs) * 3600000);
     const wd = local.getUTCDay();
-    return (this.openRule && this.openRule.hh >= 12) ? (wd + 1) % 7 : wd;
+    return this.openRule && this.openRule.hh >= 12 ? (wd + 1) % 7 : wd;
   }
   /** @param {number} openMs @returns {boolean} */
-  _isTradingSession(openMs) { const d = this._ownsWeekday(openMs); return d !== 0 && d !== 6; }
+  _isTradingSession(openMs) {
+    const d = this._ownsWeekday(openMs);
+    return d !== 0 && d !== 6;
+  }
 
   // The next real session open at/after `now`, PROJECTED from the rule (for when it's beyond the fetched
   // window -- e.g. the countdown to Sunday's open while it's the weekend). Skips non-trading opens.
   /** @param {number} now @returns {number | null} */
   _projectNextOpen(now) {
-    const r = this.openRule; if (!r) return null;
+    const r = this.openRule;
+    if (!r) return null;
     const b = new Date(now);
     for (let off = 0; off <= 9; off++) {
       const d = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate() + off));
@@ -177,7 +218,8 @@ export class MarketHours {
   // onto each recent date, walking back until one is <= t AND a trading session. null if no rule.
   /** @param {number} t @returns {number | null} */
   _sessionOpenAtOrBefore(t) {
-    const r = this.openRule; if (!r) return null;
+    const r = this.openRule;
+    if (!r) return null;
     const b = new Date(t);
     for (let off = 0; off >= -6; off--) {
       const d = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate() + off));
@@ -198,15 +240,16 @@ export class MarketHours {
     const tf = tfSec * 1000;
     /** @type {number[]} */
     const out = [];
-    let t = lastSec * 1000, guard = 0;
+    let t = lastSec * 1000,
+      guard = 0;
     while (out.length < count && guard++ < count * 4 + 16) {
       const next = t + tf;
       const open = this._sessionOpenAtOrBefore(next);
       const close = open != null ? open + this._sessionLen : null;
       if (open == null || next < /** @type {number} */ (close)) {
-        t = next;                              // still inside a session -> a valid slot
+        t = next; // still inside a session -> a valid slot
       } else {
-        const no = this._projectNextOpen(next);   // in the gap -> jump to the next session open
+        const no = this._projectNextOpen(next); // in the gap -> jump to the next session open
         if (no == null || no <= t) break;
         t = no;
       }
@@ -230,7 +273,11 @@ export class MarketHours {
       for (let off = -1; off <= 1; off++) {
         const d = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate() + off));
         const o = nyClockUtc(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), r.hh, r.mm);
-        const dd = Math.abs(o - t); if (dd < bestD) { bestD = dd; best = o; }
+        const dd = Math.abs(o - t);
+        if (dd < bestD) {
+          bestD = dd;
+          best = o;
+        }
       }
       return best;
     }
@@ -238,14 +285,23 @@ export class MarketHours {
     /** @type {number | null} */
     let best = null;
     let bestD = 18 * 3600000;
-    for (const d of this.days) { const dd = Math.abs(d.open - t); if (dd < bestD) { bestD = dd; best = d.open; } }
+    for (const d of this.days) {
+      const dd = Math.abs(d.open - t);
+      if (dd < bestD) {
+        bestD = dd;
+        best = d.open;
+      }
+    }
     return best;
   }
 
   // the session a timestamp is INSIDE (open<=t<close); the live tail uses its projected close. null in a gap.
   /** @param {number} t @returns {{ open: number, close: number } | null} */
   sessionOf(t) {
-    for (const s of this.days) { const close = s.ongoing ? s.open + this._sessionLen : s.close; if (t >= s.open && t < close) return { open: s.open, close }; }
+    for (const s of this.days) {
+      const close = s.ongoing ? s.open + this._sessionLen : s.close;
+      if (t >= s.open && t < close) return { open: s.open, close };
+    }
     return null;
   }
 
@@ -263,7 +319,12 @@ export class MarketHours {
       const open = this._sessionOpenAtOrBefore(now);
       if (open != null && now < open + this._sessionLen) {
         const close = open + this._sessionLen;
-        return { state: 'open', session: { open, close }, msToClose: close - now, progress: (now - open) / (close - open) };
+        return {
+          state: 'open',
+          session: { open, close },
+          msToClose: close - now,
+          progress: (now - open) / (close - open),
+        };
       }
       const nextOpen = this._projectNextOpen(now);
       if (nextOpen == null) return { state: 'closed' };
@@ -278,11 +339,17 @@ export class MarketHours {
     let nextOpen = null;
     for (const s of this.days) {
       const close = s.ongoing ? s.open + this._sessionLen : s.close;
-      if (now >= s.open && now < close) return { state: 'open', session: { open: s.open, close }, msToClose: close - now, progress: (now - s.open) / (close - s.open) };
+      if (now >= s.open && now < close)
+        return {
+          state: 'open',
+          session: { open: s.open, close },
+          msToClose: close - now,
+          progress: (now - s.open) / (close - s.open),
+        };
       if (close <= now && (prevClose == null || close > prevClose)) prevClose = close;
       if (s.open > now && (nextOpen == null || s.open < nextOpen)) nextOpen = s.open;
     }
-    if (nextOpen == null) nextOpen = this._projectNextOpen(now);   // future open not in the window -> project
+    if (nextOpen == null) nextOpen = this._projectNextOpen(now); // future open not in the window -> project
     if (nextOpen == null) return { state: 'closed', prevClose };
     const gap = prevClose != null ? nextOpen - prevClose : Infinity;
     return { state: gap <= MAINT_MAX ? 'maintenance' : 'closed', prevClose, nextOpen, msToOpen: nextOpen - now };
@@ -296,13 +363,16 @@ export class MarketHours {
 // they never fetch at all. (Registry is per window; multiple browser windows each learn once -- a
 // cross-window cache via the data-host is a possible follow-up.)
 /** @type {Map<string, MarketHours>} */
-const _registry = new Map();   // `${brokerKey}:${contractId}` -> MarketHours
+const _registry = new Map(); // `${brokerKey}:${contractId}` -> MarketHours
 /** @param {BarsApi} api @param {any} contractId @param {string | null} [brokerKey] @param {string} [symbol] @returns {MarketHours} */
 export function sharedMarketHours(api, contractId, brokerKey, symbol) {
   const key = (brokerKey == null ? '' : brokerKey) + ':' + contractId;
   let mh = _registry.get(key);
   // persist key is broker:SYMBOL (stable across contract rolls), not contractId, so the learned open rule
   // is reused for every month/contract of the same instrument.
-  if (!mh) { mh = new MarketHours(api, contractId, (brokerKey == null ? '' : brokerKey) + ':' + (symbol || contractId)); _registry.set(key, mh); }
+  if (!mh) {
+    mh = new MarketHours(api, contractId, (brokerKey == null ? '' : brokerKey) + ':' + (symbol || contractId));
+    _registry.set(key, mh);
+  }
   return mh;
 }

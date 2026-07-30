@@ -7,10 +7,15 @@
 // in the store and outlives the dialog; this is a pure control surface (nothing is sent to a broker here).
 import { isProjecting, isArmed, setLevel, setLevels, commitStop } from '../chart/order-view/plan-store.js';
 import { state, getCtx } from './ticket-state.js';
-import { snapToTick } from './order-intent.js';   // shared tick-snap (pure)
+import { snapToTick } from './order-intent.js'; // shared tick-snap (pure)
 
 // snap a price to the current instrument's tick (used for the mirrored target commitStop can produce on a flip)
-const snapStop = (/** @type {number} */ v) => { const inst = state.mktInst; const tick = inst && inst.tickSize ? Number(inst.tickSize) : 0; const dec = inst && inst.priceDecimals != null ? Number(inst.priceDecimals) : 2; return snapToTick(v, tick, dec); };
+const snapStop = (/** @type {number} */ v) => {
+  const inst = state.mktInst;
+  const tick = inst && inst.tickSize ? Number(inst.tickSize) : 0;
+  const dec = inst && inst.priceDecimals != null ? Number(inst.priceDecimals) : 2;
+  return snapToTick(v, tick, dec);
+};
 
 // Commit a dialog STOP edit (roller/type/Dist) through the SAME position-based writer the chart drag uses (commitStop):
 // the stop's side vs the entry PIVOT sets the direction -- below = long, above = short -- so it flips the pill's B/S and
@@ -26,15 +31,33 @@ function writeStop(c, v, pivot) {
 // it, so a handler never has to repeat `const c = getCtx(); if (isProjecting(...)) ...`.
 export const planControl = {
   /** the pill's qty cell mirrors the Volume box @param {number} qty */
-  setQty(qty) { const c = getCtx(); if (isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { qty }); },
+  setQty(qty) {
+    const c = getCtx();
+    if (isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { qty });
+  },
   /** the projection level (plan.ref) for a limit/stop entry; only a positive price moves it @param {number} price */
-  setRef(price) { const c = getCtx(); if (price > 0 && isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { ref: price }); },
+  setRef(price) {
+    const c = getCtx();
+    if (price > 0 && isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { ref: price });
+  },
   /** the bracket STOP, through the flip/snap/pivot rule; pivot = the entry reference this stop is measured against @param {number} v @param {number} pivot */
-  setStop(v, pivot) { const c = getCtx(); if (isProjecting(c.broker, c.symbol)) writeStop(c, v, pivot); },
+  setStop(v, pivot) {
+    const c = getCtx();
+    if (isProjecting(c.broker, c.symbol)) writeStop(c, v, pivot);
+  },
   /** the bracket TARGET on rung 0; 0/negative clears it @param {number} v */
-  setTarget(v) { const c = getCtx(); if (isProjecting(c.broker, c.symbol)) setLevel(c.broker, c.symbol, 0, { target: v > 0 ? v : null }); },
+  setTarget(v) {
+    const c = getCtx();
+    if (isProjecting(c.broker, c.symbol)) setLevel(c.broker, c.symbol, 0, { target: v > 0 ? v : null });
+  },
   /** the sizing INTENT the on-chart V places with (null in Units mode) @param {any} sizing */
-  setSizing(sizing) { const c = getCtx(); if (isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { sizing }); },
+  setSizing(sizing) {
+    const c = getCtx();
+    if (isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { sizing });
+  },
   /** qty + sizing together (the Stake preview writes both so the pill reflects the Volume box AND sizes like the dialog) @param {number} qty @param {any} sizing */
-  setQtyAndSizing(qty, sizing) { const c = getCtx(); if (isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { qty, sizing }); },
+  setQtyAndSizing(qty, sizing) {
+    const c = getCtx();
+    if (isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { qty, sizing });
+  },
 };

@@ -20,8 +20,8 @@ export const BAR_TAIL_CAP = 300;
 export function mergeTail(tail, bars, cap) {
   /** @type {Map<number, any>} */
   const byTime = new Map();
-  for (const b of (tail || [])) if (b && b.time != null) byTime.set(b.time, b);
-  for (const b of (bars || [])) if (b && b.time != null) byTime.set(b.time, b);   // newer report wins per time
+  for (const b of tail || []) if (b && b.time != null) byTime.set(b.time, b);
+  for (const b of bars || []) if (b && b.time != null) byTime.set(b.time, b); // newer report wins per time
   const merged = [...byTime.values()].sort((a, b) => a.time - b.time);
   return merged.slice(-cap);
 }
@@ -34,8 +34,8 @@ export function mergeTail(tail, bars, cap) {
  * @param {'up'|'down'|'both'} direction
  */
 export function crossed(bar, level, direction) {
-  const up = bar.close >= level && bar.low < level;      // closed at/above, wick dipped below -> crossed up
-  const down = bar.close <= level && bar.high > level;   // closed at/below, wick poked above -> crossed down
+  const up = bar.close >= level && bar.low < level; // closed at/above, wick dipped below -> crossed up
+  const down = bar.close <= level && bar.high > level; // closed at/below, wick poked above -> crossed down
   if (direction === 'up') return up;
   if (direction === 'down') return down;
   return up || down;
@@ -78,7 +78,7 @@ export function isSupportedTerm(t) {
   if (!t || t.op === 'unsupported') return false;
   if (t.op === 'move-up-pct' || t.op === 'move-down-pct') return Number(t.percent) > 0 && Number(t.lookback) > 0;
   if (t.op === 'move-up' || t.op === 'move-down') return Number(t.amount) > 0 && Number(t.lookback) > 0;
-  return t.level != null;   // level ops (cross / gt / lt)
+  return t.level != null; // level ops (cross / gt / lt)
 }
 
 /**
@@ -91,16 +91,34 @@ export function isSupportedTerm(t) {
 export function termFires(term, bar, tail) {
   if (!term || !bar) return false;
   switch (term.op) {
-    case 'cross': return term.level != null && crossed(bar, term.level, 'both');
-    case 'cross-up': return term.level != null && crossed(bar, term.level, 'up');
-    case 'cross-down': return term.level != null && crossed(bar, term.level, 'down');
-    case 'gt': return term.level != null && bar.close > term.level;
-    case 'lt': return term.level != null && bar.close < term.level;
-    case 'move-up-pct': { const m = movePct(tail || [], bar, Number(term.lookback)); return m != null && m >= Number(term.percent); }
-    case 'move-down-pct': { const m = movePct(tail || [], bar, Number(term.lookback)); return m != null && -m >= Number(term.percent); }
-    case 'move-up': { const d = moveAbs(tail || [], bar, Number(term.lookback)); return d != null && d >= Number(term.amount); }
-    case 'move-down': { const d = moveAbs(tail || [], bar, Number(term.lookback)); return d != null && -d >= Number(term.amount); }
-    default: return false;   // unsupported (drawing/indicator side) -- never fires yet
+    case 'cross':
+      return term.level != null && crossed(bar, term.level, 'both');
+    case 'cross-up':
+      return term.level != null && crossed(bar, term.level, 'up');
+    case 'cross-down':
+      return term.level != null && crossed(bar, term.level, 'down');
+    case 'gt':
+      return term.level != null && bar.close > term.level;
+    case 'lt':
+      return term.level != null && bar.close < term.level;
+    case 'move-up-pct': {
+      const m = movePct(tail || [], bar, Number(term.lookback));
+      return m != null && m >= Number(term.percent);
+    }
+    case 'move-down-pct': {
+      const m = movePct(tail || [], bar, Number(term.lookback));
+      return m != null && -m >= Number(term.percent);
+    }
+    case 'move-up': {
+      const d = moveAbs(tail || [], bar, Number(term.lookback));
+      return d != null && d >= Number(term.amount);
+    }
+    case 'move-down': {
+      const d = moveAbs(tail || [], bar, Number(term.lookback));
+      return d != null && -d >= Number(term.amount);
+    }
+    default:
+      return false; // unsupported (drawing/indicator side) -- never fires yet
   }
 }
 
@@ -117,7 +135,7 @@ export function conditionFires(compiled, bar, tail) {
   const supported = terms.filter(isSupportedTerm);
   if (!supported.length) return false;
   if (compiled.match === 'any') return supported.some((t) => termFires(t, bar, tail));
-  if (supported.length !== terms.length) return false;   // an unsupported term can't pass an ALL match
+  if (supported.length !== terms.length) return false; // an unsupported term can't pass an ALL match
   return supported.every((t) => termFires(t, bar, tail));
 }
 
@@ -144,11 +162,15 @@ export function cadenceOf(trigger) {
 export function cadenceAllows(cadence, rt, barTime, nowMs, onClosedBar) {
   rt = rt || {};
   switch (cadence) {
-    case 'per-minute': return !rt.lastFireMs || (nowMs - rt.lastFireMs) >= 60000;
-    case 'per-bar': return rt.lastFireBar !== barTime;
-    case 'per-bar-close': return onClosedBar && rt.lastFireBar !== barTime;
+    case 'per-minute':
+      return !rt.lastFireMs || nowMs - rt.lastFireMs >= 60000;
+    case 'per-bar':
+      return rt.lastFireBar !== barTime;
+    case 'per-bar-close':
+      return onClosedBar && rt.lastFireBar !== barTime;
     case 'once':
-    default: return !rt.fired;
+    default:
+      return !rt.fired;
   }
 }
 
@@ -164,4 +186,6 @@ export function markFired(barTime, nowMs) {
  * Has the alert passed its expiry? expiryMs is a resolved epoch-ms instant (null = open-ended).
  * @param {number|null|undefined} expiryMs @param {number} nowMs
  */
-export function isExpired(expiryMs, nowMs) { return expiryMs != null && nowMs >= expiryMs; }
+export function isExpired(expiryMs, nowMs) {
+  return expiryMs != null && nowMs >= expiryMs;
+}

@@ -7,15 +7,18 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-const here = dirname(fileURLToPath(import.meta.url));   // docs/kapelka/scripts
-const engine = resolve(here, '../../../lib/kapelka');   // the vendored engine
-const pub = resolve(here, '../public');                 // docs/kapelka/public
+const here = dirname(fileURLToPath(import.meta.url)); // docs/kapelka/scripts
+const engine = resolve(here, '../../../lib/kapelka'); // the vendored engine
+const pub = resolve(here, '../public'); // docs/kapelka/public
 
 const parts = ['index.js', 'core', 'studies', 'skin', 'examples'];
 for (const part of parts) {
   const src = resolve(engine, part);
   const dst = resolve(pub, part);
-  if (!existsSync(src)) { console.warn('[mirror] missing:', src); continue; }
+  if (!existsSync(src)) {
+    console.warn('[mirror] missing:', src);
+    continue;
+  }
   await rm(dst, { recursive: true, force: true });
   await cp(src, dst, { recursive: true });
 }
@@ -28,7 +31,7 @@ const changelogSrc = resolve(engine, 'CHANGELOG.md');
 const changelogDst = resolve(here, '../src/pages/docs/changelog.md');
 if (existsSync(changelogSrc)) {
   const front = '---\nlayout: ../../layouts/DocsLayout.astro\ntitle: Changelog\n---\n\n';
-  await writeFile(changelogDst, front + await readFile(changelogSrc, 'utf8'));
+  await writeFile(changelogDst, front + (await readFile(changelogSrc, 'utf8')));
   console.log('[mirror] CHANGELOG.md -> src/pages/docs/changelog.md');
 } else {
   console.warn('[mirror] missing engine CHANGELOG.md:', changelogSrc);

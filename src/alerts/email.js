@@ -21,7 +21,7 @@ function transportFor(cfg) {
   const t = nodemailer.createTransport({
     host: cfg.host,
     port: Number(cfg.port) || 587,
-    secure: !!cfg.secure,          // true = port 465 (implicit TLS); false = 587 with STARTTLS
+    secure: !!cfg.secure, // true = port 465 (implicit TLS); false = 587 with STARTTLS
     auth: cfg.user ? { user: cfg.user, pass: cfg.pass } : undefined,
   });
   cached = { transport: t, sig };
@@ -39,7 +39,12 @@ export async function sendEmail(cfg, msg) {
   if (!cfg || !cfg.host) throw new Error('SMTP not configured (no host)');
   const to = msg.to || cfg.to;
   if (!to) throw new Error('no recipient (to)');
-  const info = await transportFor(cfg).sendMail({ from: cfg.from || cfg.user, to, subject: msg.subject, text: msg.text });
+  const info = await transportFor(cfg).sendMail({
+    from: cfg.from || cfg.user,
+    to,
+    subject: msg.subject,
+    text: msg.text,
+  });
   return { messageId: info.messageId, accepted: info.accepted, rejected: info.rejected };
 }
 

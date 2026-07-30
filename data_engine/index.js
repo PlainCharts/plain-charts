@@ -48,8 +48,8 @@ export { onRaw, emitRaw, setRawActivity } from './data/raw-tap.js';
 export * from './data/adapter-contract.js';
 
 // app-installable seams
-export { setStatusSink } from './status.js';     // mirror engine log lines onto an app display
-export { setExecGate } from './policy.js';       // the assistant-order policy gate (default: deny)
+export { setStatusSink } from './status.js'; // mirror engine log lines onto an app display
+export { setExecGate } from './policy.js'; // the assistant-order policy gate (default: deny)
 
 // neutral bar/timeframe math shared with adapters
 export { barMs } from './timeframes.js';

@@ -6,14 +6,23 @@
 // handled the request, false to let the router fall through.
 const fs = require('fs');
 const path = require('path');
-const { ROOT, SETTINGS_DIR, readSettingsFile, writeSettingsFile, sendJson, readBody, openFolder, fileSlug } = require('./util.js');
+const {
+  ROOT,
+  SETTINGS_DIR,
+  readSettingsFile,
+  writeSettingsFile,
+  sendJson,
+  readBody,
+  openFolder,
+  fileSlug,
+} = require('./util.js');
 
 // API path -> settings file. Each is a JSON document persisted to settings/.
 // settings/ is organized into logical subfolders. The API path is stable; only the on-disk
 // location (the value) is grouped. Folder libraries (themes, chart-templates, workspaces, vocab)
 // are handled by folderApi/workspacesApi below with their own dir constants.
 const API_FILES = {
-  '/api/settings': 'settings.json',                               // app prefs (anchor, root)
+  '/api/settings': 'settings.json', // app prefs (anchor, root)
   '/api/accounts': 'brokers/accounts.json',
   '/api/tabs': 'workspace/tabs.json',
   '/api/indicator-templates': 'studies/indicator-templates.json',
@@ -26,16 +35,16 @@ const API_FILES = {
   '/api/addons-toolbar': 'addons/addons-toolbar.json',
   '/api/colors': 'appearance/colors.json',
   '/api/palettes': 'appearance/palettes.json',
-  '/api/order-buttons': 'trading/order-buttons.json',   // user-authored quick-action buttons for the order ticket
-  '/api/order-plan': 'trading/order-plan.json',   // persisted on-chart PLAN state (gray projection etc.) per broker:symbol
-  '/api/order-primitives': 'trading/order-primitives.json',   // on-chart order primitives: the GLOBAL active primitive + per-primitive config namespaces
+  '/api/order-buttons': 'trading/order-buttons.json', // user-authored quick-action buttons for the order ticket
+  '/api/order-plan': 'trading/order-plan.json', // persisted on-chart PLAN state (gray projection etc.) per broker:symbol
+  '/api/order-primitives': 'trading/order-primitives.json', // on-chart order primitives: the GLOBAL active primitive + per-primitive config namespaces
   '/api/watchlist': 'market/watchlist.json',
-  '/api/alert-rules': 'market/alert-rules.json',   // the Alert engine's authoritative rule set (owned by the alert-host)
-  '/api/alert-log': 'market/alert-log.json',       // the Alert engine's persistent fire LOG (the mailbox) -- a capped ring, owned by the alert-host
+  '/api/alert-rules': 'market/alert-rules.json', // the Alert engine's authoritative rule set (owned by the alert-host)
+  '/api/alert-log': 'market/alert-log.json', // the Alert engine's persistent fire LOG (the mailbox) -- a capped ring, owned by the alert-host
 
-  '/api/email-smtp': 'brokers/email-smtp.json',    // alert email SMTP account (host/port/user/PASS/from/to) -- credentials, so it lives under the git-excluded brokers/ dir
-  '/api/telegram': 'brokers/telegram.json',        // alert Telegram bot config (enabled/TOKEN/chatId) -- the bot token is a secret, so also under git-excluded brokers/
-  '/api/market-hours': 'market/market-hours.json',   // learned session open-rule per broker/symbol (persisted; rarely changes)
+  '/api/email-smtp': 'brokers/email-smtp.json', // alert email SMTP account (host/port/user/PASS/from/to) -- credentials, so it lives under the git-excluded brokers/ dir
+  '/api/telegram': 'brokers/telegram.json', // alert Telegram bot config (enabled/TOKEN/chatId) -- the bot token is a secret, so also under git-excluded brokers/
+  '/api/market-hours': 'market/market-hours.json', // learned session open-rule per broker/symbol (persisted; rarely changes)
 };
 
 // ---- folder libraries: one <name>.json file per item ----
@@ -57,29 +66,54 @@ const WS_DIR = path.join(SETTINGS_DIR, 'workspace', 'workspaces');
 
 function listFolder(dir) {
   try {
-    return fs.readdirSync(dir).filter((f) => f.endsWith('.json'))
-      .map((f) => { try { return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')); } catch (_) { return null; } })
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => {
+        try {
+          return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
+        } catch (_) {
+          return null;
+        }
+      })
       .filter((t) => t && t.name);
-  } catch (_) { return []; }
+  } catch (_) {
+    return [];
+  }
 }
 // generic GET (list) / save / delete / open for a folder of <name>.json items.
 // returns true once it has handled `p`. `key` is the JSON array field the client expects.
 function folderApi(p, req, res, base, dir, key) {
-  if (p === base && req.method === 'GET') { sendJson(res, 200, { [key]: listFolder(dir) }); return true; }
+  if (p === base && req.method === 'GET') {
+    sendJson(res, 200, { [key]: listFolder(dir) });
+    return true;
+  }
   if (p === base + '/save' && req.method === 'POST') {
     readBody(req, (d) => {
       if (!d || !d.name) return sendJson(res, 400, { error: 'name required' });
       fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(path.join(dir, fileSlug(d.name) + '.json'), JSON.stringify({ name: d.name, ...(d.data || {}) }, null, 2));
+      fs.writeFileSync(
+        path.join(dir, fileSlug(d.name) + '.json'),
+        JSON.stringify({ name: d.name, ...(d.data || {}) }, null, 2),
+      );
       sendJson(res, 200, { ok: true });
     });
     return true;
   }
   if (p === base + '/delete' && req.method === 'POST') {
-    readBody(req, (d) => { try { fs.unlinkSync(path.join(dir, fileSlug(d && d.name) + '.json')); } catch (_) {} sendJson(res, 200, { ok: true }); });
+    readBody(req, (d) => {
+      try {
+        fs.unlinkSync(path.join(dir, fileSlug(d && d.name) + '.json'));
+      } catch (_) {}
+      sendJson(res, 200, { ok: true });
+    });
     return true;
   }
-  if (p === base + '/open' && req.method === 'POST') { openFolder(dir); sendJson(res, 200, { ok: true }); return true; }
+  if (p === base + '/open' && req.method === 'POST') {
+    openFolder(dir);
+    sendJson(res, 200, { ok: true });
+    return true;
+  }
   return false;
 }
 
@@ -88,29 +122,48 @@ function folderApi(p, req, res, base, dir, key) {
 // light index (id/name/meta + a summary) for the manager dialog; GET /api/workspaces/<id> returns
 // the FULL workspace. Autosave POSTs the whole record to /api/workspaces/save.
 function wsSummary(ws) {
-  const panes = (ws && Array.isArray(ws.panes)) ? ws.panes : [];
+  const panes = ws && Array.isArray(ws.panes) ? ws.panes : [];
   const p0 = panes[0] || {};
-  return panes.length + ' pane' + (panes.length === 1 ? '' : 's') +
-         (p0.symbol ? ' · ' + p0.symbol : '') + (p0.tfId ? ' · ' + p0.tfId : '');
+  return (
+    panes.length +
+    ' pane' +
+    (panes.length === 1 ? '' : 's') +
+    (p0.symbol ? ' · ' + p0.symbol : '') +
+    (p0.tfId ? ' · ' + p0.tfId : '')
+  );
 }
 // study board (chart-less: every pane is a board pane) vs a regular chart layout — for the manager icon
 function wsIsBoard(ws) {
   if (ws && ws.type === 'studyboard') return true;
-  const panes = (ws && Array.isArray(ws.panes)) ? ws.panes : [];
+  const panes = ws && Array.isArray(ws.panes) ? ws.panes : [];
   return panes.length > 0 && panes.every((p) => p && p.settings && p.settings.board);
 }
 function workspacesApi(p, req, res) {
   if (p === '/api/workspaces' && req.method === 'GET') {
     let items = [];
     try {
-      items = fs.readdirSync(WS_DIR).filter((f) => f.endsWith('.json')).map((f) => {
-        try { const j = JSON.parse(fs.readFileSync(path.join(WS_DIR, f), 'utf-8'));
-          // surface panels (Trade Desk / AI Workspace) are singleton tools opened via the "Open panel"
-          // buttons, not user-curated workspaces -- keep them OUT of the saved-workspace list.
-          if (j.ws && j.ws.type === 'surface') return null;
-          return { id: j.id, name: j.name, createdMs: j.createdMs, updatedMs: j.updatedMs, summary: wsSummary(j.ws), isBoard: wsIsBoard(j.ws) }; }
-        catch (_) { return null; }
-      }).filter((x) => x && x.id);
+      items = fs
+        .readdirSync(WS_DIR)
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => {
+          try {
+            const j = JSON.parse(fs.readFileSync(path.join(WS_DIR, f), 'utf-8'));
+            // surface panels (Trade Desk / AI Workspace) are singleton tools opened via the "Open panel"
+            // buttons, not user-curated workspaces -- keep them OUT of the saved-workspace list.
+            if (j.ws && j.ws.type === 'surface') return null;
+            return {
+              id: j.id,
+              name: j.name,
+              createdMs: j.createdMs,
+              updatedMs: j.updatedMs,
+              summary: wsSummary(j.ws),
+              isBoard: wsIsBoard(j.ws),
+            };
+          } catch (_) {
+            return null;
+          }
+        })
+        .filter((x) => x && x.id);
     } catch (_) {}
     sendJson(res, 200, { workspaces: items });
     return true;
@@ -125,14 +178,27 @@ function workspacesApi(p, req, res) {
     return true;
   }
   if (p === '/api/workspaces/delete' && req.method === 'POST') {
-    readBody(req, (d) => { try { fs.unlinkSync(path.join(WS_DIR, fileSlug(d && d.id) + '.json')); } catch (_) {} sendJson(res, 200, { ok: true }); });
+    readBody(req, (d) => {
+      try {
+        fs.unlinkSync(path.join(WS_DIR, fileSlug(d && d.id) + '.json'));
+      } catch (_) {}
+      sendJson(res, 200, { ok: true });
+    });
     return true;
   }
-  if (p === '/api/workspaces/open' && req.method === 'POST') { openFolder(WS_DIR); sendJson(res, 200, { ok: true }); return true; }
-  if (p.startsWith('/api/workspaces/') && req.method === 'GET') {   // GET one full workspace by id
+  if (p === '/api/workspaces/open' && req.method === 'POST') {
+    openFolder(WS_DIR);
+    sendJson(res, 200, { ok: true });
+    return true;
+  }
+  if (p.startsWith('/api/workspaces/') && req.method === 'GET') {
+    // GET one full workspace by id
     const id = fileSlug(decodeURIComponent(p.slice('/api/workspaces/'.length)));
-    try { sendJson(res, 200, JSON.parse(fs.readFileSync(path.join(WS_DIR, id + '.json'), 'utf-8'))); }
-    catch (_) { sendJson(res, 404, { error: 'not found' }); }
+    try {
+      sendJson(res, 200, JSON.parse(fs.readFileSync(path.join(WS_DIR, id + '.json'), 'utf-8')));
+    } catch (_) {
+      sendJson(res, 404, { error: 'not found' });
+    }
     return true;
   }
   return false;
@@ -146,12 +212,15 @@ function handleSettings(req, res) {
   if (req.url === '/api/tabs/upsert' && req.method === 'POST') {
     readBody(req, (d) => {
       if (!d || !d.id) return sendJson(res, 400, { error: 'missing id' });
-      const cur = readSettingsFile('workspace/tabs.json'); const list = Array.isArray(cur.tabs) ? cur.tabs : [];
+      const cur = readSettingsFile('workspace/tabs.json');
+      const list = Array.isArray(cur.tabs) ? cur.tabs : [];
       const i = list.findIndex((t) => t && t.id === d.id);
-      const tab = { id: d.id, name: d.name || '', wsId: d.wsId };   // thin index; ws lives in the workspace file
-      if (i >= 0) list[i] = tab; else list.push(tab);
+      const tab = { id: d.id, name: d.name || '', wsId: d.wsId }; // thin index; ws lives in the workspace file
+      if (i >= 0) list[i] = tab;
+      else list.push(tab);
       if (d.active !== undefined) cur.active = d.active;
-      cur.tabs = list; writeSettingsFile('workspace/tabs.json', cur);
+      cur.tabs = list;
+      writeSettingsFile('workspace/tabs.json', cur);
       sendJson(res, 200, { ok: true });
     });
     return true;
@@ -160,7 +229,8 @@ function handleSettings(req, res) {
     readBody(req, (d) => {
       const cur = readSettingsFile('workspace/tabs.json');
       cur.tabs = (Array.isArray(cur.tabs) ? cur.tabs : []).filter((t) => t && t.id !== (d && d.id));
-      writeSettingsFile('workspace/tabs.json', cur); sendJson(res, 200, { ok: true });
+      writeSettingsFile('workspace/tabs.json', cur);
+      sendJson(res, 200, { ok: true });
     });
     return true;
   }
@@ -176,7 +246,8 @@ function handleSettings(req, res) {
     const file = API_FILES[fp.slice(0, -'/merge'.length)];
     if (file) {
       readBody(req, (patch) => {
-        if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return sendJson(res, 400, { error: 'object patch required' });
+        if (!patch || typeof patch !== 'object' || Array.isArray(patch))
+          return sendJson(res, 400, { error: 'object patch required' });
         writeSettingsFile(file, { ...readSettingsFile(file), ...patch });
         sendJson(res, 200, { ok: true });
       });
@@ -192,36 +263,53 @@ function handleSettings(req, res) {
   if (fp === '/api/vocab' && req.method === 'GET') {
     let packs = [];
     try {
-      packs = fs.readdirSync(VOCABULARY_DIR).filter((f) => f.endsWith('.json')).map((f) => {
-        try {
-          const obj = JSON.parse(fs.readFileSync(path.join(VOCABULARY_DIR, f), 'utf-8'));
-          const words = (obj && obj.words && typeof obj.words === 'object') ? obj.words : obj;
-          return { name: (obj && obj.name) || f.slice(0, -5), words };
-        } catch (_) { return null; }
-      }).filter(Boolean);
-    } catch (_) { /* folder absent -> no packs */ }
+      packs = fs
+        .readdirSync(VOCABULARY_DIR)
+        .filter((f) => f.endsWith('.json'))
+        .map((f) => {
+          try {
+            const obj = JSON.parse(fs.readFileSync(path.join(VOCABULARY_DIR, f), 'utf-8'));
+            const words = obj && obj.words && typeof obj.words === 'object' ? obj.words : obj;
+            return { name: (obj && obj.name) || f.slice(0, -5), words };
+          } catch (_) {
+            return null;
+          }
+        })
+        .filter(Boolean);
+    } catch (_) {
+      /* folder absent -> no packs */
+    }
     sendJson(res, 200, { packs });
     return true;
   }
-  if (folderApi(fp, req, res, '/api/vocab', VOCABULARY_DIR, 'packs')) return true;   // save/delete/open the user's LOCAL vocab library
+  if (folderApi(fp, req, res, '/api/vocab', VOCABULARY_DIR, 'packs')) return true; // save/delete/open the user's LOCAL vocab library
   if (workspacesApi(fp, req, res)) return true;
 
   const file = API_FILES[req.url];
   if (file) {
-    if (req.method === 'GET') { sendJson(res, 200, readSettingsFile(file)); return true; }
+    if (req.method === 'GET') {
+      sendJson(res, 200, readSettingsFile(file));
+      return true;
+    }
     if (req.method === 'POST') {
       let raw = '';
-      req.on('data', (c) => { raw += c; });
+      req.on('data', (c) => {
+        raw += c;
+      });
       req.on('end', () => {
         let data;
-        try { data = JSON.parse(raw); }
-        catch (_) { return sendJson(res, 400, { error: 'invalid json' }); }
+        try {
+          data = JSON.parse(raw);
+        } catch (_) {
+          return sendJson(res, 400, { error: 'invalid json' });
+        }
         writeSettingsFile(file, data);
         sendJson(res, 200, { ok: true });
       });
       return true;
     }
-    res.writeHead(405); res.end('Method not allowed');
+    res.writeHead(405);
+    res.end('Method not allowed');
     return true;
   }
   return false;

@@ -12,7 +12,7 @@ let data = { custom: [] };
 /** @returns {Promise<ColorsData>} */
 export async function loadColors() {
   const d = await store.load();
-  data.custom = Array.isArray(d.custom) ? d.custom.slice(0, 9) : [];   // trim any pre-existing overflow
+  data.custom = Array.isArray(d.custom) ? d.custom.slice(0, 9) : []; // trim any pre-existing overflow
   return data;
 }
 const save = () => store.set('custom', data.custom);

@@ -4,15 +4,22 @@
 // ticket-entry and ticket-modify share ONE implementation without importing each other (no cycle). The only
 // state it touches is the shared qtType.
 import { state } from './ticket-state.js';
-import { t } from '../i18n/i18n.js';   // vocabulary lookup -- the order ticket is the execution layer; every word here is overridable
+import { t } from '../i18n/i18n.js'; // vocabulary lookup -- the order ticket is the execution layer; every word here is overridable
 
 /** @param {string} label @param {number} value @param {{ step?: number|string, min?: number }} [o] @returns {{ row: HTMLElement, input: HTMLInputElement }} */
 export function mktRow(label, value, o = {}) {
-  const row = document.createElement('div'); row.className = 'ot-mod-row';
-  const lbl = document.createElement('label'); lbl.className = 'ot-mod-label'; lbl.textContent = t(label);
-  const input = document.createElement('input'); input.type = 'number'; input.className = 'ot-mod-price';
-  input.style.flex = '0 0 120px';   // fixed width == the col2 boxes (Qt type / Stake / Exp), so every entry-tab input is one width
-  input.step = String(o.step != null ? o.step : 'any'); input.min = String(o.min != null ? o.min : 0); input.value = String(value);
+  const row = document.createElement('div');
+  row.className = 'ot-mod-row';
+  const lbl = document.createElement('label');
+  lbl.className = 'ot-mod-label';
+  lbl.textContent = t(label);
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'ot-mod-price';
+  input.style.flex = '0 0 120px'; // fixed width == the col2 boxes (Qt type / Stake / Exp), so every entry-tab input is one width
+  input.step = String(o.step != null ? o.step : 'any');
+  input.min = String(o.min != null ? o.min : 0);
+  input.value = String(value);
   row.append(lbl, input);
   return { row, input };
 }
@@ -23,12 +30,28 @@ export function mktRow(label, value, o = {}) {
 // edge lines up with the Volume box below it. Sets state.qtType; onChange fires after (reveal/hide Stake + re-preview).
 /** @param {() => void} [onChange] @returns {HTMLElement} */
 export function buildQtTypeRow(onChange) {
-  const row = document.createElement('div'); row.className = 'ot-mod-row';
-  const lbl = document.createElement('label'); lbl.className = 'ot-mod-label'; lbl.textContent = t('Qt type:');
-  const sel = document.createElement('select'); sel.className = 'ot-input'; sel.style.flex = '0 0 120px';   // == Exp/Symbol box width
-  /** @type {[string,string][]} */ ([['units', 'Units'], ['stake', 'Stake']]).forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = t(l); sel.appendChild(o); });
+  const row = document.createElement('div');
+  row.className = 'ot-mod-row';
+  const lbl = document.createElement('label');
+  lbl.className = 'ot-mod-label';
+  lbl.textContent = t('Qt type:');
+  const sel = document.createElement('select');
+  sel.className = 'ot-input';
+  sel.style.flex = '0 0 120px'; // == Exp/Symbol box width
+  /** @type {[string,string][]} */ ([
+    ['units', 'Units'],
+    ['stake', 'Stake'],
+  ]).forEach(([v, l]) => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = t(l);
+    sel.appendChild(o);
+  });
   sel.value = state.qtType;
-  sel.onchange = () => { state.qtType = sel.value; if (onChange) onChange(); };
+  sel.onchange = () => {
+    state.qtType = sel.value;
+    if (onChange) onChange();
+  };
   row.append(lbl, sel);
   return row;
 }
@@ -41,11 +64,18 @@ export const syncLsSltp = () => {
   if (!state.lsSltpRows) return;
   const on = !!(state.selectedAccount && state.selectedAccount.hedging);
   const dim = on ? '' : '0.45';
-  state.lsSltpRows.sl.style.display = ''; state.lsSltpRows.sl.style.opacity = dim;
-  state.lsSltpRows.tp.style.display = ''; state.lsSltpRows.tp.style.opacity = dim;
-  if (state.lsSltpRows.slDist) state.lsSltpRows.slDist.style.opacity = dim;   // the Dist boxes ride with their SL/TP levels
+  state.lsSltpRows.sl.style.display = '';
+  state.lsSltpRows.sl.style.opacity = dim;
+  state.lsSltpRows.tp.style.display = '';
+  state.lsSltpRows.tp.style.opacity = dim;
+  if (state.lsSltpRows.slDist) state.lsSltpRows.slDist.style.opacity = dim; // the Dist boxes ride with their SL/TP levels
   if (state.lsSltpRows.tpDist) state.lsSltpRows.tpDist.style.opacity = dim;
-  if (state.lsInputs) { if (state.lsInputs.sl) state.lsInputs.sl.disabled = !on; if (state.lsInputs.tp) state.lsInputs.tp.disabled = !on; if (state.lsInputs.slDist) state.lsInputs.slDist.disabled = !on; if (state.lsInputs.tpDist) state.lsInputs.tpDist.disabled = !on; }
+  if (state.lsInputs) {
+    if (state.lsInputs.sl) state.lsInputs.sl.disabled = !on;
+    if (state.lsInputs.tp) state.lsInputs.tp.disabled = !on;
+    if (state.lsInputs.slDist) state.lsInputs.slDist.disabled = !on;
+    if (state.lsInputs.tpDist) state.lsInputs.tpDist.disabled = !on;
+  }
 };
 
 // SEED-FROM-REFERENCE spinner: the field starts at 0; the FIRST spinner tick doesn't count 0 -> one step, it
@@ -57,9 +87,18 @@ export const syncLsSltp = () => {
 export function seedSpinner(input, o) {
   let prev = Number(input.value) || 0;
   input.oninput = () => {
-    const step = Number(input.step) || 0; let v = Number(input.value) || 0; const ref = Number(o.getRef()) || 0;
-    if (prev === 0 && v !== 0 && step > 0 && Math.abs(Math.abs(v) - step) < step / 2 && ref > 0) { v = Number((v > 0 ? ref + step : ref - step).toFixed(o.getDec())); input.value = String(v); }
-    if (v < 0) { v = 0; input.value = '0'; }
-    o.set(v); prev = v;
+    const step = Number(input.step) || 0;
+    let v = Number(input.value) || 0;
+    const ref = Number(o.getRef()) || 0;
+    if (prev === 0 && v !== 0 && step > 0 && Math.abs(Math.abs(v) - step) < step / 2 && ref > 0) {
+      v = Number((v > 0 ? ref + step : ref - step).toFixed(o.getDec()));
+      input.value = String(v);
+    }
+    if (v < 0) {
+      v = 0;
+      input.value = '0';
+    }
+    o.set(v);
+    prev = v;
   };
 }

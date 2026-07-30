@@ -29,11 +29,18 @@ export const dataMethods = {
   // ---- data-TF routing + ingest (clock-anchored aggregation) ----
   // The TF we actually request / cache / subscribe: the base TF when this feed is off the clock
   // grid, else the display TF. All broker + cache I/O routes through this.
-  _dataTf() { return (this._aggregate && this._baseTf) ? this._baseTf : this.tf(); },
-  _tfSec() { const tf = this.tf(); return tf ? barMs(tf) / 1000 : 60; },   // DISPLAY TF in seconds
+  _dataTf() {
+    return this._aggregate && this._baseTf ? this._baseTf : this.tf();
+  },
+  _tfSec() {
+    const tf = this.tf();
+    return tf ? barMs(tf) / 1000 : 60;
+  }, // DISPLAY TF in seconds
   // oldest SOURCE bar loaded: base bar in aggregate mode (display buckets can start before it, so we
   // page from the base edge to keep making progress), else the oldest display bar.
-  _oldestSrc() { return this._aggregate ? this._baseEarliest : this.earliest; },
+  _oldestSrc() {
+    return this._aggregate ? this._baseEarliest : this.earliest;
+  },
   // Take broker/cache bars into the pane. In aggregate mode they are BASE bars: store them and
   // rebuild the derived display bars (this.bars). Else they go straight in. Returns the count of NEW
   // source bars (for the older-history gap-hop logic).
@@ -47,20 +54,25 @@ export const dataMethods = {
       // accumulate in this._fastOps; anything structural pins the 'full' sentinel. Runs before
       // the map mutation below. redraw() consumes and resets both fields.
       if (this._fastOps !== 'full') {
-        const lastT = this._fastLastTime != null ? this._fastLastTime
-          : (this.seeded && this.lastBar ? this.lastBar.time : null);
+        const lastT =
+          this._fastLastTime != null ? this._fastLastTime : this.seeded && this.lastBar ? this.lastBar.time : null;
         const r = classifyTicks(this.bars, lastT, valid);
-        if (r.ops === 'full') { this._fastOps = 'full'; this._fastLastTime = null; }
-        else {
+        if (r.ops === 'full') {
+          this._fastOps = 'full';
+          this._fastLastTime = null;
+        } else {
           if (!Array.isArray(this._fastOps)) this._fastOps = [];
           for (const b of r.ops) this._fastOps.push(b);
           this._fastLastTime = r.lastT;
         }
       }
-      for (const b of valid) { if (!this.bars.has(b.time)) added++; this.applyBar(b); }
+      for (const b of valid) {
+        if (!this.bars.has(b.time)) added++;
+        this.applyBar(b);
+      }
       return added;
     }
-    this._fastOps = 'full';   // aggregate mode rebuilds the display bars wholesale below
+    this._fastOps = 'full'; // aggregate mode rebuilds the display bars wholesale below
     for (const b of bars) {
       if (!b || !(b.close > 0)) continue;
       if (!this._base.has(b.time)) added++;
@@ -102,7 +114,8 @@ export const dataMethods = {
     // sit there over-zoomed until the user scrolled and triggered loadOlder. Instead we hold the first
     // paint, auto-pull the history on open, and frame the view once it has filled (or a max wait passes)
     // -- "wait for data, then reset the view". Cached symbols fill from seedFromCache, so they skip this.
-    clearTimeout(this._openSettle); clearTimeout(this._openMax);
+    clearTimeout(this._openSettle);
+    clearTimeout(this._openMax);
     // Uncached panes hold + auto-pull deep history. Board (study) panes need this too: they subscribe
     // their OWN bars and the anchor pushes a full-history time window (setTimeWindow), so without the
     // fill the board frames that window over the thin recent sliver -- data-less, zoomed into NULL.
@@ -117,18 +130,32 @@ export const dataMethods = {
     // live then corrected -- the startup "jerk" on cached symbols. Deferring keeps instant scrollback
     // (the history is in place by the time you scroll) without the correction flash.
     this._wantCacheSeed = this.cached;
-    this.reqId = this.api() && this.api().subscribeBars(
-      { id: this.contractId, tf: this._dataTf(), fromMs: Date.now() - lookFor(tf) },   // base resolution, display-sized window
-      (/** @type {any} */ u) => this.onReport(u),
+    this.reqId =
+      this.api() &&
+      this.api().subscribeBars(
+        { id: this.contractId, tf: this._dataTf(), fromMs: Date.now() - lookFor(tf) }, // base resolution, display-sized window
+        (/** @type {any} */ u) => this.onReport(u),
+      );
+    log(
+      'Subscribed: ' +
+        this.symbol +
+        ' @ ' +
+        tf.id +
+        (this._aggregate ? ' (via ' + this._dataTf().id + ')' : '') +
+        ' (contract ' +
+        this.contractId +
+        ').',
     );
-    log('Subscribed: ' + this.symbol + ' @ ' + tf.id + (this._aggregate ? ' (via ' + this._dataTf().id + ')' : '') + ' (contract ' + this.contractId + ').');
   },
 
   // normalized bar update: { bars:[Bar], complete, reachedStart?, error? }
   /** @param {BarUpdate} u */
   onReport(u) {
-    if (this.destroyed) return;   // a late reply after the pane was torn down
-    if (u.error) { log('[' + this.symbol + '] bar request failed: ' + u.error, true); return; }
+    if (this.destroyed) return; // a late reply after the pane was torn down
+    if (u.error) {
+      log('[' + this.symbol + '] bar request failed: ' + u.error, true);
+      return;
+    }
     // one-time probe: is this (as-yet-undecided) intraday feed off the UTC clock grid? If so, remember
     // the verdict and restart at the base TF (requestBars then derives clock-anchored display bars).
     // Only tested on a complete batch, when the historical bars are present.
@@ -138,42 +165,49 @@ export const dataMethods = {
       if (dtf && baseTfFor(dtf) && !OFFGRID_VERDICT.has(vkey)) {
         const off = offGrid(u.bars, barMs(dtf) / 1000);
         OFFGRID_VERDICT.set(vkey, off);
-        if (off) { this.requestBars(); return; }   // restart at the base TF, now aggregating
+        if (off) {
+          this.requestBars();
+          return;
+        } // restart at the base TF, now aggregating
       }
     }
     this._ingest(u.bars);
     this.redraw(u.complete);
-    this.storeClosed(u.bars);     // write-through: persist closed bars for cached symbols
+    this.storeClosed(u.bars); // write-through: persist closed bars for cached symbols
     // Live has now established the recent view (seeded). Backfill OLDER history from the local cache,
     // silently (seeded -> redraw prepends, no refit). Deferred so the cache never repaints/corrects
     // the visible window.
     if (u.complete && this._wantCacheSeed && this.seeded) {
       this._wantCacheSeed = false;
-      const tf = this.tf(); if (tf) this.seedFromCache(tf);
+      const tf = this.tf();
+      if (tf) this.seedFromCache(tf);
     }
   },
 
   /** @param {Bar} b */
-  applyBar(b) { if (b && b.close > 0) this.bars.set(b.time, b); },   // guard: a 0/invalid close would pin autoscale to 0
+  applyBar(b) {
+    if (b && b.close > 0) this.bars.set(b.time, b);
+  }, // guard: a 0/invalid close would pin autoscale to 0
 
   // Seed the chart instantly from the persistent cache (all cached bars for this tf),
   // then the live subscription extends the forward edge. Loading every cached bar means
   // scrolling back through the library is instant — no broker round-trips inside it.
   /** @param {any} tf */
   seedFromCache(tf) {
-    const tfId = tf.id, id = this.contractId;   // tfId = DISPLAY tf (guard); dtf = the cached BASE stream
+    const tfId = tf.id,
+      id = this.contractId; // tfId = DISPLAY tf (guard); dtf = the cached BASE stream
     const dtf = this._dataTf();
     const row = barCache.rowFor(this.broker, this.symbol);
-    const startMs = (row && row.startMs) || (Date.now() - 90 * 86400000);
+    const startMs = (row && row.startMs) || Date.now() - 90 * 86400000;
     barCache.getBars({ broker: this.broker, symbol: this.symbol, tf: dtf.id }).then((res) => {
-      if (this.destroyed || this.tfId !== tfId) return;   // timeframe/symbol changed meanwhile
+      if (this.destroyed || this.tfId !== tfId) return; // timeframe/symbol changed meanwhile
       const bars = (res && res.bars) || [];
-      if (bars.length) this.lastStored = Math.max(this.lastStored, bars[bars.length - 1].time);   // already in the cache
+      if (bars.length) this.lastStored = Math.max(this.lastStored, bars[bars.length - 1].time); // already in the cache
       // Only PREPEND history OLDER than what live already loaded. Live owns the recent/visible bars;
       // applying an overlapping (possibly stale) cache bar over a live bar would visibly correct the
       // candle = the jerk. So filter to bars older than the current oldest loaded bar.
-      const cutoff = this._oldestSrc();   // oldest SOURCE bar (base edge in aggregate mode) live has loaded
-      const older = (cutoff == null) ? bars : bars.filter((b) => b.time < cutoff);
+      const cutoff = this._oldestSrc(); // oldest SOURCE bar (base edge in aggregate mode) live has loaded
+      const older = cutoff == null ? bars : bars.filter((b) => b.time < cutoff);
       if (older.length) {
         this._ingest(older);
         // Prepend the cached history. The series feed shifts the visible index window by the prepend
@@ -183,12 +217,16 @@ export const dataMethods = {
         // seed-time fit over-zoomed into them. Now that the cache has supplied the full history, fit
         // the recent window over the WHOLE dataset. The newest bar stays pinned at the right edge, so
         // this is a zoom-OUT to show context -- NOT the backward "jump". Once only (deferred seed).
-        try { this.chart.timeAxis().scrollToNow(); } catch (_) {}
+        try {
+          this.chart.timeAxis().scrollToNow();
+        } catch (_) {}
       }
       // background: keep the library filled toward [startMs, now] (forward gap, then backward).
       // Cancels itself if the pane is torn down or its symbol/timeframe changes.
-      backfillCache({ brokerId: this.broker, symbol: this.symbol, id, tf: dtf, startMs },
-        () => !this.destroyed && this.tfId === tfId && this.contractId === id);
+      backfillCache(
+        { brokerId: this.broker, symbol: this.symbol, id, tf: dtf, startMs },
+        () => !this.destroyed && this.tfId === tfId && this.contractId === id,
+      );
     });
   },
 
@@ -198,8 +236,9 @@ export const dataMethods = {
   /** @param {Bar[]=} bars */
   storeClosed(bars) {
     if (!this.cached || !bars || !bars.length) return;
-    const dtf = this._dataTf(); if (!dtf) return;   // cache the BASE stream when aggregating
-    const formingStart = Math.floor(Date.now() / barMs(dtf)) * barMs(dtf) / 1000;
+    const dtf = this._dataTf();
+    if (!dtf) return; // cache the BASE stream when aggregating
+    const formingStart = (Math.floor(Date.now() / barMs(dtf)) * barMs(dtf)) / 1000;
     const last = this.lastStored || 0;
     const closed = bars.filter((b) => b && b.close > 0 && b.time < formingStart && b.time > last);
     if (!closed.length) return;
@@ -214,19 +253,25 @@ export const dataMethods = {
   /** @param {{ from: number }=} range */
   boardEnsureHistory(range) {
     if (!this.board || this.blanked || !this.seeded || this._openPending || !range) return;
-    const from = range.from;   // seconds
+    const from = range.from; // seconds
     if (!Number.isFinite(from)) return;
     // keep the DEEPEST edge requested (anchor may still be settling several range events)
-    this._boardWantFrom = (this._boardWantFrom == null) ? from : Math.min(this._boardWantFrom, from);
+    this._boardWantFrom = this._boardWantFrom == null ? from : Math.min(this._boardWantFrom, from);
     this._boardPullIfNeeded();
   },
   _boardPullIfNeeded() {
     if (this._boardWantFrom == null) return;
-    if (this.exhausted) { this._boardWantFrom = null; return; }   // no more history to be had
-    if (this.loadingOlder) return;                                // a hop is in flight -> onOlder re-drives
-    const oldest = this._oldestSrc();                            // oldest loaded SOURCE bar (secs)
+    if (this.exhausted) {
+      this._boardWantFrom = null;
+      return;
+    } // no more history to be had
+    if (this.loadingOlder) return; // a hop is in flight -> onOlder re-drives
+    const oldest = this._oldestSrc(); // oldest loaded SOURCE bar (secs)
     if (oldest == null) return;
-    if (oldest <= this._boardWantFrom) { this._boardWantFrom = null; return; }   // window is covered
+    if (oldest <= this._boardWantFrom) {
+      this._boardWantFrom = null;
+      return;
+    } // window is covered
     this.loadOlder();
   },
 
@@ -234,18 +279,21 @@ export const dataMethods = {
   // walks past empty windows so a weekend/holiday gap (e.g. a 2-day intraday lookback
   // landing on a closed market) doesn't look like the end of data.
   loadOlder() {
-    const tf = this.tf(), dtf = this._dataTf();
+    const tf = this.tf(),
+      dtf = this._dataTf();
     if (!this.contractId || !tf) return;
     if (this.olderCursorMs == null) {
       const oe = this._oldestSrc();
       if (oe == null) return;
-      this.olderCursorMs = oe * 1000;   // start at the current oldest SOURCE bar (base edge when aggregating)
+      this.olderCursorMs = oe * 1000; // start at the current oldest SOURCE bar (base edge when aggregating)
     }
     this.loadingOlder = true;
-    const toMs = this.olderCursorMs;             // exclusive upper bound for this hop
-    const fromMs = toMs - lookFor(tf);           // window sized by the DISPLAY tf, fetched at base resolution
+    const toMs = this.olderCursorMs; // exclusive upper bound for this hop
+    const fromMs = toMs - lookFor(tf); // window sized by the DISPLAY tf, fetched at base resolution
     this._olderFromMs = fromMs;
-    this.olderReqId = this.api() && this.api().getBars({ id: this.contractId, tf: dtf, fromMs, toMs }, (/** @type {any} */ u) => this.onOlder(u));
+    this.olderReqId =
+      this.api() &&
+      this.api().getBars({ id: this.contractId, tf: dtf, fromMs, toMs }, (/** @type {any} */ u) => this.onOlder(u));
   },
 
   // Drive the opening fill after each ingest. Finish as soon as the window is full or the deep pull is
@@ -254,9 +302,15 @@ export const dataMethods = {
   // still opens. OPEN_MAX (armed in requestBars) is the ultimate backstop.
   _armOpenSettle() {
     if (!this._openPending) return;
-    if (this.barCount >= this.constructor.FILL_MIN || this.exhausted) { this._finishOpen(); return; }
-    if (this.loadingOlder) return;                                   // a hop is in flight -> wait for onOlder
-    if (this._openFillKicked) { this.loadOlder(); return; }          // still thin, more may exist -> keep pulling
+    if (this.barCount >= this.constructor.FILL_MIN || this.exhausted) {
+      this._finishOpen();
+      return;
+    }
+    if (this.loadingOlder) return; // a hop is in flight -> wait for onOlder
+    if (this._openFillKicked) {
+      this.loadOlder();
+      return;
+    } // still thin, more may exist -> keep pulling
     clearTimeout(this._openSettle);
     this._openSettle = setTimeout(() => this._finishOpen(), this.constructor.OPEN_SETTLE_MS);
   },
@@ -266,27 +320,39 @@ export const dataMethods = {
   _finishOpen() {
     if (!this._openPending) return;
     this._openPending = false;
-    clearTimeout(this._openSettle); clearTimeout(this._openMax);
+    clearTimeout(this._openSettle);
+    clearTimeout(this._openMax);
     this.redraw(true);
   },
 
   /** @param {BarUpdate} u */
   onOlder(u) {
-    if (this.destroyed) return;   // a late history chunk after the pane was torn down
+    if (this.destroyed) return; // a late history chunk after the pane was torn down
     if (u.complete) this.olderReqId = 0;
-    if (u.error) { this.loadingOlder = false; this.exhausted = true; if (this._openPending) this._armOpenSettle(); this._boardPullIfNeeded(); return; }
-    const added = this._ingest(u.bars);          // base bars (aggregate mode) -> derived display bars
-    if (added > 0) this.redraw(true);            // seeded already -> feed, no refit
-    this.storeClosed(u.bars);                    // write-through older bars into the cache
+    if (u.error) {
+      this.loadingOlder = false;
+      this.exhausted = true;
+      if (this._openPending) this._armOpenSettle();
+      this._boardPullIfNeeded();
+      return;
+    }
+    const added = this._ingest(u.bars); // base bars (aggregate mode) -> derived display bars
+    if (added > 0) this.redraw(true); // seeded already -> feed, no refit
+    this.storeClosed(u.bars); // write-through older bars into the cache
     if (!u.complete) return;
     this.loadingOlder = false;
     // opening fill / board follow: this hop finished (loadingOlder now false) -> let _armOpenSettle finish
     // or pull the next hop, and let _boardPullIfNeeded chain until the anchor's window is covered. Both
     // are guarded (no-op when their flag is unset), so they are safe on every branch.
-    if (u.reachedStart) { this.exhausted = true; if (this._openPending) this._armOpenSettle(); this._boardPullIfNeeded(); return; }   // adapter knows it's the true start
+    if (u.reachedStart) {
+      this.exhausted = true;
+      if (this._openPending) this._armOpenSettle();
+      this._boardPullIfNeeded();
+      return;
+    } // adapter knows it's the true start
     if (added > 0) {
       this.gapHops = 0;
-      this.olderCursorMs = this._oldestSrc() * 1000;   // continue back from the new oldest SOURCE bar
+      this.olderCursorMs = this._oldestSrc() * 1000; // continue back from the new oldest SOURCE bar
       if (this._openPending) this._armOpenSettle();
       this._boardPullIfNeeded();
       return;
@@ -294,7 +360,12 @@ export const dataMethods = {
     // empty window: a market-closed gap, or the true end. Hop the cursor past it and
     // retry a bounded number of times — data usually resumes older than the gap.
     this.gapHops = (this.gapHops || 0) + 1;
-    if (this.gapHops >= this.constructor.GAP_HOPS) { this.exhausted = true; if (this._openPending) this._armOpenSettle(); this._boardPullIfNeeded(); return; }
+    if (this.gapHops >= this.constructor.GAP_HOPS) {
+      this.exhausted = true;
+      if (this._openPending) this._armOpenSettle();
+      this._boardPullIfNeeded();
+      return;
+    }
     this.olderCursorMs = this._olderFromMs;
     this.loadOlder();
   },

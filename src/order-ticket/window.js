@@ -9,19 +9,25 @@
 // forms in ticket-entry.js; the Modify editors in ticket-modify.js; the plan-store mirror
 // (Project/Bracket) in ticket-plan-sync.js; the quick-action button bar in buttons.js.
 import { platform } from '../../data_engine/index.js';
-import '../perf/sampler.js';   // publish this window's live perf sample (Performance Monitor addon reads it)
+import '../perf/sampler.js'; // publish this window's live perf sample (Performance Monitor addon reads it)
 import { loadSettings } from '../settings/settings.js';
 import { loadThemes } from '../settings/theme.js';
 import { loadAccounts } from '../connect/accounts.js';
 import { buildButtonBar } from './buttons.js';
-import { buildVisibilityFrame } from './visibility-frame.js';   // universal VISIBILITY / HIDE ON ENTRY frame (all tabs, like the button bar)
-import { isProjecting, setLevels } from '../chart/order-view/plan-store.js';   // a tab click while projecting writes plan.orderType
+import { buildVisibilityFrame } from './visibility-frame.js'; // universal VISIBILITY / HIDE ON ENTRY frame (all tabs, like the button bar)
+import { isProjecting, setLevels } from '../chart/order-view/plan-store.js'; // a tab click while projecting writes plan.orderType
 import { state, getCtx, setRenderer } from './ticket-state.js';
-import { populateAccounts, refreshAccounts, buildAccountSymbolRow, buildPositionTable, buildOrderTable } from './ticket-top.js';
+import {
+  populateAccounts,
+  refreshAccounts,
+  buildAccountSymbolRow,
+  buildPositionTable,
+  buildOrderTable,
+} from './ticket-top.js';
 import { buildMarketForm, buildMarketActions, buildLimitStopForm, buildLimitStopActions } from './ticket-entry.js';
 import { buildModifyEditor, buildOrderModifyEditor } from './ticket-modify.js';
 import { syncTab } from './ticket-plan-sync.js';
-import { t, loadVocab } from '../i18n/i18n.js';   // this standalone window has its OWN module state -> must load the active vocab pack itself
+import { t, loadVocab } from '../i18n/i18n.js'; // this standalone window has its OWN module state -> must load the active vocab pack itself
 
 // Skin this window with the user's LIVE chosen theme (settings/themes), exactly like every other window:
 // loadThemes() writes the selected palette as CSS variables on documentElement AND subscribes to the cross-window
@@ -29,32 +35,63 @@ import { t, loadVocab } from '../i18n/i18n.js';   // this standalone window has 
 // pre-load bootstrap (same defaults index.html uses) until this resolves -- never a hardcoded palette.
 // load prefs, theme, the active vocabulary pack, and accounts; then re-render so the first synchronous paint
 // (line-142 render()) is repainted with the resolved vocab (t() falls back to English until loadVocab settles).
-(async () => { try { await loadSettings(); await loadThemes(); await loadVocab(); await loadAccounts(); if (state.accountSelEl) populateAccounts(state.accountSelEl); render(); } catch (_) {} })();
+(async () => {
+  try {
+    await loadSettings();
+    await loadThemes();
+    await loadVocab();
+    await loadAccounts();
+    if (state.accountSelEl) populateAccounts(state.accountSelEl);
+    render();
+  } catch (_) {}
+})();
 
 /** @type {[string, string][]} */
-const TABS = [['market', 'Market'], ['limit', 'Limit'], ['stop', 'Stop'], ['modify', 'Modify']];
+const TABS = [
+  ['market', 'Market'],
+  ['limit', 'Limit'],
+  ['stop', 'Stop'],
+  ['modify', 'Modify'],
+];
 
-const PIN_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M8 3h8l-1 5 2 3H7l2-3-1-5z"/></svg>';
+const PIN_SVG =
+  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M8 3h8l-1 5 2 3H7l2-3-1-5z"/></svg>';
 
 const root = /** @type {HTMLElement} */ (document.getElementById('order-root'));
 
 // Custom frameless title bar mirroring the main app: draggable bar + always-on-top pin, minimize, maximize, close.
 function buildTitleBar() {
   const d = /** @type {any} */ (window).desktop;
-  const bar = document.createElement('div'); bar.className = 'ot-titlebar';
-  const title = document.createElement('div'); title.className = 'ot-title'; title.textContent = t('Order');
-  const spacer = document.createElement('div'); spacer.className = 'ot-spacer';
-  const ctrls = document.createElement('div'); ctrls.className = 'ot-ctrls';
+  const bar = document.createElement('div');
+  bar.className = 'ot-titlebar';
+  const title = document.createElement('div');
+  title.className = 'ot-title';
+  title.textContent = t('Order');
+  const spacer = document.createElement('div');
+  spacer.className = 'ot-spacer';
+  const ctrls = document.createElement('div');
+  ctrls.className = 'ot-ctrls';
   /** @param {string} cls @param {string} glyph @param {string} tip @param {(this: HTMLButtonElement) => void} fn */
-  const mk = (cls, glyph, tip, fn) => { const b = document.createElement('button'); b.className = 'ot-btn ' + cls; if (glyph) b.textContent = glyph; b.title = tip; b.onclick = /** @type {any} */ (fn); return b; };
+  const mk = (cls, glyph, tip, fn) => {
+    const b = document.createElement('button');
+    b.className = 'ot-btn ' + cls;
+    if (glyph) b.textContent = glyph;
+    b.title = tip;
+    b.onclick = /** @type {any} */ (fn);
+    return b;
+  };
   if (d) {
     spacer.ondblclick = () => d.winMaximizeToggle && d.winMaximizeToggle();
     if (d.winAlwaysOnTopToggle) {
       const pinned = d.winIsAlwaysOnTop ? !!d.winIsAlwaysOnTop() : false;
       const pin = mk('ot-pin', '', pinned ? t('Unpin (always on top)') : t('Always on top'), function () {
-        const on = d.winAlwaysOnTopToggle(); this.classList.toggle('on', on); this.title = on ? t('Unpin (always on top)') : t('Always on top');
+        const on = d.winAlwaysOnTopToggle();
+        this.classList.toggle('on', on);
+        this.title = on ? t('Unpin (always on top)') : t('Always on top');
       });
-      pin.innerHTML = PIN_SVG; pin.classList.toggle('on', pinned); ctrls.appendChild(pin);
+      pin.innerHTML = PIN_SVG;
+      pin.classList.toggle('on', pinned);
+      ctrls.appendChild(pin);
     }
     ctrls.appendChild(mk('ot-min', '–', t('Minimize'), () => d.winMinimize && d.winMinimize()));
     ctrls.appendChild(mk('ot-max', '□', t('Maximize'), () => d.winMaximizeToggle && d.winMaximizeToggle()));
@@ -64,14 +101,25 @@ function buildTitleBar() {
   return bar;
 }
 
-const tabsEl = document.createElement('div'); tabsEl.className = 'ot-tabs';
-const bodyEl = document.createElement('div'); bodyEl.className = 'ot-body';
+const tabsEl = document.createElement('div');
+tabsEl.className = 'ot-tabs';
+const bodyEl = document.createElement('div');
+bodyEl.className = 'ot-body';
 root.append(buildTitleBar(), tabsEl, bodyEl);
 
 function renderBody() {
   bodyEl.innerHTML = '';
-  state.posTableEl = null; state.repaintTable = null;   // dropped from the DOM; the build fn re-sets them when a position/order is shown
-  state.mktInputs = null; state.lsInputs = null; state.lsSltpRows = null; state.recalcStake = null; state.recomputeDist = null; state.syncSideGate = null; state.refreshQuote = null; state.fire = null; state.syncModify = null;   // market-form + limit/stop-form inputs (Stake-preview + Dist + Buy/Sell-gate + quote-readout + trigger + Modify-sync hooks) are rebuilt below per tab
+  state.posTableEl = null;
+  state.repaintTable = null; // dropped from the DOM; the build fn re-sets them when a position/order is shown
+  state.mktInputs = null;
+  state.lsInputs = null;
+  state.lsSltpRows = null;
+  state.recalcStake = null;
+  state.recomputeDist = null;
+  state.syncSideGate = null;
+  state.refreshQuote = null;
+  state.fire = null;
+  state.syncModify = null; // market-form + limit/stop-form inputs (Stake-preview + Dist + Buy/Sell-gate + quote-readout + trigger + Modify-sync hooks) are rebuilt below per tab
   // the loaded position OR order as a headerless mini table, ABOVE the symbol -- always shown when one is loaded,
   // so the user sees what they're controlling on every tab
   if (state.context && state.context.kind === 'order') bodyEl.appendChild(buildOrderTable(state.context));
@@ -95,7 +143,10 @@ function renderBody() {
   }
   // PLACED state (entry tabs): gray the form (all but the .ot-mkt-actions bottom block, which holds New Order). The
   // actions block already rendered its placed variant (New Order in place of Buy/Sell).
-  bodyEl.classList.toggle('ot-placed', !!state.placed && (state.active === 'market' || state.active === 'limit' || state.active === 'stop'));
+  bodyEl.classList.toggle(
+    'ot-placed',
+    !!state.placed && (state.active === 'market' || state.active === 'limit' || state.active === 'stop'),
+  );
 }
 
 function render() {
@@ -106,36 +157,55 @@ function render() {
     tab.textContent = t(label);
     // a tab click while projecting also writes plan.orderType -- the tabs and the pill's type cell are two
     // views of the planned entry's type (modify is a different context and stays out of it)
-    tab.onclick = () => { if (state.active !== id) { state.active = id; render(); const c = getCtx(); if ((id === 'market' || id === 'limit' || id === 'stop') && isProjecting(c.broker, c.symbol)) setLevels(c.broker, c.symbol, { orderType: id }); } };
+    tab.onclick = () => {
+      if (state.active !== id) {
+        state.active = id;
+        render();
+        const c = getCtx();
+        if ((id === 'market' || id === 'limit' || id === 'stop') && isProjecting(c.broker, c.symbol))
+          setLevels(c.broker, c.symbol, { orderType: id });
+      }
+    };
     tabsEl.appendChild(tab);
   }
   renderBody();
-  if (state.syncVis) state.syncVis();   // re-target the universal visibility frame to the current tab's ctx (symbol/broker)
+  if (state.syncVis) state.syncVis(); // re-target the universal visibility frame to the current tab's ctx (symbol/broker)
 }
-setRenderer(render);   // plan-sync's tab mirror re-renders through the state slot
+setRenderer(render); // plan-sync's tab mirror re-renders through the state slot
 
 // Open/refocus payload from main: {tab, position}. Double-clicking a position row asks for the Modify tab.
 // Fired on first load and on every re-open.
 const desk = /** @type {any} */ (window).desktop;
 if (desk && desk.onOrderTicketOpen) {
-  desk.onOrderTicketOpen(/** @param {any} opts */ (opts) => {
-    if (!opts) return;
-    state.placed = false; state.placedMsg = '';   // a fresh open/re-focus starts armed, never in a stale placed state
-    if (opts.position) {
-      state.context = opts.position;
-      if (state.context.symbol) { state.symbolValue = state.context.symbol; state.symbolBroker = state.context.broker || ''; }   // inherit the position's symbol
-    } else if (opts.order) {
-      state.context = { ...opts.order, kind: 'order' };   // a clicked resting stop/limit order -> Modify edits its Volume + Price
-      if (state.context.symbol) { state.symbolValue = state.context.symbol; state.symbolBroker = state.context.broker || ''; }
-    } else if (opts.symbol || opts.broker) {
-      state.context = null;   // no loaded position -- e.g. opened from the chart toolbar with just broker + symbol
-      if (opts.symbol) state.symbolValue = opts.symbol;
-      state.symbolBroker = opts.broker || '';   // preselects the matching account (populateAccounts)
-    }
-    if (opts.tab && TABS.some(([id]) => id === opts.tab)) { state.active = opts.tab; }
-    render();
-    syncTab();   // opened/refocused onto a live projection -> reflect its planned type as the active tab
-  });
+  desk.onOrderTicketOpen(
+    /** @param {any} opts */ (opts) => {
+      if (!opts) return;
+      state.placed = false;
+      state.placedMsg = ''; // a fresh open/re-focus starts armed, never in a stale placed state
+      if (opts.position) {
+        state.context = opts.position;
+        if (state.context.symbol) {
+          state.symbolValue = state.context.symbol;
+          state.symbolBroker = state.context.broker || '';
+        } // inherit the position's symbol
+      } else if (opts.order) {
+        state.context = { ...opts.order, kind: 'order' }; // a clicked resting stop/limit order -> Modify edits its Volume + Price
+        if (state.context.symbol) {
+          state.symbolValue = state.context.symbol;
+          state.symbolBroker = state.context.broker || '';
+        }
+      } else if (opts.symbol || opts.broker) {
+        state.context = null; // no loaded position -- e.g. opened from the chart toolbar with just broker + symbol
+        if (opts.symbol) state.symbolValue = opts.symbol;
+        state.symbolBroker = opts.broker || ''; // preselects the matching account (populateAccounts)
+      }
+      if (opts.tab && TABS.some(([id]) => id === opts.tab)) {
+        state.active = opts.tab;
+      }
+      render();
+      syncTab(); // opened/refocused onto a live projection -> reflect its planned type as the active tab
+    },
+  );
   // Now that the listener is attached, PULL the open intent from main -- don't rely on main pushing at
   // did-finish-load (that races: on a fresh window the push can land before this listener exists, and is lost).
   if (desk.orderTicketReady) desk.orderTicketReady();
@@ -149,13 +219,16 @@ if (desk && desk.onOrderTicketOpen) {
 const footerBar = buildButtonBar(getCtx);
 footerBar.insertBefore(buildVisibilityFrame(getCtx), footerBar.firstChild);
 root.appendChild(footerBar);
-platform.accounts.subscribe(refreshAccounts);   // keep the Account dropdown in sync with connect/disconnect
+platform.accounts.subscribe(refreshAccounts); // keep the Account dropdown in sync with connect/disconnect
 
 // keep the mini table LIVE: repaint the loaded position OR order whenever the book changes (a partial close changes
 // qty, a resting order fills/cancels, etc.). Only touches the read-only table -- never the inputs the user is editing.
 // keep the mini table AND the Modify-tab editor fields live: the loaded order/position drives both, so a chart drag
 // (or any book change) that moves its price/SL/TP flows straight into the dialog (syncModify skips a field being edited).
-const refreshTable = () => { if (state.posTableEl && state.repaintTable) state.repaintTable(); if (state.syncModify) state.syncModify(); };
+const refreshTable = () => {
+  if (state.posTableEl && state.repaintTable) state.repaintTable();
+  if (state.syncModify) state.syncModify();
+};
 platform.positionLots.subscribe(refreshTable);
 platform.positions.subscribe(refreshTable);
 platform.orders.subscribe(refreshTable);

@@ -11,5 +11,13 @@
 const DAY = 86400000;
 
 /** @param {TfSpec} tf @returns {number} */
-export const barMs = (tf) => tf.unit === 'm' ? tf.n * 60000 : tf.unit === 'h' ? tf.n * 3600000
-                          : tf.unit === 'D' ? DAY : tf.unit === 'W' ? 7 * DAY : 30 * DAY;
+export const barMs = (tf) =>
+  tf.unit === 'm'
+    ? tf.n * 60000
+    : tf.unit === 'h'
+      ? tf.n * 3600000
+      : tf.unit === 'D'
+        ? DAY
+        : tf.unit === 'W'
+          ? 7 * DAY
+          : 30 * DAY;

@@ -9,8 +9,9 @@ export const $ = (id) => document.getElementById(id);
 // mirror was removed too: the Console IS the log now.
 /** @param {string} msg @param {boolean} [isErr] */
 export function log(msg, isErr) {
-  if (isErr) console.error('[app]', msg); else console.log('[app]', msg);
-  platform.console.post({ level: isErr ? 'error' : 'info', cat: 'journal', src: 'app', msg });   // Console (Journal)
+  if (isErr) console.error('[app]', msg);
+  else console.log('[app]', msg);
+  platform.console.post({ level: isErr ? 'error' : 'info', cat: 'journal', src: 'app', msg }); // Console (Journal)
 }
 
 // (setConn moved to data_engine/status.js -- adapters nudge connection state through the ENGINE, not the app.)

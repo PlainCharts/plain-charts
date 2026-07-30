@@ -21,17 +21,17 @@
 
 /** The app's cross-window channel names. */
 export const IPC = {
-  ORDER_PLAN: 'order-plan',            // surfaces -> chart overlays: PLAN drawing requests (gray projection etc.), keyed by broker+symbol; pure UI, never touches the book
+  ORDER_PLAN: 'order-plan', // surfaces -> chart overlays: PLAN drawing requests (gray projection etc.), keyed by broker+symbol; pure UI, never touches the book
   UI_BUS: 'ui-bus',
   DRAWING_CLIPBOARD: 'drawing-clipboard',
   ASSISTANT_CONFIRM: 'assistant-confirm',
-  ASSISTANT_RELOAD: 'assistant-reload',   // addon-host -> UI: reload a study file the assistant just wrote
-  ASSISTANT_CMD: 'assistant-cmd',         // addon-host -> UI: run a live workspace command (add study, set symbol/tf) + reply
-  ASSISTANT_INJECT: 'assistant-inject',   // chart window -> AI Workspace: inject context text into its terminal prompt
-  ALERT_BUS: 'alert-bus',                 // surfaces -> alert-host: semantic alert COMMANDS + acks (the Alert engine)
-  ALERT_STORE: 'alert-store',             // alert-host -> windows: authoritative alert-rule state replication (read-only mirrors)
-  ALERT_FIRED: 'alert-fired',             // alert-host -> windows: an alert fired; visible windows show an in-app toast
-  ALERT_LOG: 'alert-log',                 // alert-host -> windows: the persistent fire LOG (the mailbox) -- an ordered capped ring, read-only mirrors (push/clear/reset)
+  ASSISTANT_RELOAD: 'assistant-reload', // addon-host -> UI: reload a study file the assistant just wrote
+  ASSISTANT_CMD: 'assistant-cmd', // addon-host -> UI: run a live workspace command (add study, set symbol/tf) + reply
+  ASSISTANT_INJECT: 'assistant-inject', // chart window -> AI Workspace: inject context text into its terminal prompt
+  ALERT_BUS: 'alert-bus', // surfaces -> alert-host: semantic alert COMMANDS + acks (the Alert engine)
+  ALERT_STORE: 'alert-store', // alert-host -> windows: authoritative alert-rule state replication (read-only mirrors)
+  ALERT_FIRED: 'alert-fired', // alert-host -> windows: an alert fired; visible windows show an in-app toast
+  ALERT_LOG: 'alert-log', // alert-host -> windows: the persistent fire LOG (the mailbox) -- an ordered capped ring, read-only mirrors (push/clear/reset)
 };
 
 // ---------------------------------------------------------------------------------------------------

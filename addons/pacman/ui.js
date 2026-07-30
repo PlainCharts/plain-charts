@@ -3,7 +3,12 @@
 // DOM-only — no Pacman state lives here.
 
 /** @param {string} tag @param {string|null} [cls] @param {string|null} [txt] @returns {HTMLElement} */
-export const el = (tag, cls, txt) => { const d = document.createElement(tag); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
+export const el = (tag, cls, txt) => {
+  const d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (txt != null) d.textContent = txt;
+  return d;
+};
 
 // Drag `box` by `handle` (the header). On first grab the box switches from the overlay's flex-centering to
 // fixed left/top at its current spot, then follows the cursor. Clicks on inputs/buttons don't start a drag.
@@ -13,18 +18,30 @@ export function makeDraggable(box, handle) {
   handle.addEventListener('mousedown', (/** @type {MouseEvent} */ e) => {
     if (/** @type {HTMLElement} */ (e.target).closest('input,button,.lib-x')) return;
     const r = box.getBoundingClientRect();
-    box.style.position = 'fixed'; box.style.margin = '0'; box.style.left = r.left + 'px'; box.style.top = r.top + 'px';
-    const dx = e.clientX - r.left, dy = e.clientY - r.top;
-    const move = (/** @type {MouseEvent} */ ev) => { box.style.left = (ev.clientX - dx) + 'px'; box.style.top = (ev.clientY - dy) + 'px'; };
-    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    box.style.position = 'fixed';
+    box.style.margin = '0';
+    box.style.left = r.left + 'px';
+    box.style.top = r.top + 'px';
+    const dx = e.clientX - r.left,
+      dy = e.clientY - r.top;
+    const move = (/** @type {MouseEvent} */ ev) => {
+      box.style.left = ev.clientX - dx + 'px';
+      box.style.top = ev.clientY - dy + 'px';
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
     e.preventDefault();
   });
 }
 
 let CSS_DONE = false;
 export function injectCss() {
-  if (CSS_DONE) return; CSS_DONE = true;
+  if (CSS_DONE) return;
+  CSS_DONE = true;
   const s = document.createElement('style');
   s.textContent = `
   .pac-dialog{width:640px;max-width:92vw;height:560px;max-height:88vh;display:flex;flex-direction:column;padding:0;}

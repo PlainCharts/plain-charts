@@ -21,14 +21,21 @@ export const timeAlertLine = (a) => {
   return t('Time alert');
 };
 // strip the exchange/broker prefix from a symbol for display ("BROKER:EURUSD" -> "EURUSD"); leave bare symbols as-is.
-export const bareSymbol = (/** @type {any} */ s) => { const str = String(s || ''); const i = str.indexOf(':'); return i >= 0 ? str.slice(i + 1) : str; };
+export const bareSymbol = (/** @type {any} */ s) => {
+  const str = String(s || '');
+  const i = str.indexOf(':');
+  return i >= 0 ? str.slice(i + 1) : str;
+};
 // the ", TF" suffix -- shown ONLY when the condition depends on a timeframe (the Moving family), hidden for
 // pure price-level conditions (cross/gt/lt).
-export const tfSuffix = (/** @type {any} */ a) => (usesTimeframe(a) && a && a.tf) ? ', ' + a.tf : '';
+export const tfSuffix = (/** @type {any} */ a) => (usesTimeframe(a) && a && a.tf ? ', ' + a.tf : '');
 /** the descriptor shown on a row's sub-line: a price alert's "SYMBOL[, TF]", or a time alert's schedule. @param {any} a */
-export const descOf = (a) => (sourceOf(a) === 'time') ? timeAlertLine(a)
-  : (applyOf(a).kind === 'watchlist') ? (/** @type {any} */ (applyOf(a)).name + tfSuffix(a))
-  : (bareSymbol(a && a.symbol) + tfSuffix(a));
+export const descOf = (a) =>
+  sourceOf(a) === 'time'
+    ? timeAlertLine(a)
+    : applyOf(a).kind === 'watchlist'
+      ? /** @type {any} */ (applyOf(a)).name + tfSuffix(a)
+      : bareSymbol(a && a.symbol) + tfSuffix(a);
 /** the row's effective name (same text as the title): explicit name, else the descriptor. @param {any} a */
 export const nameOf = (a) => (a && a.name && String(a.name)) || descOf(a);
 // the hover card's Broker/Symbol line: "BROKER:EURUSD" (broker prefix + bare instrument). Unlike the row, the

@@ -32,11 +32,17 @@ const TABS = ['Style', 'Text', 'Coordinates', 'Visibility'];
 /** @type {HTMLElement | null} */
 let overlay = null;
 /** @type {DialogState | null} */
-let state = null;   // { engine, id, snapshot, tab }
+let state = null; // { engine, id, snapshot, tab }
 
 export function closeSettingsDialog() {
-  closeColorPicker(); closeLineStyleMenu(); closeToolTemplateMenu(); closeMultiMenu();
-  if (overlay) { overlay.remove(); overlay = null; }
+  closeColorPicker();
+  closeLineStyleMenu();
+  closeToolTemplateMenu();
+  closeMultiMenu();
+  if (overlay) {
+    overlay.remove();
+    overlay = null;
+  }
   state = null;
 }
 
@@ -44,11 +50,19 @@ export function closeSettingsDialog() {
  * @param {string} tag @param {string | null} [cls] @param {string} [txt]
  * @returns {HTMLElement}
  */
-const el = (tag, cls, txt) => { const d = document.createElement(tag); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
+const el = (tag, cls, txt) => {
+  const d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (txt != null) d.textContent = txt;
+  return d;
+};
 
 // repaint after an edit — broadcasts so a synced drawing updates on every pane,
 // a local one only on its own pane.
-function preview() { if (!state) return; state.engine.liveUpdate(state.engine.get(state.id)); }
+function preview() {
+  if (!state) return;
+  state.engine.liveUpdate(state.engine.get(state.id));
+}
 
 /**
  * @param {any} engine   the pane's DrawingEngine (opaque handle; not typed here)
@@ -64,21 +78,54 @@ export function openSettingsDialog(engine, id, startTab) {
   // open on a requested tab (e.g. double-click the text → 'Text'), but only if it's
   // valid and — for Text — the tool actually supports it.
   let tab = TABS.includes(/** @type {string} */ (startTab)) ? /** @type {string} */ (startTab) : 'Style';
-  if (tab === 'Text' && (!(tool.settings && tool.settings.text) || (tool.textEnabled && !tool.textEnabled(d)))) tab = 'Style';
-  state = { engine, id, tab, snapshot: JSON.parse(JSON.stringify({ points: d.points, style: d.style, hidden: d.hidden, text: d.text, textStyle: d.textStyle, visibility: d.visibility })) };
+  if (tab === 'Text' && (!(tool.settings && tool.settings.text) || (tool.textEnabled && !tool.textEnabled(d))))
+    tab = 'Style';
+  state = {
+    engine,
+    id,
+    tab,
+    snapshot: JSON.parse(
+      JSON.stringify({
+        points: d.points,
+        style: d.style,
+        hidden: d.hidden,
+        text: d.text,
+        textStyle: d.textStyle,
+        visibility: d.visibility,
+      }),
+    ),
+  };
 
-  overlay = el('div', 'modal open'); overlay.style.zIndex = '70'; overlay.style.background = 'transparent';
-  overlay.onclick = (e) => { if (e.target === overlay) ok(); };   // click away onto the canvas → save (not cancel)
+  overlay = el('div', 'modal open');
+  overlay.style.zIndex = '70';
+  overlay.style.background = 'transparent';
+  overlay.onclick = (e) => {
+    if (e.target === overlay) ok();
+  }; // click away onto the canvas → save (not cancel)
   const dlg = el('div', 'dialog set-dlg');
 
   const head = el('div', 'set-head');
-  head.append(el('span', 'set-title', tool.name), (() => { const x = el('span', 'lib-x', '✕'); x.onclick = cancel; x.onpointerdown = (e) => e.stopPropagation(); return x; })());   // the ✕ is not a drag handle
+  head.append(
+    el('span', 'set-title', tool.name),
+    (() => {
+      const x = el('span', 'lib-x', '✕');
+      x.onclick = cancel;
+      x.onpointerdown = (e) => e.stopPropagation();
+      return x;
+    })(),
+  ); // the ✕ is not a drag handle
   dlg.appendChild(head);
 
   const tabbar = el('div', 'set-tabs');
   TABS.forEach((t) => {
-    if (t === 'Text' && tool.textEnabled && !tool.textEnabled(d)) return;   // conventional measure: no text tab
-    const b = el('div', 'set-tab' + (t === /** @type {DialogState} */ (state).tab ? ' active' : ''), t); b.onclick = () => { /** @type {DialogState} */ (state).tab = t; renderTabs(); renderBody(); }; tabbar.appendChild(b);
+    if (t === 'Text' && tool.textEnabled && !tool.textEnabled(d)) return; // conventional measure: no text tab
+    const b = el('div', 'set-tab' + (t === /** @type {DialogState} */ (state).tab ? ' active' : ''), t);
+    b.onclick = () => {
+      /** @type {DialogState} */ (state).tab = t;
+      renderTabs();
+      renderBody();
+    };
+    tabbar.appendChild(b);
   });
   dlg.appendChild(tabbar);
 
@@ -88,12 +135,24 @@ export function openSettingsDialog(engine, id, startTab) {
   const foot = el('div', 'dlg-actions');
   const tplBtn = el('button', 'set-tpl-btn', 'Template ▾');
   tplBtn.onclick = () => {
-    if (isToolTemplateMenuOpen()) { closeToolTemplateMenu(); return; }
+    if (isToolTemplateMenuOpen()) {
+      closeToolTemplateMenu();
+      return;
+    }
     const st = /** @type {DialogState} */ (state);
-    openToolTemplateMenu(tplBtn, { engine: st.engine, id: st.id, afterApply: () => { preview(); renderBody(); } });
+    openToolTemplateMenu(tplBtn, {
+      engine: st.engine,
+      id: st.id,
+      afterApply: () => {
+        preview();
+        renderBody();
+      },
+    });
   };
-  const cancelBtn = el('button', null, 'Cancel'); cancelBtn.onclick = cancel;
-  const okBtn = el('button', 'primary', 'Ok'); okBtn.onclick = ok;
+  const cancelBtn = el('button', null, 'Cancel');
+  cancelBtn.onclick = cancel;
+  const okBtn = el('button', 'primary', 'Ok');
+  okBtn.onclick = ok;
   foot.append(tplBtn, cancelBtn, okBtn);
   dlg.appendChild(foot);
 
@@ -101,30 +160,50 @@ export function openSettingsDialog(engine, id, startTab) {
   document.body.appendChild(overlay);
 
   // float + drag by the header (so it doesn't sit on top of the drawing) -- the shared makeDraggable
-  dlg.style.position = 'fixed'; dlg.style.margin = '0';
+  dlg.style.position = 'fixed';
+  dlg.style.margin = '0';
   dlg.style.left = Math.max(8, (window.innerWidth - dlg.offsetWidth) / 2) + 'px';
   dlg.style.top = Math.max(8, (window.innerHeight - dlg.offsetHeight) / 3) + 'px';
   makeDraggable(dlg, head);
 
-  const renderTabs = () => tabbar.querySelectorAll('.set-tab').forEach((b) => b.classList.toggle('active', b.textContent === /** @type {DialogState} */ (state).tab));
+  const renderTabs = () =>
+    tabbar
+      .querySelectorAll('.set-tab')
+      .forEach((b) => b.classList.toggle('active', b.textContent === /** @type {DialogState} */ (state).tab));
   const renderBody = () => {
     body.innerHTML = '';
     const st = /** @type {DialogState} */ (state);
     if (st.tab === 'Style') renderStyle(body);
     else if (st.tab === 'Text') renderTextTab(body, /** @type {Drawing} */ (st.engine.get(st.id)), preview);
-    else if (st.tab === 'Coordinates') renderCoordsTab(body, /** @type {Drawing} */ (st.engine.get(st.id)), st.engine.pane, preview);
+    else if (st.tab === 'Coordinates')
+      renderCoordsTab(body, /** @type {Drawing} */ (st.engine.get(st.id)), st.engine.pane, preview);
     else if (st.tab === 'Visibility') renderVisibility(body);
     else body.appendChild(el('div', 'set-soon', st.tab + ' options — coming soon.'));
   };
   renderBody();
   // focus the text box when opened straight on the Text tab (add/edit text flow)
-  if (/** @type {DialogState} */ (state).tab === 'Text') { const ta = /** @type {HTMLTextAreaElement | null} */ (body.querySelector('.set-text-area')); if (ta) { ta.focus(); ta.select(); } }
+  if (/** @type {DialogState} */ (state).tab === 'Text') {
+    const ta = /** @type {HTMLTextAreaElement | null} */ (body.querySelector('.set-text-area'));
+    if (ta) {
+      ta.focus();
+      ta.select();
+    }
+  }
 }
 
 function cancel() {
   if (state) {
     const d = state.engine.get(state.id);
-    if (d) { d.points = state.snapshot.points; d.style = state.snapshot.style; d.hidden = state.snapshot.hidden; d.text = state.snapshot.text; d.textStyle = state.snapshot.textStyle; d.visibility = state.snapshot.visibility; state.engine.persist(); preview(); }
+    if (d) {
+      d.points = state.snapshot.points;
+      d.style = state.snapshot.style;
+      d.hidden = state.snapshot.hidden;
+      d.text = state.snapshot.text;
+      d.textStyle = state.snapshot.textStyle;
+      d.visibility = state.snapshot.visibility;
+      state.engine.persist();
+      preview();
+    }
   }
   closeSettingsDialog();
 }
@@ -144,8 +223,12 @@ function renderStyle(body) {
   const st = /** @type {DialogState} */ (state);
   const d = /** @type {Drawing} */ (st.engine.get(st.id));
   const tool = /** @type {any} */ (getTool(d.tool));
-  const rows = (tool.settings && tool.settings.style)
-    || (tool.styleSchema || []).map((/** @type {any} */ f) => ({ name: f.name, controls: [{ key: f.key, type: f.type, options: f.options, min: f.min, max: f.max }] }));
+  const rows =
+    (tool.settings && tool.settings.style) ||
+    (tool.styleSchema || []).map((/** @type {any} */ f) => ({
+      name: f.name,
+      controls: [{ key: f.key, type: f.type, options: f.options, min: f.min, max: f.max }],
+    }));
   rows.forEach((/** @type {any} */ row) => body.appendChild(buildRow(d, row, preview)));
   if (!rows.length) body.appendChild(el('div', 'set-soon', 'No style options.'));
 }
@@ -162,5 +245,7 @@ function renderVisibility(body) {
   const st = /** @type {DialogState} */ (state);
   const d = /** @type {Drawing} */ (st.engine.get(st.id));
   if (!d.visibility) d.visibility = {};
-  buildVisibilityRows(d.visibility, preview, 'Show this drawing only on the selected timeframes.').forEach((/** @type {HTMLElement} */ e) => body.appendChild(e));
+  buildVisibilityRows(d.visibility, preview, 'Show this drawing only on the selected timeframes.').forEach(
+    (/** @type {HTMLElement} */ e) => body.appendChild(e),
+  );
 }

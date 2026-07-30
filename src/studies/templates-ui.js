@@ -16,12 +16,20 @@ export function initStudyTemplates() {
   if (!btn || !menu) return;
   const close = () => menu.classList.remove('open');
   /** @param {string} [cls] @param {string} [txt] @returns {HTMLDivElement} */
-  const el = (cls, txt) => { const d = document.createElement('div'); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
+  const el = (cls, txt) => {
+    const d = document.createElement('div');
+    if (cls) d.className = cls;
+    if (txt != null) d.textContent = txt;
+    return d;
+  };
 
   /** @param {{ id: string, [k: string]: any }} s @returns {string} */
-  const nameOf = (s) => { const st = getStudy(s.id); return st ? st.name : s.id; };
+  const nameOf = (s) => {
+    const st = getStudy(s.id);
+    return st ? st.name : s.id;
+  };
   /** @param {import('./templates.js').StudyTemplate} tpl @returns {string} */
-  const subtitle = (tpl) => ((tpl.studies || []).map(nameOf).join(', ') || t('No indicators'));
+  const subtitle = (tpl) => (tpl.studies || []).map(nameOf).join(', ') || t('No indicators');
 
   const render = () => {
     menu.innerHTML = '';
@@ -29,15 +37,24 @@ export function initStudyTemplates() {
 
     // Save the current chart's indicators as a template
     const saveRow = el('study-row');
-    saveRow.append(el('stpl-lico', '⬆'), (() => { const s = el('lbl', t('Save indicator template…')); return s; })());
+    saveRow.append(
+      el('stpl-lico', '⬆'),
+      (() => {
+        const s = el('lbl', t('Save indicator template…'));
+        return s;
+      })(),
+    );
     saveRow.onclick = async () => {
       close();
       if (!pane) return;
       const studies = pane.studies.serialize();
       const name = await namePrompt({
-        title: t('Save indicator template'), label: t('Template name'), placeholder: t('Template name'),
+        title: t('Save indicator template'),
+        label: t('Template name'),
+        placeholder: t('Template name'),
         existing: listStudyTemplates().map((tpl) => tpl.name),
-        replaceMessage: (n) => t("Indicator template '{n}' already exists. Do you really want to replace it?").replace('{n}', n),
+        replaceMessage: (n) =>
+          t("Indicator template '{n}' already exists. Do you really want to replace it?").replace('{n}', n),
       });
       if (name) saveStudyTemplate(name, studies);
     };
@@ -51,10 +68,21 @@ export function initStudyTemplates() {
         const row = el('stpl-row');
         const col = el('stpl-col');
         col.append(el('stpl-name', tpl.name), el('stpl-sub', subtitle(tpl)));
-        const del = el('stpl-del', '✕'); del.title = t('Delete template');
-        del.onclick = (e) => { e.stopPropagation(); deleteStudyTemplate(tpl.name); render(); };
+        const del = el('stpl-del', '✕');
+        del.title = t('Delete template');
+        del.onclick = (e) => {
+          e.stopPropagation();
+          deleteStudyTemplate(tpl.name);
+          render();
+        };
         row.append(col, del);
-        row.onclick = () => { close(); if (pane) { pane.studies.applyTemplate(tpl.studies); touchStudyTemplate(tpl.name); } };
+        row.onclick = () => {
+          close();
+          if (pane) {
+            pane.studies.applyTemplate(tpl.studies);
+            touchStudyTemplate(tpl.name);
+          }
+        };
         menu.appendChild(row);
       });
     }
@@ -64,9 +92,15 @@ export function initStudyTemplates() {
     render();
     const r = btn.getBoundingClientRect();
     menu.style.left = Math.min(r.left, window.innerWidth - 360) + 'px';
-    menu.style.top = (r.bottom + 4) + 'px';
+    menu.style.top = r.bottom + 4 + 'px';
     menu.classList.add('open');
   };
-  btn.onclick = (e) => { e.stopPropagation(); menu.classList.contains('open') ? close() : open(); };
-  document.addEventListener('click', (e) => { const tgt = /** @type {Node} */ (e.target); if (!menu.contains(tgt) && e.target !== btn && !btn.contains(tgt)) close(); });
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    menu.classList.contains('open') ? close() : open();
+  };
+  document.addEventListener('click', (e) => {
+    const tgt = /** @type {Node} */ (e.target);
+    if (!menu.contains(tgt) && e.target !== btn && !btn.contains(tgt)) close();
+  });
 }

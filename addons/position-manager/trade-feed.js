@@ -17,19 +17,34 @@ export function createTradeFeed(ot) {
   /** @type {((e: any) => void)|null} */ let tCb = null;
 
   const wire = () => {
-    if (tApi && tCb) { try { tApi.unsubscribeTrade(tCb); } catch (_) {} }
-    tApi = ad(); tCb = null;
-    if (!tApi || !tApi.subscribeTrade) { emit('reseed'); return; }
+    if (tApi && tCb) {
+      try {
+        tApi.unsubscribeTrade(tCb);
+      } catch (_) {}
+    }
+    tApi = ad();
+    tCb = null;
+    if (!tApi || !tApi.subscribeTrade) {
+      emit('reseed');
+      return;
+    }
     tCb = (/** @type {any} */ e) => {
       if (e.kind === 'position') emit('position', e.position);
-      else if (e.kind === 'order') { if (e.order.symbol === cfg.symbol) emit('order', e.order); }
-      else if (e.kind === 'fill') emit('fill', e.fill);
+      else if (e.kind === 'order') {
+        if (e.order.symbol === cfg.symbol) emit('order', e.order);
+      } else if (e.kind === 'fill') emit('fill', e.fill);
     };
     tApi.subscribeTrade(tCb);
-    emit('reseed');   // fresh context (the book is already current -- the app seeds it) -> resync buttons/UI
+    emit('reseed'); // fresh context (the book is already current -- the app seeds it) -> resync buttons/UI
   };
 
-  const teardown = () => { if (tApi && tCb) { try { tApi.unsubscribeTrade(tCb); } catch (_) {} } };
+  const teardown = () => {
+    if (tApi && tCb) {
+      try {
+        tApi.unsubscribeTrade(tCb);
+      } catch (_) {}
+    }
+  };
 
   return { wire, teardown };
 }

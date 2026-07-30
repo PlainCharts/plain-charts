@@ -6,6 +6,6 @@
 // double-clicking the price scale, as usual.
 Tools.register({
   id: 'zoom',
-  glyph: '⌕',   // magnifier glyph
+  glyph: '⌕', // magnifier glyph
   kind: 'zoom',
 });

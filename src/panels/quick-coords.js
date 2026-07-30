@@ -16,13 +16,22 @@ import { bus } from '../bus.js';
 import { getTool } from '../tools/registry.js';
 import { strokeSwatch, textSwatch, colorSwatch, closeColorPicker } from '../ui/colorpicker.js';
 import { saveToolDefaults } from '../tools/tool-defaults.js';
-import { segTime, segDate, partsOf, timeFromParts, fmtDateField, parseDateField } from '../tools/engine/coord-inputs.js';
+import {
+  segTime,
+  segDate,
+  partsOf,
+  timeFromParts,
+  fmtDateField,
+  parseDateField,
+} from '../tools/engine/coord-inputs.js';
 import { openCreateAlertDialog } from '../alerts/create-alert-dialog.js';
 
 // small calendar glyph (plain SVG, currentColor so it follows the theme)
-const SVG_CAL = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 2v2M11 2v2"/></svg>';
+const SVG_CAL =
+  '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6h12M5 2v2M11 2v2"/></svg>';
 // small bell glyph (plain SVG, currentColor so it follows the theme) -- the "create alert" quick button
-const SVG_BELL = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2a4 4 0 0 0-4 4c0 3-1.2 4.2-1.5 4.8a.4.4 0 0 0 .35.6h10.3a.4.4 0 0 0 .35-.6C13.2 10.2 12 9 12 6a4 4 0 0 0-4-4Z"/><path d="M6.6 13.4a1.5 1.5 0 0 0 2.8 0"/></svg>';
+const SVG_BELL =
+  '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2a4 4 0 0 0-4 4c0 3-1.2 4.2-1.5 4.8a.4.4 0 0 0 .35.6h10.3a.4.4 0 0 0 .35-.6C13.2 10.2 12 9 12 6a4 4 0 0 0-4-4Z"/><path d="M6.6 13.4a1.5 1.5 0 0 0 2.8 0"/></svg>';
 
 // The engine (`pane.drawings`), its panes, drawings and tool descriptors are the vendored
 // kapelka boundary — no TS types here, so they are treated as `any`.
@@ -47,15 +56,15 @@ const SVG_BELL = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" st
 // Assigned once (non-null) in mountQuickCoords before any other function runs; typed non-null so
 // the many downstream .style/.append uses don't each need a guard.
 /** @type {HTMLElement} */
-let host = /** @type {any} */ (null);   // the bottom-bar container element
+let host = /** @type {any} */ (null); // the bottom-bar container element
 /** @type {QcState|null} */
-let cur = null;    // { pane, eng, id, kind, fields } for the currently-shown drawing
+let cur = null; // { pane, eng, id, kind, fields } for the currently-shown drawing
 
 /** @param {HTMLElement} container */
 export function mountQuickCoords(container) {
   host = container;
   host.style.display = 'none';
-  bus.on('objects:changed', onObjects);      // selection add/remove/clear
+  bus.on('objects:changed', onObjects); // selection add/remove/clear
   bus.on('drawings:committed', refreshValues); // after a drag, re-read the anchor
 }
 
@@ -69,24 +78,38 @@ function onObjects(detail) {
   // Multi-selection: show the shared stroke/text editor for the drawings that have those properties.
   const sel = eng.selectedIds();
   if (sel.length >= 2) {
-    const editable = sel.map((/** @type {string} */ i) => eng.get(i)).filter(Boolean)
+    const editable = sel
+      .map((/** @type {string} */ i) => eng.get(i))
+      .filter(Boolean)
       .filter((/** @type {Drawing} */ d) => hasStrokeSwatch(d, getTool(d.tool)) || showsText(d, getTool(d.tool)));
     if (editable.length >= 2) {
-      if (cur && cur.multi && cur.pane === pane && sameIds(/** @type {string[]} */ (cur.ids), editable.map((/** @type {Drawing} */ d) => d.id))) return;   // no churn on a re-emit of the same set
+      if (
+        cur &&
+        cur.multi &&
+        cur.pane === pane &&
+        sameIds(
+          /** @type {string[]} */ (cur.ids),
+          editable.map((/** @type {Drawing} */ d) => d.id),
+        )
+      )
+        return; // no churn on a re-emit of the same set
       buildMulti(pane, eng, editable);
       return;
     }
-    if (!cur || cur.pane === pane) hide();   // 2+ selected but nothing shared to edit
+    if (!cur || cur.pane === pane) hide(); // 2+ selected but nothing shared to edit
     return;
   }
   const id = sel.length === 1 ? eng.selectedId : null;
   const d = id ? eng.get(id) : null;
   const tool = d && getTool(d.tool);
   const kind = tool ? (tool.id === 'hline' ? 'hline' : tool.id === 'vline' ? 'vline' : null) : null;
-  const hasStroke = hasStrokeSwatch(d, tool);                    // any line-styled drawing (fib excluded)
-  const hasFill = !!(d && d.style && d.style.fill != null);      // a fillable drawing (e.g. rectangle)
+  const hasStroke = hasStrokeSwatch(d, tool); // any line-styled drawing (fib excluded)
+  const hasFill = !!(d && d.style && d.style.fill != null); // a fillable drawing (e.g. rectangle)
   if (d && (kind || hasStroke || hasFill || showsText(d, tool))) {
-    if (cur && cur.pane === pane && cur.id === id && cur.kind === kind) { refreshValues(); return; }
+    if (cur && cur.pane === pane && cur.id === id && cur.kind === kind) {
+      refreshValues();
+      return;
+    }
     build(pane, eng, id, d, kind);
   } else if (!cur || cur.pane === pane) {
     hide();
@@ -97,7 +120,20 @@ function onObjects(detail) {
 // where a label is a first-class use: the dedicated text tools (Text / Callout), the trend-line family
 // (Trend Line / Ray / Extended Line), the Arrow (delegates to the trend line), the Horizontal Ray, the
 // Rectangle, and the measuring ranges (Price / Date / Date & Price Range).
-const TEXT_TOOLS = new Set(['text', 'callout', 'trendline', 'ray', 'extendedline', 'arrow', 'hray', 'levelray', 'rect', 'priceRange', 'dateRange', 'priceTimeRange']);
+const TEXT_TOOLS = new Set([
+  'text',
+  'callout',
+  'trendline',
+  'ray',
+  'extendedline',
+  'arrow',
+  'hray',
+  'levelray',
+  'rect',
+  'priceRange',
+  'dateRange',
+  'priceTimeRange',
+]);
 /** @param {Drawing} d @param {Tool} tool */
 function showsText(d, tool) {
   if (!d || !tool || !(tool.settings && tool.settings.text)) return false;
@@ -115,7 +151,7 @@ function hasStrokeSwatch(d, tool) {
 
 /** @param {Pane} pane @param {Engine} eng @param {string} id @param {Drawing} d @param {('hline'|'vline'|null)} kind */
 function build(pane, eng, id, d, kind) {
-  closeColorPicker();   // a picker open on the previous selection's swatch must not outlive the rebuild
+  closeColorPicker(); // a picker open on the previous selection's swatch must not outlive the rebuild
   const pt = d.points[0];
   cur = { pane, eng, id, kind, fields: { pt } };
   host.innerHTML = '';
@@ -127,14 +163,29 @@ function build(pane, eng, id, d, kind) {
   if (kind === 'vline') {
     const style = d.style || (d.style = {});
     const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.className = 'bb-qc-axischk'; cb.title = 'Axis label';
+    cb.type = 'checkbox';
+    cb.className = 'bb-qc-axischk';
+    cb.title = 'Axis label';
     cb.checked = style.timeLabel !== false;
-    const lbl = document.createElement('span'); lbl.className = 'bb-qc-lbl'; lbl.textContent = 'Axis label';
+    const lbl = document.createElement('span');
+    lbl.className = 'bb-qc-lbl';
+    lbl.textContent = 'Axis label';
     const txt = document.createElement('input');
-    txt.type = 'text'; txt.className = 'bb-qc-in bb-qc-axistext'; txt.style.width = '96px';
-    txt.placeholder = 'Date'; txt.value = style.labelText || ''; txt.disabled = !cb.checked;
-    cb.onchange = () => { style.timeLabel = cb.checked; txt.disabled = !cb.checked; commit(); };
-    txt.oninput = () => { style.labelText = txt.value; commit(); };
+    txt.type = 'text';
+    txt.className = 'bb-qc-in bb-qc-axistext';
+    txt.style.width = '96px';
+    txt.placeholder = 'Date';
+    txt.value = style.labelText || '';
+    txt.disabled = !cb.checked;
+    cb.onchange = () => {
+      style.timeLabel = cb.checked;
+      txt.disabled = !cb.checked;
+      commit();
+    };
+    txt.oninput = () => {
+      style.labelText = txt.value;
+      commit();
+    };
     host.append(cb, lbl, txt);
   }
 
@@ -143,46 +194,107 @@ function build(pane, eng, id, d, kind) {
   if (d.style && d.style.priceLabels != null) {
     const style = d.style;
     const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.className = 'bb-qc-axischk'; cb.title = 'Price label';
+    cb.type = 'checkbox';
+    cb.className = 'bb-qc-axischk';
+    cb.title = 'Price label';
     cb.checked = !!style.priceLabels;
-    const lbl = document.createElement('span'); lbl.className = 'bb-qc-lbl'; lbl.textContent = 'Label';
-    cb.onchange = () => { style.priceLabels = cb.checked; commit(); };
+    const lbl = document.createElement('span');
+    lbl.className = 'bb-qc-lbl';
+    lbl.textContent = 'Label';
+    cb.onchange = () => {
+      style.priceLabels = cb.checked;
+      commit();
+    };
     host.append(cb, lbl);
   }
 
   if (kind === 'hline') {
-    const lbl = document.createElement('span'); lbl.className = 'bb-qc-lbl'; lbl.textContent = 'Price';
+    const lbl = document.createElement('span');
+    lbl.className = 'bb-qc-lbl';
+    lbl.textContent = 'Price';
     const dec = pane.priceDecimals != null ? pane.priceDecimals : 2;
     const price = document.createElement('input');
-    price.type = 'number'; price.step = 'any'; price.className = 'bb-qc-in bb-qc-price';
+    price.type = 'number';
+    price.step = 'any';
+    price.className = 'bb-qc-in bb-qc-price';
     price.value = pt.price != null ? Number(pt.price).toFixed(dec) : '';
-    price.oninput = () => { const v = parseFloat(price.value); if (!Number.isNaN(v)) { pt.price = v; commit(); } };
+    price.oninput = () => {
+      const v = parseFloat(price.value);
+      if (!Number.isNaN(v)) {
+        pt.price = v;
+        commit();
+      }
+    };
     host.append(lbl, price);
-    cur.fields.price = price; cur.fields.dec = dec;
+    cur.fields.price = price;
+    cur.fields.dec = dec;
   } else if (kind === 'vline') {
-    const off = pane.tzOffset();   // this pane's display offset -- date/time read/write in its tz
-    const lbl = document.createElement('span'); lbl.className = 'bb-qc-lbl'; lbl.textContent = 'Time';
+    const off = pane.tzOffset(); // this pane's display offset -- date/time read/write in its tz
+    const lbl = document.createElement('span');
+    lbl.className = 'bb-qc-lbl';
+    lbl.textContent = 'Time';
     // segmented MM/DD/YY date (2-digit year) -- native type=date can't shorten the year -- PLUS a
     // calendar button that opens the native picker (a hidden type=date), so both are available.
     /** @param {{ y: number, mo: number, d: number }} nd */
-    const applyDate = (nd) => { const p = partsOf(pt.time, off); p.y = nd.y; p.mo = nd.mo; p.d = nd.d; p.s = 0; pt.time = timeFromParts(p, off); };
-    const dateWrap = document.createElement('span'); dateWrap.className = 'bb-qc-datewrap';
-    const dateW = segDate((nd) => { applyDate(nd); commit(); });
+    const applyDate = (nd) => {
+      const p = partsOf(pt.time, off);
+      p.y = nd.y;
+      p.mo = nd.mo;
+      p.d = nd.d;
+      p.s = 0;
+      pt.time = timeFromParts(p, off);
+    };
+    const dateWrap = document.createElement('span');
+    dateWrap.className = 'bb-qc-datewrap';
+    const dateW = segDate((nd) => {
+      applyDate(nd);
+      commit();
+    });
     dateW.set(partsOf(pt.time, off));
-    const picker = document.createElement('input'); picker.type = 'date'; picker.className = 'bb-qc-picker';
-    picker.onchange = () => { const nd = parseDateField(picker.value); if (!nd) return; applyDate(nd); dateW.set(partsOf(pt.time, off)); commit(); };
-    const cal = document.createElement('button'); cal.className = 'bb-qc-cal'; cal.title = 'Pick date'; cal.innerHTML = SVG_CAL;
-    cal.onclick = () => { picker.value = fmtDateField(partsOf(pt.time, off)); if (picker.showPicker) { try { picker.showPicker(); return; } catch (_) {} } picker.focus(); };
+    const picker = document.createElement('input');
+    picker.type = 'date';
+    picker.className = 'bb-qc-picker';
+    picker.onchange = () => {
+      const nd = parseDateField(picker.value);
+      if (!nd) return;
+      applyDate(nd);
+      dateW.set(partsOf(pt.time, off));
+      commit();
+    };
+    const cal = document.createElement('button');
+    cal.className = 'bb-qc-cal';
+    cal.title = 'Pick date';
+    cal.innerHTML = SVG_CAL;
+    cal.onclick = () => {
+      picker.value = fmtDateField(partsOf(pt.time, off));
+      if (picker.showPicker) {
+        try {
+          picker.showPicker();
+          return;
+        } catch (_) {}
+      }
+      picker.focus();
+    };
     dateWrap.append(dateW.el, cal, picker);
     const h24 = pane.settings && pane.settings.tsHours24 !== false;
     // HH:MM only on this at-a-glance view (seconds are rarely typed); any edit zeroes seconds.
-    const timeW = segTime(h24, (nt) => {
-      const p = partsOf(pt.time, off); p.h = nt.h; p.mi = nt.mi; p.s = 0; pt.time = timeFromParts(p, off);
-      dateW.set(partsOf(pt.time, off)); commit();
-    }, { seconds: false });
+    const timeW = segTime(
+      h24,
+      (nt) => {
+        const p = partsOf(pt.time, off);
+        p.h = nt.h;
+        p.mi = nt.mi;
+        p.s = 0;
+        pt.time = timeFromParts(p, off);
+        dateW.set(partsOf(pt.time, off));
+        commit();
+      },
+      { seconds: false },
+    );
     timeW.set(partsOf(pt.time, off));
     host.append(lbl, dateWrap, timeW.el);
-    cur.fields.dateW = dateW; cur.fields.timeW = timeW;
+    cur.fields.dateW = dateW;
+    cur.fields.timeW = timeW;
   }
 
   // colour control for the drawing's main colour. A colour-ONLY style (no width/line-style, e.g. the
@@ -193,13 +305,35 @@ function build(pane, eng, id, d, kind) {
     const colorOnly = style.width == null && style.lineWidth == null && style.lineStyle == null;
     let sw;
     if (colorOnly) {
-      sw = colorSwatch(style.color, (/** @type {any} */ v) => { style.color = v; commit(); });
-      sw.classList.add('bb-qc-fill'); sw.title = 'Colour';
+      sw = colorSwatch(style.color, (/** @type {any} */ v) => {
+        style.color = v;
+        commit();
+      });
+      sw.classList.add('bb-qc-fill');
+      sw.title = 'Colour';
     } else {
       sw = strokeSwatch({
-        color: { get: () => style.color, set: (/** @type {any} */ v) => { style.color = v; commit(); } },
-        width: { get: () => style.width, set: (/** @type {any} */ v) => { style.width = v; commit(); } },
-        lineStyle: { get: () => style.lineStyle, set: (/** @type {any} */ v) => { style.lineStyle = v; commit(); } },
+        color: {
+          get: () => style.color,
+          set: (/** @type {any} */ v) => {
+            style.color = v;
+            commit();
+          },
+        },
+        width: {
+          get: () => style.width,
+          set: (/** @type {any} */ v) => {
+            style.width = v;
+            commit();
+          },
+        },
+        lineStyle: {
+          get: () => style.lineStyle,
+          set: (/** @type {any} */ v) => {
+            style.lineStyle = v;
+            commit();
+          },
+        },
       });
       sw.classList.add('bb-qc-stroke');
     }
@@ -209,8 +343,12 @@ function build(pane, eng, id, d, kind) {
   // fill colour swatch (a plain colour box) for a fillable drawing (e.g. rectangle background)
   if (d.style && d.style.fill != null) {
     const style = d.style;
-    const fsw = colorSwatch(style.fill, (/** @type {any} */ v) => { style.fill = v; commit(); });
-    fsw.classList.add('bb-qc-fill'); fsw.title = 'Fill colour';
+    const fsw = colorSwatch(style.fill, (/** @type {any} */ v) => {
+      style.fill = v;
+      commit();
+    });
+    fsw.classList.add('bb-qc-fill');
+    fsw.title = 'Fill colour';
     host.append(fsw);
   }
 
@@ -227,10 +365,17 @@ function build(pane, eng, id, d, kind) {
     if (!sec) return;
     const style = d.style || (d.style = {});
     const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.className = 'bb-qc-axischk'; cb.title = label;
+    cb.type = 'checkbox';
+    cb.className = 'bb-qc-axischk';
+    cb.title = label;
     cb.checked = style[key] != null ? !!style[key] : !!sec.toggleDefault;
-    const lbl = document.createElement('span'); lbl.className = 'bb-qc-lbl'; lbl.textContent = label;
-    cb.onchange = () => { style[key] = cb.checked; commit(); };
+    const lbl = document.createElement('span');
+    lbl.className = 'bb-qc-lbl';
+    lbl.textContent = label;
+    cb.onchange = () => {
+      style[key] = cb.checked;
+      commit();
+    };
     host.append(cb, lbl);
   };
   addToggle('bgOn', 'Bkgnd');
@@ -241,15 +386,46 @@ function build(pane, eng, id, d, kind) {
   // the twin of the line swatch. Bound live to the drawing's textStyle. Right-most control.
   if (showsText(d, tool)) {
     if (!d.textStyle) {
-      const def = (/** @type {any} */ (tool).settings.text.defaults) || {};
-      d.textStyle = { color: '#787b86', size: 14, bold: false, italic: false, vAlign: def.vAlign || 'middle', hAlign: def.hAlign || 'center' };
+      const def = /** @type {any} */ (tool).settings.text.defaults || {};
+      d.textStyle = {
+        color: '#787b86',
+        size: 14,
+        bold: false,
+        italic: false,
+        vAlign: def.vAlign || 'middle',
+        hAlign: def.hAlign || 'center',
+      };
     }
     const ts = d.textStyle;
     const tsw = textSwatch({
-      color: { get: () => ts.color, set: (/** @type {any} */ v) => { ts.color = v; commit(); } },
-      size: { get: () => ts.size, set: (/** @type {any} */ v) => { ts.size = v; commit(); } },
-      bold: { get: () => ts.bold, set: (/** @type {any} */ v) => { ts.bold = v; commit(); } },
-      italic: { get: () => ts.italic, set: (/** @type {any} */ v) => { ts.italic = v; commit(); } },
+      color: {
+        get: () => ts.color,
+        set: (/** @type {any} */ v) => {
+          ts.color = v;
+          commit();
+        },
+      },
+      size: {
+        get: () => ts.size,
+        set: (/** @type {any} */ v) => {
+          ts.size = v;
+          commit();
+        },
+      },
+      bold: {
+        get: () => ts.bold,
+        set: (/** @type {any} */ v) => {
+          ts.bold = v;
+          commit();
+        },
+      },
+      italic: {
+        get: () => ts.italic,
+        set: (/** @type {any} */ v) => {
+          ts.italic = v;
+          commit();
+        },
+      },
     });
     tsw.classList.add('bb-qc-text');
     host.append(tsw);
@@ -258,7 +434,9 @@ function build(pane, eng, id, d, kind) {
   // Create-alert quick button (right-most) -- opens the same dialog as the drawing's right-click
   // "Create alert…". Single-selection only (an alert anchors to one drawing).
   const alertBtn = document.createElement('button');
-  alertBtn.className = 'bb-qc-alert'; alertBtn.title = 'Create alert…'; alertBtn.innerHTML = SVG_BELL;
+  alertBtn.className = 'bb-qc-alert';
+  alertBtn.title = 'Create alert…';
+  alertBtn.innerHTML = SVG_BELL;
   alertBtn.onclick = () => openCreateAlertDialog(eng, id);
   host.append(alertBtn);
 }
@@ -276,7 +454,9 @@ function buildMulti(pane, eng, drawings) {
   host.innerHTML = '';
   host.style.display = 'flex';
 
-  const lbl = document.createElement('span'); lbl.className = 'bb-qc-lbl'; lbl.textContent = drawings.length + ' selected';
+  const lbl = document.createElement('span');
+  lbl.className = 'bb-qc-lbl';
+  lbl.textContent = drawings.length + ' selected';
   host.append(lbl);
 
   const primary = eng.get(eng.selectedId) || drawings[0];
@@ -285,12 +465,21 @@ function buildMulti(pane, eng, drawings) {
   // family, rays, hlines). The checkbox reflects the primary (or the first that has the field). ----
   const withPriceLabel = drawings.filter((d) => d.style && d.style.priceLabels != null);
   if (withPriceLabel.length) {
-    const repP = (primary && primary.style && primary.style.priceLabels != null) ? primary : withPriceLabel[0];
+    const repP = primary && primary.style && primary.style.priceLabels != null ? primary : withPriceLabel[0];
     const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.className = 'bb-qc-axischk'; cb.title = 'Price label';
+    cb.type = 'checkbox';
+    cb.className = 'bb-qc-axischk';
+    cb.title = 'Price label';
     cb.checked = !!repP.style.priceLabels;
-    const plbl = document.createElement('span'); plbl.className = 'bb-qc-lbl'; plbl.textContent = 'Label';
-    cb.onchange = () => { withPriceLabel.forEach((d) => { d.style.priceLabels = cb.checked; }); commitMulti(); };
+    const plbl = document.createElement('span');
+    plbl.className = 'bb-qc-lbl';
+    plbl.textContent = 'Label';
+    cb.onchange = () => {
+      withPriceLabel.forEach((d) => {
+        d.style.priceLabels = cb.checked;
+      });
+      commitMulti();
+    };
     host.append(cb, plbl);
   }
 
@@ -302,17 +491,30 @@ function buildMulti(pane, eng, drawings) {
     // representative value for a stroke field: prefer the primary, else the first selected that has it
     /** @param {string} f */
     const rep = (f) => {
-      const p = (primary && primary.style && primary.style[f] != null) ? primary : withStroke.find((d) => d.style[f] != null);
+      const p =
+        primary && primary.style && primary.style[f] != null ? primary : withStroke.find((d) => d.style[f] != null);
       return p && p.style ? p.style[f] : undefined;
     };
     /** @param {string} f @param {any} v */
-    const setAll = (f, v) => { withStroke.forEach((d) => { if (d.style[f] != null) d.style[f] = v; }); commitMulti(); };
+    const setAll = (f, v) => {
+      withStroke.forEach((d) => {
+        if (d.style[f] != null) d.style[f] = v;
+      });
+      commitMulti();
+    };
     const anyWidth = withStroke.some((d) => d.style.width != null);
     const anyLine = withStroke.some((d) => d.style.lineStyle != null);
     let sw;
-    if (!anyWidth && !anyLine) {   // colour-only across the selection -> a plain colour box
-      sw = colorSwatch(rep('color') || '#787b86', (/** @type {any} */ v) => { withStroke.forEach((d) => { d.style.color = v; }); commitMulti(); });
-      sw.classList.add('bb-qc-fill'); sw.title = 'Colour';
+    if (!anyWidth && !anyLine) {
+      // colour-only across the selection -> a plain colour box
+      sw = colorSwatch(rep('color') || '#787b86', (/** @type {any} */ v) => {
+        withStroke.forEach((d) => {
+          d.style.color = v;
+        });
+        commitMulti();
+      });
+      sw.classList.add('bb-qc-fill');
+      sw.title = 'Colour';
     } else {
       sw = strokeSwatch({
         color: { get: () => rep('color'), set: (/** @type {any} */ v) => setAll('color', v) },
@@ -328,14 +530,27 @@ function buildMulti(pane, eng, drawings) {
   if (withText.length) {
     withText.forEach((d) => {
       if (d.textStyle) return;
-      const def = (/** @type {any} */ (getTool(d.tool)).settings.text && /** @type {any} */ (getTool(d.tool)).settings.text.defaults) || {};
-      d.textStyle = { color: '#787b86', size: 14, bold: false, italic: false, vAlign: def.vAlign || 'middle', hAlign: def.hAlign || 'center' };
+      const tool = /** @type {any} */ (getTool(d.tool));
+      const def = (tool.settings.text && tool.settings.text.defaults) || {};
+      d.textStyle = {
+        color: '#787b86',
+        size: 14,
+        bold: false,
+        italic: false,
+        vAlign: def.vAlign || 'middle',
+        hAlign: def.hAlign || 'center',
+      };
     });
-    const primaryT = (primary && primary.textStyle) ? primary : withText[0];
+    const primaryT = primary && primary.textStyle ? primary : withText[0];
     /** @param {string} f */
     const repT = (f) => (primaryT.textStyle[f] != null ? primaryT.textStyle[f] : withText[0].textStyle[f]);
     /** @param {string} f @param {any} v */
-    const setAllT = (f, v) => { withText.forEach((d) => { d.textStyle[f] = v; }); commitMulti(); };
+    const setAllT = (f, v) => {
+      withText.forEach((d) => {
+        d.textStyle[f] = v;
+      });
+      commitMulti();
+    };
     const tsw = textSwatch({
       color: { get: () => repT('color'), set: (/** @type {any} */ v) => setAllT('color', v) },
       size: { get: () => repT('size'), set: (/** @type {any} */ v) => setAllT('size', v) },
@@ -352,7 +567,10 @@ function buildMulti(pane, eng, drawings) {
 function commitMulti() {
   if (!cur || !cur.multi) return;
   cur.eng.persist();
-  /** @type {string[]} */ (cur.ids).forEach((id) => { const d = /** @type {QcState} */ (cur).eng.get(id); if (d) /** @type {QcState} */ (cur).eng.liveUpdate(d); });
+  /** @type {string[]} */ (cur.ids).forEach((id) => {
+    const d = /** @type {QcState} */ (cur).eng.get(id);
+    if (d) /** @type {QcState} */ (cur).eng.liveUpdate(d);
+  });
 }
 
 // persist + repaint (same path the settings dialog uses), and record the appearance as the tool's
@@ -371,8 +589,12 @@ function refreshValues() {
   if (!cur || !cur.fields) return;
   if (host.contains(document.activeElement)) return;
   const d = cur.eng.get(cur.id);
-  if (!d || !d.points || !d.points[0]) { hide(); return; }
-  const pt = d.points[0]; cur.fields.pt = pt;
+  if (!d || !d.points || !d.points[0]) {
+    hide();
+    return;
+  }
+  const pt = d.points[0];
+  cur.fields.pt = pt;
   if (cur.kind === 'hline') {
     cur.fields.price.value = pt.price != null ? Number(pt.price).toFixed(cur.fields.dec) : '';
   } else if (cur.kind === 'vline') {
@@ -382,4 +604,11 @@ function refreshValues() {
   }
 }
 
-function hide() { cur = null; closeColorPicker(); if (host) { host.style.display = 'none'; host.innerHTML = ''; } }
+function hide() {
+  cur = null;
+  closeColorPicker();
+  if (host) {
+    host.style.display = 'none';
+    host.innerHTML = '';
+  }
+}

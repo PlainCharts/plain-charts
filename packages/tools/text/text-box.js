@@ -14,22 +14,27 @@ export const PADX = 6;
 export const PADY = 4;
 
 /** @param {TextStyle | null | undefined} ts */
-const fontOf = (ts) => ((ts && ts.italic) ? 'italic ' : '') + ((ts && ts.bold) ? 'bold ' : '') + ((ts && ts.size) || 14) + 'px sans-serif';
+const fontOf = (ts) =>
+  (ts && ts.italic ? 'italic ' : '') + (ts && ts.bold ? 'bold ' : '') + ((ts && ts.size) || 14) + 'px sans-serif';
 
 // WORD wrap: break lines at spaces only (a word is atomic). Honors explicit newlines.
 /** @param {CanvasRenderingContext2D} c @param {string} text @param {number} maxW @returns {string[]} */
 export function wrapWords(c, text, maxW) {
   /** @type {string[]} */
   const out = [];
-  String(text).split('\n').forEach((para) => {
-    let line = '';
-    para.split(' ').forEach((word) => {
-      const cand = line ? line + ' ' + word : word;
-      if (line && c.measureText(cand).width > maxW) { out.push(line); line = word; }
-      else line = cand;
+  String(text)
+    .split('\n')
+    .forEach((para) => {
+      let line = '';
+      para.split(' ').forEach((word) => {
+        const cand = line ? line + ' ' + word : word;
+        if (line && c.measureText(cand).width > maxW) {
+          out.push(line);
+          line = word;
+        } else line = cand;
+      });
+      out.push(line);
     });
-    out.push(line);
-  });
   return out.length ? out : [''];
 }
 
@@ -45,14 +50,19 @@ export function wrapWords(c, text, maxW) {
  * @returns {Box}
  */
 export function measureBox(c, x, y, text, textStyle, wrapW) {
-  const ts = textStyle || {}, size = ts.size || 14, lh = size * 1.25;
-  const t = (text != null && text !== '') ? text : '+ Add text';
+  const ts = textStyle || {},
+    size = ts.size || 14,
+    lh = size * 1.25;
+  const t = text != null && text !== '' ? text : '+ Add text';
   c.save();
   c.font = fontOf(ts);
   let lines, w;
   if (wrapW != null) {
     let widestWord = 0;
-    t.split(/\s+/).forEach((wd) => { const ww = c.measureText(wd).width; if (ww > widestWord) widestWord = ww; });
+    t.split(/\s+/).forEach((wd) => {
+      const ww = c.measureText(wd).width;
+      if (ww > widestWord) widestWord = ww;
+    });
     const innerW = Math.max(wrapW, widestWord);
     lines = wrapWords(c, t, innerW);
     w = innerW + PADX * 2;
@@ -70,9 +80,13 @@ export function measureBox(c, x, y, text, textStyle, wrapW) {
 export function drawBox(c, box, style) {
   const s = style || {};
   c.save();
-  if (s.bgOn !== false && s.bg) { c.fillStyle = s.bg; c.fillRect(box.x, box.y, box.w, box.h); }
+  if (s.bgOn !== false && s.bg) {
+    c.fillStyle = s.bg;
+    c.fillRect(box.x, box.y, box.w, box.h);
+  }
   if (s.borderOn !== false) {
-    c.strokeStyle = s.border || '#2962ff'; c.lineWidth = s.borderWidth || 1;
+    c.strokeStyle = s.border || '#2962ff';
+    c.lineWidth = s.borderWidth || 1;
     c.strokeRect(box.x + 0.5, box.y + 0.5, box.w - 1, box.h - 1);
   }
   c.restore();
@@ -84,7 +98,8 @@ export function drawBoxText(c, box, textStyle) {
   c.save();
   c.font = fontOf(ts);
   c.fillStyle = ts.color || '#d1d4dc';
-  c.textAlign = 'left'; c.textBaseline = 'top';
+  c.textAlign = 'left';
+  c.textBaseline = 'top';
   box.lines.forEach((ln, i) => c.fillText(ln, box.x + PADX, box.y + PADY + i * box.lh));
   c.restore();
 }
@@ -96,9 +111,19 @@ export function boxTextGeom(box, style, wrap) {
   const EDGE = Math.max(4, Math.min(10, box.w / 3, box.h / 3));
   const bg = (style && style.bg) || '#1e222d';
   return {
-    cx: box.x, cy: box.y, angle: 0, tAlign: 'left', baseline: 'top', va: 'top',
-    size: box.size, w: box.w, totalH: box.h,
-    lx0: EDGE, lx1: box.w - EDGE, ly0: EDGE, ly1: box.h - EDGE,
+    cx: box.x,
+    cy: box.y,
+    angle: 0,
+    tAlign: 'left',
+    baseline: 'top',
+    va: 'top',
+    size: box.size,
+    w: box.w,
+    totalH: box.h,
+    lx0: EDGE,
+    lx1: box.w - EDGE,
+    ly0: EDGE,
+    ly1: box.h - EDGE,
     editor: wrap
       ? { wrap: true, width: Math.max(8, box.w - PADX * 2), offX: PADX, offY: PADY, bg }
       : { wrap: false, offX: PADX, offY: PADY, bg },

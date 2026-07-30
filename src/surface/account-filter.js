@@ -7,10 +7,15 @@
 import { platform, bus } from '../../data_engine/index.js';
 import * as accounts from '../connect/accounts.js';
 import { getSetting, setSetting } from '../settings/settings.js';
-import { t as tr } from '../i18n/i18n.js';   // imported as tr -- local `t` (event target) below
+import { t as tr } from '../i18n/i18n.js'; // imported as tr -- local `t` (event target) below
 
 /** @param {string} [cls] @param {string} [txt] */
-const el = (cls, txt) => { const d = document.createElement('div'); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
+const el = (cls, txt) => {
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  if (txt != null) d.textContent = txt;
+  return d;
+};
 
 // currently connected accounts as { key:'broker:accountId', label }. Label is the saved connection name when
 // known (what the Accounts tab shows), else the raw account id.
@@ -33,46 +38,96 @@ export function createAccountFilter(settingsKey, onChange) {
   // while only another is up. Treat that as 'all' so the tab isn't SILENTLY emptied under a misleading "All accounts" label
   // (the label already reads "All accounts" in that case, so this just makes behaviour match it). Once the account
   // connects, connections:changed re-renders the tab and the filter engages.
-  const effectiveSel = () => (!sel || sel === 'all' || !connectedAccounts().some((a) => a.key === sel)) ? 'all' : sel;
-  const label = () => { const s = effectiveSel(); if (s === 'all') return tr('All accounts'); const f = connectedAccounts().find((a) => a.key === s); return f ? f.label : tr('All accounts'); };
+  const effectiveSel = () => (!sel || sel === 'all' || !connectedAccounts().some((a) => a.key === sel) ? 'all' : sel);
+  const label = () => {
+    const s = effectiveSel();
+    if (s === 'all') return tr('All accounts');
+    const f = connectedAccounts().find((a) => a.key === s);
+    return f ? f.label : tr('All accounts');
+  };
 
-  const btn = el('desk-filt acct-filt'); btn.title = tr('Filter by account');
+  const btn = el('desk-filt acct-filt');
+  btn.title = tr('Filter by account');
   const lbl = el('desk-filt-t', label());
   btn.append(lbl, el('desk-filt-caret', '▾'));
 
-  const apply = (/** @type {string} */ v) => { sel = v; setSetting(settingsKey, v); lbl.textContent = label(); try { onChange(); } catch (_) {} };
+  const apply = (/** @type {string} */ v) => {
+    sel = v;
+    setSetting(settingsKey, v);
+    lbl.textContent = label();
+    try {
+      onChange();
+    } catch (_) {}
+  };
 
   /** @type {HTMLElement | null} */
   let menu = null;
-  const close = () => { if (menu) { try { menu.remove(); } catch (_) {} menu = null; document.removeEventListener('pointerdown', away, true); } };
+  const close = () => {
+    if (menu) {
+      try {
+        menu.remove();
+      } catch (_) {}
+      menu = null;
+      document.removeEventListener('pointerdown', away, true);
+    }
+  };
   /** @param {PointerEvent} e */
-  const away = (e) => { const t = /** @type {Node} */ (e.target); if (menu && !menu.contains(t) && !btn.contains(t)) close(); };
+  const away = (e) => {
+    const t = /** @type {Node} */ (e.target);
+    if (menu && !menu.contains(t) && !btn.contains(t)) close();
+  };
   const open = () => {
     close();
-    const m = el('wl-listmenu desk-filt-menu'); menu = m;
+    const m = el('wl-listmenu desk-filt-menu');
+    menu = m;
     /** @type {{ key: string, label: string }[]} */
     const rows = [{ key: 'all', label: tr('All accounts') }, ...connectedAccounts()];
     rows.forEach(({ key, label: lab }) => {
       const row = el('wl-listmenu-row' + (sel === key ? ' sel' : ''), lab);
-      row.onclick = () => { apply(key); close(); };
+      row.onclick = () => {
+        apply(key);
+        close();
+      };
       m.appendChild(row);
     });
     document.body.appendChild(m);
     const r = btn.getBoundingClientRect();
     m.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 236)) + 'px';
-    m.style.top = (r.bottom + 4) + 'px';
+    m.style.top = r.bottom + 4 + 'px';
     setTimeout(() => document.addEventListener('pointerdown', away, true), 0);
   };
   btn.onclick = () => (menu ? close() : open());
 
   // refresh the label if the selected account's name resolves later / it (dis)connects
-  const off = bus.on('connections:changed', () => { lbl.textContent = label(); });
+  const off = bus.on('connections:changed', () => {
+    lbl.textContent = label();
+  });
   // an account (dis)connecting flips effectiveSel (engage a filter once its account is up; fall back to 'all' when
   // it drops), so re-label AND re-render the tab -- this is what fixes a saved filter showing empty at startup.
-  const offAcc = platform.accounts.subscribe(() => { lbl.textContent = label(); try { onChange(); } catch (_) {} });
+  const offAcc = platform.accounts.subscribe(() => {
+    lbl.textContent = label();
+    try {
+      onChange();
+    } catch (_) {}
+  });
 
   /** @param {{ broker?: any, accountId?: any }} r */
-  const matches = (r) => { const s = effectiveSel(); return s === 'all' ? true : (r.broker + ':' + (r.accountId != null ? r.accountId : '')) === s; };
+  const matches = (r) => {
+    const s = effectiveSel();
+    return s === 'all' ? true : r.broker + ':' + (r.accountId != null ? r.accountId : '') === s;
+  };
 
-  return { btn, matches, destroy() { close(); try { off(); } catch (_) {} try { offAcc(); } catch (_) {} } };
+  return {
+    btn,
+    matches,
+    destroy() {
+      close();
+      try {
+        off();
+      } catch (_) {}
+      try {
+        offAcc();
+      } catch (_) {}
+    },
+  };
 }

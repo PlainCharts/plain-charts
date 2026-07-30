@@ -12,7 +12,12 @@ import { getSetting, setSetting } from '../settings/settings.js';
  * @param {string=} txt
  * @returns {HTMLElement}
  */
-const el = (tag, cls, txt) => { const d = document.createElement(tag); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
+const el = (tag, cls, txt) => {
+  const d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (txt != null) d.textContent = txt;
+  return d;
+};
 
 // A registered slide-out view: an id, its content element, the panel width it needs,
 // and its rail button (null for a dockView that has no button of its own).
@@ -42,36 +47,56 @@ let current = null;
 const MIN_W = 200;
 const maxW = () => Math.min(900, Math.floor(window.innerWidth * 0.8));
 /** @param {string} id @returns {number|null} */
-function savedWidth(id) { const m = getSetting('rightPanelWidths') || {}; const w = m[id]; return typeof w === 'number' ? w : null; }
+function savedWidth(id) {
+  const m = getSetting('rightPanelWidths') || {};
+  const w = m[id];
+  return typeof w === 'number' ? w : null;
+}
 /** @param {string} id @param {number} w */
-function saveWidth(id, w) { const m = getSetting('rightPanelWidths') || {}; m[id] = w; setSetting('rightPanelWidths', m); }
+function saveWidth(id, w) {
+  const m = getSetting('rightPanelWidths') || {};
+  m[id] = w;
+  setSetting('rightPanelWidths', m);
+}
 
 // One grip on the panel's LEFT edge serves whichever view is current (the panel is docked on the right, so
 // dragging left widens it). Created once, on the first registered view.
 let gripDone = false;
 /** @param {HTMLElement} panel */
 function ensureGrip(panel) {
-  if (gripDone) return; gripDone = true;
+  if (gripDone) return;
+  gripDone = true;
   const grip = el('div', 'rp-resize');
   panel.appendChild(grip);
-  let startX = 0, startW = 0, dragging = false;
+  let startX = 0,
+    startW = 0,
+    dragging = false;
   grip.addEventListener('pointerdown', (e) => {
     if (!current) return;
-    dragging = true; startX = e.clientX; startW = panel.getBoundingClientRect().width;
-    panel.classList.add('rp-resizing');   // kill the width transition while dragging
-    try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+    dragging = true;
+    startX = e.clientX;
+    startW = panel.getBoundingClientRect().width;
+    panel.classList.add('rp-resizing'); // kill the width transition while dragging
+    try {
+      grip.setPointerCapture(e.pointerId);
+    } catch (_) {}
     e.preventDefault();
   });
   grip.addEventListener('pointermove', (e) => {
     if (!dragging || !current) return;
     const w = Math.max(MIN_W, Math.min(maxW(), startW + (startX - e.clientX)));
-    panel.style.width = w + 'px'; current.content.style.width = w + 'px'; current.width = w;
+    panel.style.width = w + 'px';
+    current.content.style.width = w + 'px';
+    current.width = w;
   });
   /** @param {PointerEvent} e */
   const end = (e) => {
-    if (!dragging) return; dragging = false;
+    if (!dragging) return;
+    dragging = false;
     panel.classList.remove('rp-resizing');
-    try { grip.releasePointerCapture(e.pointerId); } catch (_) {}
+    try {
+      grip.releasePointerCapture(e.pointerId);
+    } catch (_) {}
     if (current) saveWidth(current.id, current.width);
   };
   grip.addEventListener('pointerup', end);
@@ -83,15 +108,18 @@ function ensureGrip(panel) {
  * @returns {{ id: string }|null}
  */
 export function addView({ id, icon, title, content, width = 260 }) {
-  const rail = $('rightrail'), panel = $('rightpanel');
+  const rail = $('rightrail'),
+    panel = $('rightpanel');
   if (!rail || !panel) return null;
   const w = savedWidth(id) ?? width;
   content.style.display = 'none';
   content.style.width = w + 'px';
   panel.appendChild(content);
   ensureGrip(panel);
-  const btn = /** @type {HTMLButtonElement} */ (el('button', 'rail-btn')); btn.title = title;
-  if (icon instanceof Node) btn.appendChild(icon); else btn.textContent = icon;
+  const btn = /** @type {HTMLButtonElement} */ (el('button', 'rail-btn'));
+  btn.title = title;
+  if (icon instanceof Node) btn.appendChild(icon);
+  else btn.textContent = icon;
   btn.onclick = () => toggle(id);
   rail.appendChild(btn);
   views.push({ id, btn, content, width: w });
@@ -108,13 +136,22 @@ export function toggle(id, force) {
   const panel = /** @type {HTMLElement} */ ($('rightpanel'));
   const willOpen = force == null ? current !== v : !!force;
   if (!willOpen) {
-    v.content.style.display = 'none'; if (v.btn) v.btn.classList.remove('active');
-    if (current === v) { current = null; panel.classList.remove('open'); panel.style.width = ''; }
+    v.content.style.display = 'none';
+    if (v.btn) v.btn.classList.remove('active');
+    if (current === v) {
+      current = null;
+      panel.classList.remove('open');
+      panel.style.width = '';
+    }
     return;
   }
-  views.forEach((x) => { const on = x === v; x.content.style.display = on ? '' : 'none'; if (x.btn) x.btn.classList.toggle('active', on); });
+  views.forEach((x) => {
+    const on = x === v;
+    x.content.style.display = on ? '' : 'none';
+    if (x.btn) x.btn.classList.toggle('active', on);
+  });
   panel.classList.add('open');
-  panel.style.width = v.width + 'px';   // each view sets the panel width it needs
+  panel.style.width = v.width + 'px'; // each view sets the panel width it needs
   current = v;
   bus.emit('rightpanel:shown', id);
 }
@@ -130,8 +167,14 @@ export function setRailBadge(id, text) {
   if (!v || !v.btn) return;
   let b = /** @type {HTMLElement|null} */ (v.btn.querySelector('.rail-badge'));
   const n = Number(text);
-  if (!text || (Number.isFinite(n) && n === 0)) { if (b) b.remove(); return; }
-  if (!b) { b = el('span', 'rail-badge'); v.btn.appendChild(b); }
+  if (!text || (Number.isFinite(n) && n === 0)) {
+    if (b) b.remove();
+    return;
+  }
+  if (!b) {
+    b = el('span', 'rail-badge');
+    v.btn.appendChild(b);
+  }
   b.textContent = String(text);
 }
 
@@ -146,7 +189,8 @@ export function dockView({ id, content, width = 300 }) {
   if (!panel) return null;
   if (views.find((v) => v.id === id)) return { id };
   const w = savedWidth(id) ?? width;
-  content.style.display = 'none'; content.style.width = w + 'px';
+  content.style.display = 'none';
+  content.style.width = w + 'px';
   panel.appendChild(content);
   ensureGrip(panel);
   views.push({ id, btn: null, content, width: w });
@@ -157,8 +201,13 @@ export function removeView(id) {
   const i = views.findIndex((v) => v.id === id);
   if (i < 0) return;
   if (current === views[i]) toggle(id, false);
-  try { views[i].content.remove(); } catch (_) {}
-  if (views[i].btn) try { views[i].btn.remove(); } catch (_) {}
+  try {
+    views[i].content.remove();
+  } catch (_) {}
+  if (views[i].btn)
+    try {
+      views[i].btn.remove();
+    } catch (_) {}
   views.splice(i, 1);
 }
 
@@ -172,9 +221,14 @@ export function addRailAction({ icon, title, onClick, bottom }) {
   const rail = $('rightrail');
   if (!rail) return null;
   if (bottom && !rail.querySelector('.rail-spacer')) rail.appendChild(el('div', 'rail-spacer'));
-  const btn = /** @type {HTMLButtonElement} */ (el('button', 'rail-btn')); btn.title = title;
-  if (icon instanceof Node) btn.appendChild(icon); else btn.textContent = icon;
-  btn.onclick = (e) => { e.stopPropagation(); onClick(btn, e); };
+  const btn = /** @type {HTMLButtonElement} */ (el('button', 'rail-btn'));
+  btn.title = title;
+  if (icon instanceof Node) btn.appendChild(icon);
+  else btn.textContent = icon;
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    onClick(btn, e);
+  };
   rail.appendChild(btn);
   return btn;
 }

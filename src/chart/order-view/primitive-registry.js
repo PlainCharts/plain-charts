@@ -14,6 +14,7 @@ const reg = new Map();
 /** @param {OrderPrimitive} p */
 export const registerPrimitive = (p) => reg.set(p.id, p);
 /** @param {string} [id] @returns {OrderPrimitive | undefined} */
-export const getPrimitive = (id) => (id ? reg.get(id) : undefined) || reg.get(DEFAULT_PRIMITIVE) || reg.values().next().value;
+export const getPrimitive = (id) =>
+  (id ? reg.get(id) : undefined) || reg.get(DEFAULT_PRIMITIVE) || reg.values().next().value;
 /** @returns {OrderPrimitive[]} */
 export const listPrimitives = () => [...reg.values()];

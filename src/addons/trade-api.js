@@ -10,12 +10,12 @@
 // book are cross-window synced, so reads here mirror every other window.
 import { readActive, command } from '../../data_engine/index.js';
 import * as plan from '../chart/order-view/plan-store.js';
-import * as vis from '../chart/order-view/order-visibility.js';   // shared VISIBILITY behavior (hide-on-entry policy + apply/reset)
+import * as vis from '../chart/order-view/order-visibility.js'; // shared VISIBILITY behavior (hide-on-entry policy + apply/reset)
 
 /** @param {((cleanup: () => void) => void)=} registerCleanup */
 export function makeTradeApi(registerCleanup) {
   /** @type {Array<() => void>} */
-  const subs = [];   // plan-store unsubscribers (auto-dropped on close)
+  const subs = []; // plan-store unsubscribers (auto-dropped on close)
 
   const api = {
     // ---- read the ACTIVE book for a (broker, symbol) ----
@@ -65,7 +65,11 @@ export function makeTradeApi(registerCleanup) {
       /** merge a hide-on-entry patch; persists + syncs to every window (dialog + addon share it). @param {{entry?: boolean, stop?: boolean, target?: boolean}} patch */
       setHideOnEntry: (patch) => vis.setHideOnEntry(patch),
       /** subscribe to hide-on-entry policy changes (auto-unsubscribed on close). @param {() => void} fn @returns {() => void} */
-      onHideOnEntryChange: (fn) => { const u = vis.onHideOnEntryChange(fn); subs.push(u); return u; },
+      onHideOnEntryChange: (fn) => {
+        const u = vis.onHideOnEntryChange(fn);
+        subs.push(u);
+        return u;
+      },
       /** apply the hide-on-entry policy now (hide checked categories). @param {string} broker @param {string} symbol */
       applyEntryVisibility: (broker, symbol) => vis.applyEntryVisibility(broker, symbol),
       /** reset visibility to all-shown. @param {string} broker @param {string} symbol */
@@ -73,10 +77,22 @@ export function makeTradeApi(registerCleanup) {
       /** REPLACE the whole ladder (push N rungs at once) -- the automation's multi-level SL/TP. @param {string} broker @param {string} symbol @param {Array<{stop?: number|null, target?: number|null}>} levels */
       setLadder: (broker, symbol, levels) => plan.setLadder(broker, symbol, levels),
       /** subscribe to any plan change; auto-unsubscribed on close. @param {() => void} fn @returns {() => void} */
-      subscribe: (fn) => { const u = plan.subscribe(fn); subs.push(u); return u; },
+      subscribe: (fn) => {
+        const u = plan.subscribe(fn);
+        subs.push(u);
+        return u;
+      },
     },
   };
 
-  if (typeof registerCleanup === 'function') registerCleanup(() => { subs.forEach((u) => { try { u(); } catch (_) {} }); subs.length = 0; });
+  if (typeof registerCleanup === 'function')
+    registerCleanup(() => {
+      subs.forEach((u) => {
+        try {
+          u();
+        } catch (_) {}
+      });
+      subs.length = 0;
+    });
   return api;
 }

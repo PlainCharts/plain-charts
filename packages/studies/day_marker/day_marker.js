@@ -16,14 +16,39 @@
 // positioned within the session and pinned to the pane top or bottom), H/L (Daily high/low triangle
 // markers + Weekly high/low lines spanning each week), and Open (daily opening-price line).
 
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];   // index = day-of-week num (0=Sun)
-const STYLES = [{ key: 'solid', name: 'Solid' }, { key: 'dashed', name: 'Dashed' }, { key: 'dotted', name: 'Dotted' }];
-const HPOS = [{ key: 'Left', name: 'Left' }, { key: 'Center', name: 'Center' }, { key: 'Right', name: 'Right' }];
-const VPOS = [{ key: 'Top', name: 'Top' }, { key: 'Bottom', name: 'Bottom' }];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']; // index = day-of-week num (0=Sun)
+const STYLES = [
+  { key: 'solid', name: 'Solid' },
+  { key: 'dashed', name: 'Dashed' },
+  { key: 'dotted', name: 'Dotted' },
+];
+const HPOS = [
+  { key: 'Left', name: 'Left' },
+  { key: 'Center', name: 'Center' },
+  { key: 'Right', name: 'Right' },
+];
+const VPOS = [
+  { key: 'Top', name: 'Top' },
+  { key: 'Bottom', name: 'Bottom' },
+];
 // day letter by the OWNED trading weekday (the session's identity): Mon=1 .. Fri=5
 const LETTERS = ['', 'M', 'T', 'W', 'T', 'F'];
-const AWR_UNITS = [{ key: 'Pips', name: 'Pips' }, { key: 'Points', name: 'Points' }, { key: 'Ticks', name: 'Ticks' }];
-const AWR_POS = ['Top Left', 'Top Center', 'Top Right', 'Middle Left', 'Middle Center', 'Middle Right', 'Bottom Left', 'Bottom Center', 'Bottom Right'].map((s) => ({ key: s, name: s }));
+const AWR_UNITS = [
+  { key: 'Pips', name: 'Pips' },
+  { key: 'Points', name: 'Points' },
+  { key: 'Ticks', name: 'Ticks' },
+];
+const AWR_POS = [
+  'Top Left',
+  'Top Center',
+  'Top Right',
+  'Middle Left',
+  'Middle Center',
+  'Middle Right',
+  'Bottom Left',
+  'Bottom Center',
+  'Bottom Right',
+].map((s) => ({ key: s, name: s }));
 
 /** @type {StudyInput[]} */
 const inputs = [
@@ -51,44 +76,182 @@ const inputs = [
 
   // --- Display: the essentials every later layer builds on ---
   { key: 'weeksToShow', type: 'number', name: 'Weeks to Show', default: 3, min: 1, max: 52, tab: 'Display' },
-  { key: 'futureWeeksToShow', type: 'number', name: 'Future Weeks to Show', default: 1, min: 1, max: 12, tab: 'Display' },
+  {
+    key: 'futureWeeksToShow',
+    type: 'number',
+    name: 'Future Weeks to Show',
+    default: 1,
+    min: 1,
+    max: 12,
+    tab: 'Display',
+  },
   { key: 'timezone', type: 'tz', name: 'Timezone', default: -4, tab: 'Display' },
   { key: 'startTime', type: 'text', name: 'Day/Week Start Time', default: '1700', placeholder: 'HHMM', tab: 'Display' },
-  { key: 'weekStartDay', type: 'select', name: 'Week Start Day', options: WEEKDAYS.map((d) => ({ key: d, name: d })), default: 'Monday', tab: 'Display' },
+  {
+    key: 'weekStartDay',
+    type: 'select',
+    name: 'Week Start Day',
+    options: WEEKDAYS.map((d) => ({ key: d, name: d })),
+    default: 'Monday',
+    tab: 'Display',
+  },
 
   // --- Separator: Day / Week line look. The on/off switches live in the Toggles tab; these swatches
   // (colour + width + style) grey out when their separator is off. ---
-  { key: 'dayColor', type: 'color', name: 'Day', default: '#787b86', stroke: { width: 'dayWidth', lineStyle: 'dayStyle' }, enableWhen: 'enableDay', tab: 'Separator' },
+  {
+    key: 'dayColor',
+    type: 'color',
+    name: 'Day',
+    default: '#787b86',
+    stroke: { width: 'dayWidth', lineStyle: 'dayStyle' },
+    enableWhen: 'enableDay',
+    tab: 'Separator',
+  },
   { key: 'dayStyle', type: 'select', options: STYLES, default: 'solid', hidden: true },
   { key: 'dayWidth', type: 'number', default: 1, min: 1, max: 10, hidden: true },
-  { key: 'weekColor', type: 'color', name: 'Week', default: '#2962ff', stroke: { width: 'weekWidth', lineStyle: 'weekStyle' }, enableWhen: 'enableWeek', tab: 'Separator' },
+  {
+    key: 'weekColor',
+    type: 'color',
+    name: 'Week',
+    default: '#2962ff',
+    stroke: { width: 'weekWidth', lineStyle: 'weekStyle' },
+    enableWhen: 'enableWeek',
+    tab: 'Separator',
+  },
   { key: 'weekStyle', type: 'select', options: STYLES, default: 'solid', hidden: true },
   { key: 'weekWidth', type: 'number', default: 2, min: 1, max: 10, hidden: true },
 
   // --- Labels section (same Separator tab): a strip of day letters (M T W T F) pinned to the pane's
   // top or bottom edge. The on/off switch lives in the Toggles tab ("Day Labels"); these settings (colour
   // + text styling, position, placement) grey out when it's off. ---
-  { key: 'labelColor', type: 'color', name: 'Label', default: '#787b86', text: { size: 'labelSize', bold: 'labelBold', italic: 'labelItalic' }, enableWhen: 'enableLabels', tab: 'Separator', group: 'Labels' },
+  {
+    key: 'labelColor',
+    type: 'color',
+    name: 'Label',
+    default: '#787b86',
+    text: { size: 'labelSize', bold: 'labelBold', italic: 'labelItalic' },
+    enableWhen: 'enableLabels',
+    tab: 'Separator',
+    group: 'Labels',
+  },
   { key: 'labelSize', type: 'number', default: 11, hidden: true },
   { key: 'labelBold', type: 'bool', default: false, hidden: true },
   { key: 'labelItalic', type: 'bool', default: false, hidden: true },
-  { key: 'labelHPos', type: 'select', name: 'Position', options: HPOS, default: 'Center', enableWhen: 'enableLabels', tab: 'Separator', group: 'Labels' },
-  { key: 'labelVPos', type: 'select', name: 'Placement', options: VPOS, default: 'Bottom', enableWhen: 'enableLabels', tab: 'Separator', group: 'Labels' },
+  {
+    key: 'labelHPos',
+    type: 'select',
+    name: 'Position',
+    options: HPOS,
+    default: 'Center',
+    enableWhen: 'enableLabels',
+    tab: 'Separator',
+    group: 'Labels',
+  },
+  {
+    key: 'labelVPos',
+    type: 'select',
+    name: 'Placement',
+    options: VPOS,
+    default: 'Bottom',
+    enableWhen: 'enableLabels',
+    tab: 'Separator',
+    group: 'Labels',
+  },
 
   // --- H/L tab, Daily section. The on/off switch lives in the Toggles tab ("Daily H/L"); these settings
   // grey out when it's off. Its own timezone + day-start (independent of the separator boundary). ---
-  { key: 'hlDaysToShow', type: 'number', name: 'Days', default: 3, min: 1, max: 60, width: 48, enableWhen: 'enableHL', tab: 'H/L', group: 'Daily', inline: 'hlDay' },
-  { key: 'hlStartTime', type: 'text', name: 'Start', default: '1700', placeholder: 'HHMM', width: 56, enableWhen: 'enableHL', tab: 'H/L', group: 'Daily', inline: 'hlDay' },
-  { key: 'hlTimezone', type: 'tz', name: 'TZ', default: -4, enableWhen: 'enableHL', tab: 'H/L', group: 'Daily', inline: 'hlDay' },
-  { key: 'hlHighColor', type: 'color', name: 'High', default: '#26a69a', enableWhen: 'enableHL', tab: 'H/L', group: 'Daily', inline: 'hlColors' },
-  { key: 'hlLowColor', type: 'color', name: 'Low', default: '#ef5350', enableWhen: 'enableHL', tab: 'H/L', group: 'Daily', inline: 'hlColors' },
+  {
+    key: 'hlDaysToShow',
+    type: 'number',
+    name: 'Days',
+    default: 3,
+    min: 1,
+    max: 60,
+    width: 48,
+    enableWhen: 'enableHL',
+    tab: 'H/L',
+    group: 'Daily',
+    inline: 'hlDay',
+  },
+  {
+    key: 'hlStartTime',
+    type: 'text',
+    name: 'Start',
+    default: '1700',
+    placeholder: 'HHMM',
+    width: 56,
+    enableWhen: 'enableHL',
+    tab: 'H/L',
+    group: 'Daily',
+    inline: 'hlDay',
+  },
+  {
+    key: 'hlTimezone',
+    type: 'tz',
+    name: 'TZ',
+    default: -4,
+    enableWhen: 'enableHL',
+    tab: 'H/L',
+    group: 'Daily',
+    inline: 'hlDay',
+  },
+  {
+    key: 'hlHighColor',
+    type: 'color',
+    name: 'High',
+    default: '#26a69a',
+    enableWhen: 'enableHL',
+    tab: 'H/L',
+    group: 'Daily',
+    inline: 'hlColors',
+  },
+  {
+    key: 'hlLowColor',
+    type: 'color',
+    name: 'Low',
+    default: '#ef5350',
+    enableWhen: 'enableHL',
+    tab: 'H/L',
+    group: 'Daily',
+    inline: 'hlColors',
+  },
 
   // --- H/L tab, Weekly section. Horizontal high/low lines spanning each completed week. Uses the
   // Display boundary (timezone + start time + week-start day) -- the same weeks the weekly separators
   // mark. High swatch carries the shared line width + style; Low shares them. ---
-  { key: 'wkWeeksToShow', type: 'number', name: 'Weeks', default: 3, min: 1, max: 52, width: 56, enableWhen: 'enableWkHL', tab: 'H/L', group: 'Weekly' },
-  { key: 'wkHighColor', type: 'color', name: 'High', default: '#26a69a', stroke: { width: 'wkWidth', lineStyle: 'wkStyle' }, enableWhen: 'enableWkHL', tab: 'H/L', group: 'Weekly', inline: 'wkColors' },
-  { key: 'wkLowColor', type: 'color', name: 'Low', default: '#ef5350', enableWhen: 'enableWkHL', tab: 'H/L', group: 'Weekly', inline: 'wkColors' },
+  {
+    key: 'wkWeeksToShow',
+    type: 'number',
+    name: 'Weeks',
+    default: 3,
+    min: 1,
+    max: 52,
+    width: 56,
+    enableWhen: 'enableWkHL',
+    tab: 'H/L',
+    group: 'Weekly',
+  },
+  {
+    key: 'wkHighColor',
+    type: 'color',
+    name: 'High',
+    default: '#26a69a',
+    stroke: { width: 'wkWidth', lineStyle: 'wkStyle' },
+    enableWhen: 'enableWkHL',
+    tab: 'H/L',
+    group: 'Weekly',
+    inline: 'wkColors',
+  },
+  {
+    key: 'wkLowColor',
+    type: 'color',
+    name: 'Low',
+    default: '#ef5350',
+    enableWhen: 'enableWkHL',
+    tab: 'H/L',
+    group: 'Weekly',
+    inline: 'wkColors',
+  },
   { key: 'wkStyle', type: 'select', options: STYLES, default: 'solid', hidden: true },
   { key: 'wkWidth', type: 'number', default: 1, min: 1, max: 10, hidden: true },
 
@@ -98,22 +261,77 @@ const inputs = [
   // The on/off switches live in the Toggles tab; the Open tab holds only the look (colour + width + style)
   // and the "current only" overrides. Colours first (Daily then Weekly), then the overrides. Each row
   // greys out when its line is off.
-  { key: 'dailyOpenColor', type: 'color', name: 'Daily', default: '#ffffff', stroke: { width: 'dailyOpenWidth', lineStyle: 'dailyOpenStyle' }, enableWhen: 'enableDailyOpen', tab: 'Open' },
+  {
+    key: 'dailyOpenColor',
+    type: 'color',
+    name: 'Daily',
+    default: '#ffffff',
+    stroke: { width: 'dailyOpenWidth', lineStyle: 'dailyOpenStyle' },
+    enableWhen: 'enableDailyOpen',
+    tab: 'Open',
+  },
   { key: 'dailyOpenStyle', type: 'select', options: STYLES, default: 'solid', hidden: true },
   { key: 'dailyOpenWidth', type: 'number', default: 1, min: 1, max: 10, hidden: true },
-  { key: 'weeklyOpenColor', type: 'color', name: 'Weekly', default: '#2962ff', stroke: { width: 'weeklyOpenWidth', lineStyle: 'weeklyOpenStyle' }, enableWhen: 'enableWeeklyOpen', tab: 'Open' },
+  {
+    key: 'weeklyOpenColor',
+    type: 'color',
+    name: 'Weekly',
+    default: '#2962ff',
+    stroke: { width: 'weeklyOpenWidth', lineStyle: 'weeklyOpenStyle' },
+    enableWhen: 'enableWeeklyOpen',
+    tab: 'Open',
+  },
   { key: 'weeklyOpenStyle', type: 'select', options: STYLES, default: 'solid', hidden: true },
   { key: 'weeklyOpenWidth', type: 'number', default: 1, min: 1, max: 10, hidden: true },
   // Overrides: show ONLY the current (forming) day's / week's open line, not every one in the window.
-  { key: 'dailyOpenCurrentOnly', type: 'bool', name: 'Current day only', default: false, enableWhen: 'enableDailyOpen', tab: 'Open' },
-  { key: 'weeklyOpenCurrentOnly', type: 'bool', name: 'Current week only', default: false, enableWhen: 'enableWeeklyOpen', tab: 'Open' },
+  {
+    key: 'dailyOpenCurrentOnly',
+    type: 'bool',
+    name: 'Current day only',
+    default: false,
+    enableWhen: 'enableDailyOpen',
+    tab: 'Open',
+  },
+  {
+    key: 'weeklyOpenCurrentOnly',
+    type: 'bool',
+    name: 'Current week only',
+    default: false,
+    enableWhen: 'enableWeeklyOpen',
+    tab: 'Open',
+  },
 
   // --- Range tab. Weekly Range (AWR) settings: a corner-pinned table of the last N COMPLETED weeks'
   // ranges (week high - low) plus their average, in the chosen unit. Screen-anchored (stays put on
   // pan/zoom). The on/off switch lives in the Toggles tab; these grey out when it's off.
-  { key: 'awrUnit', type: 'select', name: 'Unit', options: AWR_UNITS, default: 'Points', enableWhen: 'enableAWR', tab: 'Range' },
-  { key: 'awrWeeks', type: 'number', name: 'Weeks to Average', default: 5, min: 1, max: 52, enableWhen: 'enableAWR', tab: 'Range' },
-  { key: 'awrTablePos', type: 'select', name: 'Table Position', options: AWR_POS, default: 'Top Right', enableWhen: 'enableAWR', tab: 'Range' },
+  {
+    key: 'awrUnit',
+    type: 'select',
+    name: 'Unit',
+    options: AWR_UNITS,
+    default: 'Points',
+    enableWhen: 'enableAWR',
+    tab: 'Range',
+  },
+  {
+    key: 'awrWeeks',
+    type: 'number',
+    name: 'Weeks to Average',
+    default: 5,
+    min: 1,
+    max: 52,
+    enableWhen: 'enableAWR',
+    tab: 'Range',
+  },
+  {
+    key: 'awrTablePos',
+    type: 'select',
+    name: 'Table Position',
+    options: AWR_POS,
+    default: 'Top Right',
+    enableWhen: 'enableAWR',
+    tab: 'Range',
+  },
 ];
 
 // The AWR table as viewport-anchored marks. Pinned to a pane corner (vpx/vp fractions + pixel offsets),
@@ -126,8 +344,14 @@ const inputs = [
  * @returns {any[]}  viewport-anchored host-render marks (one shape's worth)
  */
 function awrTableMarks(pos, cells, avgStr) {
-  const ROW_H = 16, COL0 = 92, COL1 = 58, PAD = 8, MARGIN = 8;
-  const W = COL0 + COL1, rows = cells.length + 2, H = rows * ROW_H;   // header + data rows + AWR
+  const ROW_H = 16,
+    COL0 = 92,
+    COL1 = 58,
+    PAD = 8,
+    MARGIN = 8;
+  const W = COL0 + COL1,
+    rows = cells.length + 2,
+    H = rows * ROW_H; // header + data rows + AWR
   const [vert, horiz] = String(pos || 'Top Right').split(' ');
   const BX = horiz === 'Left' ? 0 : horiz === 'Center' ? 0.5 : 1;
   const BY = vert === 'Middle' ? 0.5 : vert === 'Bottom' ? 1 : 0;
@@ -136,34 +360,66 @@ function awrTableMarks(pos, cells, avgStr) {
   /** @param {number} lx @param {number} ly */
   const at = (lx, ly) => ({ vpx: BX, vp: BY, dx: baseDx + lx, dy: baseDy + ly });
   /** @param {number} x0 @param {number} y0 @param {number} x1 @param {number} y1 @param {string} fill @param {string|null} stroke */
-  const rect = (x0, y0, x1, y1, fill, stroke) => ({ closed: true, fill, stroke, width: stroke ? 1 : 0, path: [at(x0, y0), at(x1, y0), at(x1, y1), at(x0, y1)] });
+  const rect = (x0, y0, x1, y1, fill, stroke) => ({
+    closed: true,
+    fill,
+    stroke,
+    width: stroke ? 1 : 0,
+    path: [at(x0, y0), at(x1, y0), at(x1, y1), at(x0, y1)],
+  });
 
-  const PANEL = 'rgba(255,255,255,0.92)', BORDER = 'rgba(128,128,128,0.7)', BAND = 'rgba(120,123,134,0.9)';
-  const INK = '#131722', HEAD = '#ffffff';
+  const PANEL = 'rgba(255,255,255,0.92)',
+    BORDER = 'rgba(128,128,128,0.7)',
+    BAND = 'rgba(120,123,134,0.9)';
+  const INK = '#131722',
+    HEAD = '#ffffff';
   /** @type {any[]} */
   const marks = [];
-  marks.push(rect(0, 0, W, H, PANEL, BORDER));               // panel
-  marks.push(rect(0, 0, W, ROW_H, BAND, null));              // header band
-  marks.push(rect(0, H - ROW_H, W, H, BAND, null));          // AWR band
+  marks.push(rect(0, 0, W, H, PANEL, BORDER)); // panel
+  marks.push(rect(0, 0, W, ROW_H, BAND, null)); // header band
+  marks.push(rect(0, H - ROW_H, W, H, BAND, null)); // AWR band
   /** @param {number} col @param {number} r @param {string} txt @param {string} color @param {boolean} [bold] */
   const cell = (col, r, txt, color, bold) => {
     const rightAlign = col === 1;
     const lx = rightAlign ? W - PAD : PAD;
-    marks.push({ text: txt, at: at(lx, r * ROW_H + ROW_H / 2), color, align: rightAlign ? 'right' : 'left', baseline: 'middle', size: 11, bold: !!bold });
+    marks.push({
+      text: txt,
+      at: at(lx, r * ROW_H + ROW_H / 2),
+      color,
+      align: rightAlign ? 'right' : 'left',
+      baseline: 'middle',
+      size: 11,
+      bold: !!bold,
+    });
   };
-  cell(0, 0, 'Week', HEAD, true); cell(1, 0, 'Range', HEAD, true);
-  cells.forEach(([d, v], i) => { cell(0, i + 1, d, INK); cell(1, i + 1, v, INK); });   // d,v: [string,string] from the typed cells param
-  cell(0, rows - 1, 'AWR', HEAD, true); cell(1, rows - 1, avgStr, HEAD, true);
+  cell(0, 0, 'Week', HEAD, true);
+  cell(1, 0, 'Range', HEAD, true);
+  cells.forEach(([d, v], i) => {
+    cell(0, i + 1, d, INK);
+    cell(1, i + 1, v, INK);
+  }); // d,v: [string,string] from the typed cells param
+  cell(0, rows - 1, 'AWR', HEAD, true);
+  cell(1, rows - 1, avgStr, HEAD, true);
   return marks;
 }
 
 // --- helpers ---
 /** @param {string|number} tz */
-const tzOff = (tz) => { if (typeof tz === 'number') return tz * 3600; const m = /^UTC([+-]\d+)?$/.exec(String(tz || 'UTC').trim()); return m && m[1] ? parseInt(m[1], 10) * 3600 : 0; };
+const tzOff = (tz) => {
+  if (typeof tz === 'number') return tz * 3600;
+  const m = /^UTC([+-]\d+)?$/.exec(String(tz || 'UTC').trim());
+  return m && m[1] ? parseInt(m[1], 10) * 3600 : 0;
+};
 /** @param {string} s */
-const parseTOD = (s) => { const m = /^(\d{2})(\d{2})$/.exec(String(s || '1700').trim()); return m ? (+m[1]) * 3600 + (+m[2]) * 60 : 17 * 3600; };
+const parseTOD = (s) => {
+  const m = /^(\d{2})(\d{2})$/.exec(String(s || '1700').trim());
+  return m ? +m[1] * 3600 + +m[2] * 60 : 17 * 3600;
+};
 /** @param {string} name */
-const weekdayNum = (name) => { const i = WEEKDAYS.indexOf(name); return i < 0 ? 1 : i; };   // Sunday=0 .. Friday=5
+const weekdayNum = (name) => {
+  const i = WEEKDAYS.indexOf(name);
+  return i < 0 ? 1 : i;
+}; // Sunday=0 .. Friday=5
 
 // ---- the trading-day BOUNDARY -- the shared context every feature reads ------------------------
 // A single Day/Week Start Time in a chosen UTC offset (DST-naive, like the original). All the derived
@@ -173,7 +429,7 @@ const weekdayNum = (name) => { const i = WEEKDAYS.indexOf(name); return i < 0 ? 
  *   fwdWeeks:number, ownsWeekday:(ts:number)=>number, isTrading:(ts:number)=>boolean, nextBoundary:(ts:number)=>number }} Boundary */
 /** @param {StudyBar[]} bars @param {Record<string, any>} p @returns {Boundary} */
 function boundaryContext(bars, p) {
-  const now = bars[bars.length - 1].time;   // UTC seconds
+  const now = bars[bars.length - 1].time; // UTC seconds
   const off = tzOff(p.timezone);
   const tod = parseTOD(p.startTime);
   // An "evening" start (>= 12:00, e.g. futures 17:00) OPENS the next calendar day's trading session,
@@ -187,14 +443,25 @@ function boundaryContext(bars, p) {
 
   // the trading weekday a boundary OPENS (0=Sun..6=Sat); skip it if that day is Sat/Sun (no session)
   /** @param {number} ts */
-  const ownsWeekday = (ts) => { const wd = new Date((ts + off) * 1000).getUTCDay(); return eveningStart ? (wd + 1) % 7 : wd; };
+  const ownsWeekday = (ts) => {
+    const wd = new Date((ts + off) * 1000).getUTCDay();
+    return eveningStart ? (wd + 1) % 7 : wd;
+  };
   /** @param {number} ts */
-  const isTrading = (ts) => { const d = ownsWeekday(ts); return d !== 0 && d !== 6; };
+  const isTrading = (ts) => {
+    const d = ownsWeekday(ts);
+    return d !== 0 && d !== 6;
+  };
   // the next drawn separator after ts -- the right edge of ts's day cell (Friday spans Thu->Sun opens)
   /** @param {number} ts */
-  const nextBoundary = (ts) => { let n = ts + 86400, g = 0; while (g++ < 10 && !isTrading(n)) n += 86400; return n; };
+  const nextBoundary = (ts) => {
+    let n = ts + 86400,
+      g = 0;
+    while (g++ < 10 && !isTrading(n)) n += 86400;
+    return n;
+  };
 
-  const targetWd = weekdayNum(p.weekStartDay);   // Sunday=0 .. Friday=5
+  const targetWd = weekdayNum(p.weekStartDay); // Sunday=0 .. Friday=5
 
   // the trading-day window: Pine daysToShow = (weeksToShow-1)*5 + daysInCurrentWeek, +1 for current.
   // Both separators AND labels span this same window (labels ignore the separator toggles).
@@ -221,14 +488,20 @@ function mitigation(bars, p) {
   /** @type {number[]|null} */
   let sufLo = null;
   if (hideM) {
-    const n = bars.length; sufHi = new Array(n + 1); sufLo = new Array(n + 1);
-    sufHi[n] = -Infinity; sufLo[n] = Infinity;
-    for (let i = n - 1; i >= 0; i--) { sufHi[i] = Math.max(bars[i].high, sufHi[i + 1]); sufLo[i] = Math.min(bars[i].low, sufLo[i + 1]); }
+    const n = bars.length;
+    sufHi = new Array(n + 1);
+    sufLo = new Array(n + 1);
+    sufHi[n] = -Infinity;
+    sufLo[n] = Infinity;
+    for (let i = n - 1; i >= 0; i--) {
+      sufHi[i] = Math.max(bars[i].high, sufHi[i + 1]);
+      sufLo[i] = Math.min(bars[i].low, sufLo[i + 1]);
+    }
   }
   // sufHi/sufLo are non-null whenever hideM is true (the `hideM &&` short-circuits before the index), so cast past the null.
   return {
-    hiMitigated: (level, endIdx) => hideM && /** @type {number[]} */ (sufHi)[endIdx + 1] >= level,   // a later bar traded above
-    loMitigated: (level, endIdx) => hideM && /** @type {number[]} */ (sufLo)[endIdx + 1] <= level,   // a later bar traded below
+    hiMitigated: (level, endIdx) => hideM && /** @type {number[]} */ (sufHi)[endIdx + 1] >= level, // a later bar traded above
+    loMitigated: (level, endIdx) => hideM && /** @type {number[]} */ (sufLo)[endIdx + 1] <= level, // a later bar traded below
   };
 }
 
@@ -238,50 +511,79 @@ function mitigation(bars, p) {
 // leftEdge -- the oldest drawn boundary, the left edge every "Whole Range" feature clips to.
 /** @param {Record<string, any>} p @param {Boundary} B @param {any[]} shapes @returns {number} leftEdge */
 function separatorsAndLabels(p, B, shapes) {
-  const dayOn = !!p.enableDay, weekOn = !!p.enableWeek, labelsOn = !!p.enableLabels;
+  const dayOn = !!p.enableDay,
+    weekOn = !!p.enableWeek,
+    labelsOn = !!p.enableLabels;
   const { off, tod, b0, targetWd, dayWindow, fwdWeeks, ownsWeekday, isTrading, nextBoundary } = B;
 
-  const dayStroke = { color: p.dayColor || '#787b86', width: (p.dayWidth | 0) || 1, lineStyle: p.dayStyle || 'solid' };
-  const weekStroke = { color: p.weekColor || '#2962ff', width: (p.weekWidth | 0) || 2, lineStyle: p.weekStyle || 'solid' };
+  const dayStroke = { color: p.dayColor || '#787b86', width: p.dayWidth | 0 || 1, lineStyle: p.dayStyle || 'solid' };
+  const weekStroke = {
+    color: p.weekColor || '#2962ff',
+    width: p.weekWidth | 0 || 2,
+    lineStyle: p.weekStyle || 'solid',
+  };
 
   // The week-start boundary is re-styled as WEEKLY, exactly as the original: it is the same day-start
   // boundary whose CALENDAR weekday (in tz, at the boundary instant) equals the week-start day. Weekly
   // wins over daily there (one line). Elsewhere the day line draws (when enabled).
   /** @param {number} ts @returns {'week'|'day'|null} */
   const kindOf = (ts) => {
-    const calWd = new Date((ts + off) * 1000).getUTCDay();   // 0=Sun..6=Sat
+    const calWd = new Date((ts + off) * 1000).getUTCDay(); // 0=Sun..6=Sat
     if (weekOn && calWd === targetWd) return 'week';
     return dayOn ? 'day' : null;
   };
   /** @param {number} ts @param {'week'|'day'} kind */
-  const emit = (ts, kind) => { const s = kind === 'week' ? weekStroke : dayStroke; shapes.push({ type: 'vline', time: ts, color: s.color, width: s.width, lineStyle: s.lineStyle }); };
+  const emit = (ts, kind) => {
+    const s = kind === 'week' ? weekStroke : dayStroke;
+    shapes.push({ type: 'vline', time: ts, color: s.color, width: s.width, lineStyle: s.lineStyle });
+  };
 
   // label placement. Horizontal: Left anchors to THIS boundary line, Right to the NEXT boundary line,
   // each held the same LM pixels off the line (consistent margin, not flush); Center = time-midpoint
   // of the day cell. Vertical: pinned to the pane edge via vp (0 = top, 1 = bottom), a few px off.
-  const LM = 5;   // horizontal margin from the separator line, in px
+  const LM = 5; // horizontal margin from the separator line, in px
   const hpos = p.labelHPos || 'Center';
   const lAlign = hpos === 'Left' ? 'left' : hpos === 'Right' ? 'right' : 'center';
   const lDx = hpos === 'Left' ? LM : hpos === 'Right' ? -LM : 0;
   const atBottom = (p.labelVPos || 'Bottom') !== 'Top';
-  const lVp = atBottom ? 1 : 0, lDy = atBottom ? -4 : 4, lBase = atBottom ? 'bottom' : 'top';
-  const lColor = p.labelColor || '#787b86', lSize = p.labelSize || 11;
+  const lVp = atBottom ? 1 : 0,
+    lDy = atBottom ? -4 : 4,
+    lBase = atBottom ? 'bottom' : 'top';
+  const lColor = p.labelColor || '#787b86',
+    lSize = p.labelSize || 11;
   /** @param {number} start @param {number} end */
   const emitLabel = (start, end) => {
-    const ch = LETTERS[ownsWeekday(start)]; if (!ch) return;
+    const ch = LETTERS[ownsWeekday(start)];
+    if (!ch) return;
     const atT = hpos === 'Left' ? start : hpos === 'Right' ? end : (start + end) / 2;
-    shapes.push({ marks: [{ text: ch, at: { t: atT, vp: lVp, dx: lDx, dy: lDy }, color: lColor, align: lAlign, baseline: lBase, size: lSize, bold: !!p.labelBold, italic: !!p.labelItalic }] });
+    shapes.push({
+      marks: [
+        {
+          text: ch,
+          at: { t: atT, vp: lVp, dx: lDx, dy: lDy },
+          color: lColor,
+          align: lAlign,
+          baseline: lBase,
+          size: lSize,
+          bold: !!p.labelBold,
+          italic: !!p.labelItalic,
+        },
+      ],
+    });
   };
 
   // backward pass over the trading-day window: one boundary = one trading day. Draw its separator
   // (day/week, when enabled) and its letter label (when enabled). Count only real trading days.
-  let kept = 0, ts = b0, guard = 0, leftEdge = b0;   // leftEdge = oldest drawn boundary (left edge of the window)
+  let kept = 0,
+    ts = b0,
+    guard = 0,
+    leftEdge = b0; // leftEdge = oldest drawn boundary (left edge of the window)
   while (kept < dayWindow && guard++ < 1200) {
     if (isTrading(ts)) {
       const k = kindOf(ts);
       if (k) emit(ts, k);
       if (labelsOn) emitLabel(ts, nextBoundary(ts));
-      leftEdge = ts;   // decreasing ts, so the last kept boundary is the oldest -> the window's left edge
+      leftEdge = ts; // decreasing ts, so the last kept boundary is the oldest -> the window's left edge
       kept++;
     }
     ts -= 86400;
@@ -293,12 +595,16 @@ function separatorsAndLabels(p, B, shapes) {
   // the backstop for the weekly-off / labels-only case, where there is no week line to stop on. The
   // host extends the time scale so these future boundaries are reachable.
   const fwdCap = fwdWeeks * 5 + 7;
-  let wkSeen = 0, fdays = 0; ts = b0 + 86400; guard = 0;
+  let wkSeen = 0,
+    fdays = 0;
+  ts = b0 + 86400;
+  guard = 0;
   while ((dayOn || weekOn || labelsOn) && guard++ < 1200) {
     if (isTrading(ts)) {
       const k = kindOf(ts);
-      if (k === 'week' && ++wkSeen > fwdWeeks) {   // the closing boundary of the last future week --
-        if (weekOn) emit(ts, 'week');              // draw it so the week is FRAMED (start AND end), then stop
+      if (k === 'week' && ++wkSeen > fwdWeeks) {
+        // the closing boundary of the last future week --
+        if (weekOn) emit(ts, 'week'); // draw it so the week is FRAMED (start AND end), then stop
         break;
       }
       if (k) emit(ts, k);
@@ -319,11 +625,16 @@ function separatorsAndLabels(p, B, shapes) {
 /** @param {StudyBar[]} bars @param {Record<string, any>} p @param {number} leftEdge
  * @param {ReturnType<typeof mitigation>} M @param {any[]} shapes */
 function dailyHL(bars, p, leftEdge, M, shapes) {
-  const hlOff = tzOff(p.hlTimezone), hlTod = parseTOD(p.hlStartTime), hlEvening = hlTod >= 12 * 3600;
+  const hlOff = tzOff(p.hlTimezone),
+    hlTod = parseTOD(p.hlStartTime),
+    hlEvening = hlTod >= 12 * 3600;
   /** @param {number} dayStart */
-  const hlOwns = (dayStart) => { const wd = new Date((dayStart + hlOff) * 1000).getUTCDay(); return hlEvening ? (wd + 1) % 7 : wd; };
+  const hlOwns = (dayStart) => {
+    const wd = new Date((dayStart + hlOff) * 1000).getUTCDay();
+    return hlEvening ? (wd + 1) % 7 : wd;
+  };
   /** @param {number} t */
-  const dayKey = (t) => Math.floor((t + hlOff - hlTod) / 86400);   // bars sharing a key are one trading day
+  const dayKey = (t) => Math.floor((t + hlOff - hlTod) / 86400); // bars sharing a key are one trading day
 
   // group consecutive bars into trading days, tracking the high bar, the low bar, and the last bar index
   /** @type {{ key:number, dayStart:number, hi:number, hiT:number, lo:number, loT:number, endIdx:number }[]} */
@@ -331,14 +642,30 @@ function dailyHL(bars, p, leftEdge, M, shapes) {
   /** @type {{ key:number, dayStart:number, hi:number, hiT:number, lo:number, loT:number, endIdx:number }|null} */
   let g = null;
   for (let bi = 0; bi < bars.length; bi++) {
-    const b = bars[bi], k = dayKey(b.time);
-    if (!g || g.key !== k) { if (g) groups.push(g); g = { key: k, dayStart: k * 86400 + hlTod - hlOff, hi: b.high, hiT: b.time, lo: b.low, loT: b.time, endIdx: bi }; }
-    else { g.endIdx = bi; if (b.high > g.hi) { g.hi = b.high; g.hiT = b.time; } if (b.low < g.lo) { g.lo = b.low; g.loT = b.time; } }
+    const b = bars[bi],
+      k = dayKey(b.time);
+    if (!g || g.key !== k) {
+      if (g) groups.push(g);
+      g = { key: k, dayStart: k * 86400 + hlTod - hlOff, hi: b.high, hiT: b.time, lo: b.low, loT: b.time, endIdx: bi };
+    } else {
+      g.endIdx = bi;
+      if (b.high > g.hi) {
+        g.hi = b.high;
+        g.hiT = b.time;
+      }
+      if (b.low < g.lo) {
+        g.lo = b.low;
+        g.loT = b.time;
+      }
+    }
   }
   if (g) groups.push(g);
 
   // completed trading days only (drop the still-forming last group); skip weekend opens (no session)
-  const done = groups.slice(0, -1).filter((x) => { const d = hlOwns(x.dayStart); return d !== 0 && d !== 6; });
+  const done = groups.slice(0, -1).filter((x) => {
+    const d = hlOwns(x.dayStart);
+    return d !== 0 && d !== 6;
+  });
   // "Whole Range" fills the visible separator window instead of the H/L tab's own Days count: take every
   // completed day, then clip each triangle to the oldest drawn separator (leftEdge) so none spills past
   // the left edge of the range the user set. Else: the last N days from the H/L tab.
@@ -346,15 +673,42 @@ function dailyHL(bars, p, leftEdge, M, shapes) {
   const show = p.hlWholeRange
     ? done.filter((x) => bars[x.endIdx].time >= hlLeft)
     : done.slice(-Math.max(1, p.hlDaysToShow | 0));
-  const hiCol = p.hlHighColor || '#26a69a', loCol = p.hlLowColor || '#ef5350';
-  const G = 3, TH = 9, TW = 6;   // gap off the bar / triangle height / half-width, in px
+  const hiCol = p.hlHighColor || '#26a69a',
+    loCol = p.hlLowColor || '#ef5350';
+  const G = 3,
+    TH = 9,
+    TW = 6; // gap off the bar / triangle height / half-width, in px
   for (const x of show) {
-    if (x.hiT >= hlLeft && !M.hiMitigated(x.hi, x.endIdx)) shapes.push({ marks: [{ closed: true, fill: hiCol, path: [   // triangle-down, above the high
-      { t: x.hiT, p: x.hi, dx: -TW, dy: -(G + TH) }, { t: x.hiT, p: x.hi, dx: TW, dy: -(G + TH) }, { t: x.hiT, p: x.hi, dx: 0, dy: -G },
-    ] }] });
-    if (x.loT >= hlLeft && !M.loMitigated(x.lo, x.endIdx)) shapes.push({ marks: [{ closed: true, fill: loCol, path: [   // triangle-up, below the low
-      { t: x.loT, p: x.lo, dx: -TW, dy: (G + TH) }, { t: x.loT, p: x.lo, dx: TW, dy: (G + TH) }, { t: x.loT, p: x.lo, dx: 0, dy: G },
-    ] }] });
+    if (x.hiT >= hlLeft && !M.hiMitigated(x.hi, x.endIdx))
+      shapes.push({
+        marks: [
+          {
+            closed: true,
+            fill: hiCol,
+            path: [
+              // triangle-down, above the high
+              { t: x.hiT, p: x.hi, dx: -TW, dy: -(G + TH) },
+              { t: x.hiT, p: x.hi, dx: TW, dy: -(G + TH) },
+              { t: x.hiT, p: x.hi, dx: 0, dy: -G },
+            ],
+          },
+        ],
+      });
+    if (x.loT >= hlLeft && !M.loMitigated(x.lo, x.endIdx))
+      shapes.push({
+        marks: [
+          {
+            closed: true,
+            fill: loCol,
+            path: [
+              // triangle-up, below the low
+              { t: x.loT, p: x.lo, dx: -TW, dy: G + TH },
+              { t: x.loT, p: x.lo, dx: TW, dy: G + TH },
+              { t: x.loT, p: x.lo, dx: 0, dy: G },
+            ],
+          },
+        ],
+      });
   }
 }
 
@@ -373,13 +727,23 @@ function weeklyHL(bars, p, B, leftEdge, M, shapes) {
   /** @type {{ key:number, hi:number, lo:number, firstT:number, lastT:number, endIdx:number }|null} */
   let cur = null;
   for (let bi = 0; bi < bars.length; bi++) {
-    const b = bars[bi], k = weekKey(b.time);
-    if (!cur || cur.key !== k) { if (cur) wks.push(cur); cur = { key: k, hi: b.high, lo: b.low, firstT: b.time, lastT: b.time, endIdx: bi }; }
-    else { cur.endIdx = bi; if (b.high > cur.hi) cur.hi = b.high; if (b.low < cur.lo) cur.lo = b.low; cur.lastT = b.time; }
+    const b = bars[bi],
+      k = weekKey(b.time);
+    if (!cur || cur.key !== k) {
+      if (cur) wks.push(cur);
+      cur = { key: k, hi: b.high, lo: b.low, firstT: b.time, lastT: b.time, endIdx: bi };
+    } else {
+      cur.endIdx = bi;
+      if (b.high > cur.hi) cur.hi = b.high;
+      if (b.low < cur.lo) cur.lo = b.low;
+      cur.lastT = b.time;
+    }
   }
   if (cur) wks.push(cur);
-  const wkW = (p.wkWidth | 0) || 1, wkS = p.wkStyle || 'solid';
-  const wkHi = p.wkHighColor || '#26a69a', wkLo = p.wkLowColor || '#ef5350';
+  const wkW = p.wkWidth | 0 || 1,
+    wkS = p.wkStyle || 'solid';
+  const wkHi = p.wkHighColor || '#26a69a',
+    wkLo = p.wkLowColor || '#ef5350';
   // draw completed weeks (exclude the still-forming last one), last N. Each line spans from the
   // week's first bar to the NEXT week's first bar -- i.e. right up to the weekly boundary, so it
   // meets the separator with no gap (as in the original: wkStartBarIdx -> next week's open bar).
@@ -389,10 +753,37 @@ function weeklyHL(bars, p, B, leftEdge, M, shapes) {
   // actually framed by the range draw a line -- no extra week spilling off the left edge. Else: last N.
   const start = p.wkWholeRange ? 0 : Math.max(0, completed - Math.max(1, p.wkWeeksToShow | 0));
   for (let i = start; i < completed; i++) {
-    const w = wks[i], rightT = wks[i + 1].firstT;
-    if (p.wkWholeRange && w.firstT < leftEdge) continue;   // week begins before the visible window -> skip
-    if (!M.hiMitigated(w.hi, w.endIdx)) shapes.push({ marks: [{ stroke: wkHi, width: wkW, dash: wkS, path: [{ t: w.firstT, p: w.hi }, { t: rightT, p: w.hi }] }] });
-    if (!M.loMitigated(w.lo, w.endIdx)) shapes.push({ marks: [{ stroke: wkLo, width: wkW, dash: wkS, path: [{ t: w.firstT, p: w.lo }, { t: rightT, p: w.lo }] }] });
+    const w = wks[i],
+      rightT = wks[i + 1].firstT;
+    if (p.wkWholeRange && w.firstT < leftEdge) continue; // week begins before the visible window -> skip
+    if (!M.hiMitigated(w.hi, w.endIdx))
+      shapes.push({
+        marks: [
+          {
+            stroke: wkHi,
+            width: wkW,
+            dash: wkS,
+            path: [
+              { t: w.firstT, p: w.hi },
+              { t: rightT, p: w.hi },
+            ],
+          },
+        ],
+      });
+    if (!M.loMitigated(w.lo, w.endIdx))
+      shapes.push({
+        marks: [
+          {
+            stroke: wkLo,
+            width: wkW,
+            dash: wkS,
+            path: [
+              { t: w.firstT, p: w.lo },
+              { t: rightT, p: w.lo },
+            ],
+          },
+        ],
+      });
   }
 }
 
@@ -404,19 +795,37 @@ function weeklyHL(bars, p, B, leftEdge, M, shapes) {
 function dailyOpenLines(bars, p, B, shapes) {
   const { off, tod, dayWindow, isTrading, nextBoundary } = B;
   /** @param {number} t */
-  const doKey = (t) => Math.floor((t + off - tod) / 86400);   // bars sharing a key are one trading day
+  const doKey = (t) => Math.floor((t + off - tod) / 86400); // bars sharing a key are one trading day
   /** @type {Map<number, { key:number, open:number, firstT:number }>} */
   const dm = new Map();
-  for (const b of bars) { const k = doKey(b.time); if (!dm.has(k)) dm.set(k, { key: k, open: b.open, firstT: b.time }); }
-  const arr = [...dm.values()];   // insertion order == ascending (bars are sorted)
-  const doCol = p.dailyOpenColor || '#ffffff', doW = (p.dailyOpenWidth | 0) || 1, doS = p.dailyOpenStyle || 'solid';
+  for (const b of bars) {
+    const k = doKey(b.time);
+    if (!dm.has(k)) dm.set(k, { key: k, open: b.open, firstT: b.time });
+  }
+  const arr = [...dm.values()]; // insertion order == ascending (bars are sorted)
+  const doCol = p.dailyOpenColor || '#ffffff',
+    doW = p.dailyOpenWidth | 0 || 1,
+    doS = p.dailyOpenStyle || 'solid';
   let drawn = 0;
-  const dLimit = p.dailyOpenCurrentOnly ? 1 : dayWindow;   // "Current day only" -> just the forming day
+  const dLimit = p.dailyOpenCurrentOnly ? 1 : dayWindow; // "Current day only" -> just the forming day
   for (let i = arr.length - 1; i >= 0 && drawn < dLimit; i--) {
-    const d = arr[i], boundary = d.key * 86400 + tod - off;
-    if (!isTrading(boundary)) continue;   // skip weekend day-starts (no session)
-    const rightT = (i + 1 < arr.length) ? arr[i + 1].firstT : nextBoundary(boundary);   // next day, or projected for the live day
-    shapes.push({ marks: [{ stroke: doCol, width: doW, dash: doS, path: [{ t: d.firstT, p: d.open }, { t: rightT, p: d.open }] }] });
+    const d = arr[i],
+      boundary = d.key * 86400 + tod - off;
+    if (!isTrading(boundary)) continue; // skip weekend day-starts (no session)
+    const rightT = i + 1 < arr.length ? arr[i + 1].firstT : nextBoundary(boundary); // next day, or projected for the live day
+    shapes.push({
+      marks: [
+        {
+          stroke: doCol,
+          width: doW,
+          dash: doS,
+          path: [
+            { t: d.firstT, p: d.open },
+            { t: rightT, p: d.open },
+          ],
+        },
+      ],
+    });
     drawn++;
   }
 }
@@ -433,16 +842,33 @@ function weeklyOpenLines(bars, p, B, shapes) {
   const woKey = (t) => Math.floor((Math.floor((t + off - tod) / 86400) - targetWd + 4) / 7);
   /** @type {Map<number, { key:number, open:number, firstT:number }>} */
   const wm = new Map();
-  for (const b of bars) { const k = woKey(b.time); if (!wm.has(k)) wm.set(k, { key: k, open: b.open, firstT: b.time }); }
-  const arr = [...wm.values()];   // insertion order == ascending (bars are sorted)
-  const woCol = p.weeklyOpenColor || '#2962ff', woW = (p.weeklyOpenWidth | 0) || 1, woS = p.weeklyOpenStyle || 'solid';
+  for (const b of bars) {
+    const k = woKey(b.time);
+    if (!wm.has(k)) wm.set(k, { key: k, open: b.open, firstT: b.time });
+  }
+  const arr = [...wm.values()]; // insertion order == ascending (bars are sorted)
+  const woCol = p.weeklyOpenColor || '#2962ff',
+    woW = p.weeklyOpenWidth | 0 || 1,
+    woS = p.weeklyOpenStyle || 'solid';
   let drawn = 0;
-  const wLimit = p.weeklyOpenCurrentOnly ? 1 : weeks;   // "Current week only" -> just the forming week
+  const wLimit = p.weeklyOpenCurrentOnly ? 1 : weeks; // "Current week only" -> just the forming week
   for (let i = arr.length - 1; i >= 0 && drawn < wLimit; i--) {
     const w = arr[i];
-    const boundary = Math.floor((w.firstT + off - tod) / 86400) * 86400 + tod - off;   // this week's start boundary
-    const rightT = (i + 1 < arr.length) ? arr[i + 1].firstT : boundary + 7 * 86400;     // next week, or projected 1 week ahead
-    shapes.push({ marks: [{ stroke: woCol, width: woW, dash: woS, path: [{ t: w.firstT, p: w.open }, { t: rightT, p: w.open }] }] });
+    const boundary = Math.floor((w.firstT + off - tod) / 86400) * 86400 + tod - off; // this week's start boundary
+    const rightT = i + 1 < arr.length ? arr[i + 1].firstT : boundary + 7 * 86400; // next week, or projected 1 week ahead
+    shapes.push({
+      marks: [
+        {
+          stroke: woCol,
+          width: woW,
+          dash: woS,
+          path: [
+            { t: w.firstT, p: w.open },
+            { t: rightT, p: w.open },
+          ],
+        },
+      ],
+    });
     drawn++;
   }
 }
@@ -461,24 +887,31 @@ function awrTable(bars, p, ctx, B, shapes) {
   /** @type {Map<number, { key:number, hi:number, lo:number, firstT:number }>} */
   const wm = new Map();
   for (const b of bars) {
-    const k = awrKey(b.time); let g = wm.get(k);
+    const k = awrKey(b.time);
+    let g = wm.get(k);
     if (!g) wm.set(k, { key: k, hi: b.high, lo: b.low, firstT: b.time });
-    else { if (b.high > g.hi) g.hi = b.high; if (b.low < g.lo) g.lo = b.low; }
+    else {
+      if (b.high > g.hi) g.hi = b.high;
+      if (b.low < g.lo) g.lo = b.low;
+    }
   }
-  const done = [...wm.values()].slice(0, -1);                 // drop the still-forming week
-  const rows = done.slice(-Math.max(1, p.awrWeeks | 0));      // last N completed weeks
+  const done = [...wm.values()].slice(0, -1); // drop the still-forming week
+  const rows = done.slice(-Math.max(1, p.awrWeeks | 0)); // last N completed weeks
   if (!rows.length) return;
   const tick = ctx && ctx.tickSize ? ctx.tickSize : null;
   const unit = p.awrUnit || 'Points';
   /** @param {number} r */
-  const conv = (r) => (unit === 'Points' || !tick) ? r : unit === 'Ticks' ? r / tick : r / tick / 10;
+  const conv = (r) => (unit === 'Points' || !tick ? r : unit === 'Ticks' ? r / tick : r / tick / 10);
   /** @param {number} v */
   const fmt = (v) => (Math.round(v * 10) / 10).toFixed(1);
-  const fridayOff = 5 - targetWd;                            // week-start day -> that week's Friday
+  const fridayOff = 5 - targetWd; // week-start day -> that week's Friday
   /** @param {number} tsec */
-  const md = (tsec) => { const d = new Date((tsec + off) * 1000); return (d.getUTCMonth() + 1) + '/' + d.getUTCDate(); };
+  const md = (tsec) => {
+    const d = new Date((tsec + off) * 1000);
+    return d.getUTCMonth() + 1 + '/' + d.getUTCDate();
+  };
   const cells = rows.map((w) => {
-    const bnd = Math.floor((w.firstT + off - tod) / 86400) * 86400 + tod - off;   // week-start boundary
+    const bnd = Math.floor((w.firstT + off - tod) / 86400) * 86400 + tod - off; // week-start boundary
     return /** @type {[string, string]} */ ([md(bnd) + '-' + md(bnd + fridayOff * 86400), fmt(conv(w.hi - w.lo))]);
   });
   const avg = rows.reduce((a, w) => a + (w.hi - w.lo), 0) / rows.length;
@@ -497,13 +930,16 @@ Studies.register({
    * @param {{ tickSize?:number }} [ctx]
    */
   calc(bars, p, ctx) {
-    /** @type {any[]} */   // heterogeneous host-render shapes (vline/label/triangle/line + raw marks) on the `shapes` channel
+    /** @type {any[]} */ // heterogeneous host-render shapes (vline/label/triangle/line + raw marks) on the `shapes` channel
     const shapes = [];
-    const dayOn = !!p.enableDay, weekOn = !!p.enableWeek, labelsOn = !!p.enableLabels, hlOn = !!p.enableHL;
+    const dayOn = !!p.enableDay,
+      weekOn = !!p.enableWeek,
+      labelsOn = !!p.enableLabels,
+      hlOn = !!p.enableHL;
     if (!bars || !bars.length || (!dayOn && !weekOn && !labelsOn && !hlOn)) return { plots: [], shapes };
 
     const B = boundaryContext(bars, p);
-    const leftEdge = separatorsAndLabels(p, B, shapes);   // also the "Whole Range" clip edge below
+    const leftEdge = separatorsAndLabels(p, B, shapes); // also the "Whole Range" clip edge below
     const M = mitigation(bars, p);
     if (hlOn) dailyHL(bars, p, leftEdge, M, shapes);
     if (p.enableWkHL) weeklyHL(bars, p, B, leftEdge, M, shapes);

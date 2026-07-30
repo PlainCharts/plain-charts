@@ -28,7 +28,7 @@
  * @property {() => number} size
  * @property {(fn: (ev: StoreEvent) => void) => (() => void)} subscribe
  */
-import { IPC } from '../ipc.js';   // the engine's cross-window channel names (single source of truth)
+import { IPC } from '../ipc.js'; // the engine's cross-window channel names (single source of truth)
 
 /**
  * @template T
@@ -41,36 +41,93 @@ export function store(name) {
   /** @type {Set<(ev: StoreEvent) => void>} */
   const subs = new Set();
   /** @type {BroadcastChannel | null} */
-  let bc = null; try { bc = new BroadcastChannel(IPC.STORE_PREFIX + name); } catch (_) {}
+  let bc = null;
+  try {
+    bc = new BroadcastChannel(IPC.STORE_PREFIX + name);
+  } catch (_) {}
 
   /** @param {StoreEvent} ev */
-  const notify = (ev) => { for (const fn of subs) { try { fn(ev); } catch (_) {} } };
+  const notify = (ev) => {
+    for (const fn of subs) {
+      try {
+        fn(ev);
+      } catch (_) {}
+    }
+  };
   /** @param {string} key @param {T} value */
-  const applySet = (key, value) => { map.set(key, value); notify({ type: 'set', key, value }); };
+  const applySet = (key, value) => {
+    map.set(key, value);
+    notify({ type: 'set', key, value });
+  };
   /** @param {string} key */
-  const applyRemove = (key) => { if (map.delete(key)) notify({ type: 'remove', key }); };
+  const applyRemove = (key) => {
+    if (map.delete(key)) notify({ type: 'remove', key });
+  };
   /** @param {[string, T][]} [entries] */
-  const applyReset = (entries) => { map.clear(); (entries || []).forEach(([k, v]) => map.set(k, v)); notify({ type: 'reset' }); };
+  const applyReset = (entries) => {
+    map.clear();
+    (entries || []).forEach(([k, v]) => map.set(k, v));
+    notify({ type: 'reset' });
+  };
 
   if (bc) {
     bc.onmessage = (e) => {
-      const d = e && e.data; if (!d) return;
+      const d = e && e.data;
+      if (!d) return;
       if (d.set) applySet(d.set.key, d.set.value);
       else if (d.remove) applyRemove(d.remove.key);
       else if (d.reset) applyReset(d.reset);
-      else if (d.reqSnapshot && map.size) { try { bc.postMessage({ reset: [...map.entries()] }); } catch (_) {} }   // answer a late joiner
+      else if (d.reqSnapshot && map.size) {
+        try {
+          bc.postMessage({ reset: [...map.entries()] });
+        } catch (_) {}
+      } // answer a late joiner
     };
-    try { bc.postMessage({ reqSnapshot: true }); } catch (_) {}   // ask peers to send current state
+    try {
+      bc.postMessage({ reqSnapshot: true });
+    } catch (_) {} // ask peers to send current state
   }
 
   return {
-    set(key, value) { applySet(key, value); if (bc) { try { bc.postMessage({ set: { key, value } }); } catch (_) {} } },
-    remove(key) { applyRemove(key); if (bc) { try { bc.postMessage({ remove: { key } }); } catch (_) {} } },
-    reset(entries = []) { applyReset(entries); if (bc) { try { bc.postMessage({ reset: [...map.entries()] }); } catch (_) {} } },
-    get(key) { return map.get(key); },
-    all() { return [...map.values()]; },
-    keys() { return [...map.keys()]; },
-    size() { return map.size; },
-    subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
+    set(key, value) {
+      applySet(key, value);
+      if (bc) {
+        try {
+          bc.postMessage({ set: { key, value } });
+        } catch (_) {}
+      }
+    },
+    remove(key) {
+      applyRemove(key);
+      if (bc) {
+        try {
+          bc.postMessage({ remove: { key } });
+        } catch (_) {}
+      }
+    },
+    reset(entries = []) {
+      applyReset(entries);
+      if (bc) {
+        try {
+          bc.postMessage({ reset: [...map.entries()] });
+        } catch (_) {}
+      }
+    },
+    get(key) {
+      return map.get(key);
+    },
+    all() {
+      return [...map.values()];
+    },
+    keys() {
+      return [...map.keys()];
+    },
+    size() {
+      return map.size;
+    },
+    subscribe(fn) {
+      subs.add(fn);
+      return () => subs.delete(fn);
+    },
   };
 }

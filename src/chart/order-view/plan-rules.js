@@ -18,6 +18,6 @@
 export function stopDragFlip(stop, ref, _curDir, curTarget) {
   const dir = stop < ref ? 'long' : 'short';
   const wrongSide = curTarget != null && (dir === 'long' ? Number(curTarget) < ref : Number(curTarget) > ref);
-  const target = curTarget == null ? null : (wrongSide ? 2 * ref - Number(curTarget) : Number(curTarget));   // keep the target on the profit side
+  const target = curTarget == null ? null : wrongSide ? 2 * ref - Number(curTarget) : Number(curTarget); // keep the target on the profit side
   return { stop, target, dir };
 }

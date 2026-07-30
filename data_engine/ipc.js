@@ -14,10 +14,10 @@
 /** The engine's cross-window channel names. `*_PREFIX` are joined with an instance name (store/channel id). */
 export const IPC = {
   BROKER_BUS: 'broker-bus',
-  BROKER_IN_PREFIX: 'broker-bus:in:',  // + <win>: per-window REPLY channel (point-to-point, no fan-out)
-  ORDER_BUS: 'order-bus',              // surfaces -> order-host: semantic order COMMANDS + acks (the Order Worker)
-  STORE_PREFIX: 'platform:store:',     // + <store name>
-  CHANNEL_PREFIX: 'platform:ch:',      // + <channel name>
+  BROKER_IN_PREFIX: 'broker-bus:in:', // + <win>: per-window REPLY channel (point-to-point, no fan-out)
+  ORDER_BUS: 'order-bus', // surfaces -> order-host: semantic order COMMANDS + acks (the Order Worker)
+  STORE_PREFIX: 'platform:store:', // + <store name>
+  CHANNEL_PREFIX: 'platform:ch:', // + <channel name>
 };
 
 // ---------------------------------------------------------------------------------------------------

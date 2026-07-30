@@ -18,14 +18,15 @@ export function createPlanBridge(ot) {
   const { cfg, api } = ot;
   const plan = api.trade.plan;
   const ctx = () => ({ broker: cfg.broker || '', symbol: cfg.symbol });
-  let owns = false;   // did WE set the plan? -> only then may clear() wipe it
+  let owns = false; // did WE set the plan? -> only then may clear() wipe it
 
   // PUSH: flip Project + Bracket on and STAMP OWNERSHIP -- the plan is addon-controlled now, so the app's pill
   // controller switches to owner semantics (its V arms us via the shared armed flag instead of placing an order
   // itself). The overlay seeds the entry/stop/target + the bars-away anchor from the app's global projection
   // settings -- we deliberately set NO ref/levels so those settings are honoured.
   const push = () => {
-    const { broker, symbol } = ctx(); if (!symbol) return;
+    const { broker, symbol } = ctx();
+    if (!symbol) return;
     plan.setProjecting(broker, symbol, true);
     plan.setBracket(broker, symbol, true);
     plan.setLevels(broker, symbol, { owner: 'position-manager' });
@@ -34,15 +35,35 @@ export function createPlanBridge(ot) {
 
   // ARM / DISARM: flip the projected bracket LIVE (planning -> live mode) without touching the levels. The overlay
   // redraws it in the live colours; disarm returns it to a plan.
-  const arm = () => { const { broker, symbol } = ctx(); if (!symbol) return; plan.setArmed(broker, symbol, true); };
-  const disarm = () => { const { broker, symbol } = ctx(); if (!symbol) return; plan.setArmed(broker, symbol, false); };
+  const arm = () => {
+    const { broker, symbol } = ctx();
+    if (!symbol) return;
+    plan.setArmed(broker, symbol, true);
+  };
+  const disarm = () => {
+    const { broker, symbol } = ctx();
+    if (!symbol) return;
+    plan.setArmed(broker, symbol, false);
+  };
 
   // CLEAR the plan (setup torn down / entry filled) -- only if we own it. setBracket(false) also clears armed.
-  const clear = () => { if (!owns) return; const { broker, symbol } = ctx(); if (!symbol) return; plan.setBracket(broker, symbol, false); plan.setProjecting(broker, symbol, false); owns = false; };
+  const clear = () => {
+    if (!owns) return;
+    const { broker, symbol } = ctx();
+    if (!symbol) return;
+    plan.setBracket(broker, symbol, false);
+    plan.setProjecting(broker, symbol, false);
+    owns = false;
+  };
 
   // RESET: fresh slate on (re)start. A prior session's projection lingers in the store / on disk while a fresh addon has
   // no setup -- so the chart shows stale beads under an idle "Show pending". Assert empty unconditionally (not owns-gated).
-  const reset = () => { const { broker, symbol } = ctx(); if (!symbol) return; plan.setProjecting(broker, symbol, false); owns = false; };
+  const reset = () => {
+    const { broker, symbol } = ctx();
+    if (!symbol) return;
+    plan.setProjecting(broker, symbol, false);
+    owns = false;
+  };
 
   return { push, arm, disarm, clear, reset };
 }

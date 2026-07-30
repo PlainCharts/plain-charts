@@ -11,7 +11,8 @@ const DAY = 86400000;
 function parseHM(s) {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(s == null ? '' : s));
   if (!m) return null;
-  const h = +m[1], min = +m[2];
+  const h = +m[1],
+    min = +m[2];
   if (h < 0 || h > 23 || min < 0 || min > 59) return null;
   return [h, min];
 }
@@ -38,13 +39,15 @@ export function scheduleValid(sch) {
 export function nextFire(sch, now, tzOffsetMin = 0) {
   if (!scheduleValid(sch)) return null;
   if (sch.kind === 'once') return sch.at > now ? sch.at : null;
-  const hm = parseHM(sch.time); if (!hm) return null;
+  const hm = parseHM(sch.time);
+  if (!hm) return null;
   const shift = tzOffsetMin * 60000;
-  const s = now + shift;                       // shifted "wall clock" epoch (read back with UTC getters)
+  const s = now + shift; // shifted "wall clock" epoch (read back with UTC getters)
   const d = new Date(s);
   const base = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hm[0], hm[1], 0, 0);
   if (sch.kind === 'daily') {
-    let cand = base; if (cand <= s) cand += DAY;   // passed (or exactly) now -> tomorrow
+    let cand = base;
+    if (cand <= s) cand += DAY; // passed (or exactly) now -> tomorrow
     return cand - shift;
   }
   // weekly: walk forward to the next configured weekday whose clock time is still ahead.

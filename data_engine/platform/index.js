@@ -43,13 +43,13 @@ import { makeConsole } from './console.js';
  * }}
  */
 export const platform = {
-  console: makeConsole(),        // log stream — { post, scoped, subscribe, history, clear }
-  orders: store('orders'),       // order book — every order, keyed broker:orderId (working + terminal, retained)
-  fills: store('fills'),         // executions — keyed broker:orderId (cumulative fill per order); positions/history derive from this
+  console: makeConsole(), // log stream — { post, scoped, subscribe, history, clear }
+  orders: store('orders'), // order book — every order, keyed broker:orderId (working + terminal, retained)
+  fills: store('fills'), // executions — keyed broker:orderId (cumulative fill per order); positions/history derive from this
   positions: store('positions'), // open positions — keyed broker:symbol (the NETTED view: chart dot, order-ticket)
   positionLots: store('positionLots'), // hedging: individual broker positions, keyed broker:ticket (SL/TP/live P&L per lot)
-  accounts: store('accounts'),   // trading accounts — keyed broker:accountId
-  perf: store('perf'),           // diagnostics — per-window live samples (src/perf/sampler.js) + OS process rows (perf-monitor addon)
+  accounts: store('accounts'), // trading accounts — keyed broker:accountId
+  perf: store('perf'), // diagnostics — per-window live samples (src/perf/sampler.js) + OS process rows (perf-monitor addon)
 };
 
 // Build the addon-facing view of the platform for a given addon id: writers are auto-tagged (Addons +

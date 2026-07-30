@@ -12,16 +12,39 @@ Tools.register({
   kind: 'draw',
   points: 2,
   sliceable: true,
-  shiftConstrain: 'angle',   // hold Shift → snap to 45° (H/V/diagonal), like the trend line
-  defaultStyle: { color: '#2962ff', width: 2, lineStyle: 'solid', extend: 'none', arrows: 'end', midPoint: false, priceLabels: false },
+  shiftConstrain: 'angle', // hold Shift → snap to 45° (H/V/diagonal), like the trend line
+  defaultStyle: {
+    color: '#2962ff',
+    width: 2,
+    lineStyle: 'solid',
+    extend: 'none',
+    arrows: 'end',
+    midPoint: false,
+    priceLabels: false,
+  },
   // share the trend line's Style/Text schema (evaluated lazily, after both load)
-  get settings() { const t = TL(); return t ? t.settings : undefined; },
+  get settings() {
+    const t = TL();
+    return t ? t.settings : undefined;
+  },
   /** @param {...any} a */
-  marks(...a) { const t = TL(); if (t) return t.marks(...a); },
+  marks(...a) {
+    const t = TL();
+    if (t) return t.marks(...a);
+  },
   /** @param {...any} a */
-  drawText(...a) { const t = TL(); if (t) return t.drawText(...a); },
+  drawText(...a) {
+    const t = TL();
+    if (t) return t.drawText(...a);
+  },
   /** @param {...any} a */
-  textGeom(...a) { const t = TL(); if (t) return t.textGeom(...a); },
+  textGeom(...a) {
+    const t = TL();
+    if (t) return t.textGeom(...a);
+  },
   /** @param {...any} a */
-  textGap(...a) { const t = TL(); if (t) return t.textGap(...a); },
+  textGap(...a) {
+    const t = TL();
+    if (t) return t.textGap(...a);
+  },
 });

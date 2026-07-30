@@ -10,7 +10,10 @@ const https = nodeRequire ? nodeRequire('https') : null;
 /** @typedef {{ token?: string, chatId?: string }} TelegramConfig */
 
 /** @param {string} s */
-function byteLen(s) { const B = /** @type {any} */ (globalThis).Buffer; return B ? B.byteLength(s) : s.length; }
+function byteLen(s) {
+  const B = /** @type {any} */ (globalThis).Buffer;
+  return B ? B.byteLength(s) : s.length;
+}
 
 /**
  * One Bot API call. GET when there's no payload (getMe), POST JSON otherwise (sendMessage). Rejects on
@@ -32,10 +35,17 @@ function tgCall(token, method, payload) {
       },
       (/** @type {any} */ res) => {
         let d = '';
-        res.on('data', (/** @type {any} */ c) => { d += c; });
+        res.on('data', (/** @type {any} */ c) => {
+          d += c;
+        });
         res.on('end', () => {
-          try { const j = JSON.parse(d); if (j && j.ok) resolve(j.result); else reject(new Error((j && j.description) || ('HTTP ' + res.statusCode))); }
-          catch (_) { reject(new Error('bad response from Telegram')); }
+          try {
+            const j = JSON.parse(d);
+            if (j && j.ok) resolve(j.result);
+            else reject(new Error((j && j.description) || 'HTTP ' + res.statusCode));
+          } catch (_) {
+            reject(new Error('bad response from Telegram'));
+          }
         });
       },
     );
@@ -71,7 +81,7 @@ export function sendTelegram(cfg, text, opts = {}) {
 export async function verifyTelegram(cfg) {
   if (!cfg || !cfg.token) throw new Error('no bot token configured');
   const me = await tgCall(cfg.token, 'getMe');
-  const botName = (me && me.username) ? '@' + me.username : 'bot';
+  const botName = me && me.username ? '@' + me.username : 'bot';
   // PLAIN text (no parse_mode) -- exactly like the reference test_connection: the bot @username can contain a
   // Markdown metacharacter (e.g. the underscore in @satsebeli_bot), which would break Markdown parsing.
   if (cfg.chatId) await tgCall(cfg.token, 'sendMessage', { chat_id: cfg.chatId, text: 'Connected as ' + botName });

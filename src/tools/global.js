@@ -8,9 +8,9 @@ import { geom } from './engine/geometry.js';
 /** @type {any} */ (window).Tools = {
   register: registerTool,
   unregister: unregisterTool,
-  get: getTool,                 // look up another registered tool (for delegation)
-  geom,                         // hit-test helpers for shape files (no imports needed)
+  get: getTool, // look up another registered tool (for delegation)
+  geom, // hit-test helpers for shape files (no imports needed)
   // canvas dash pattern for a line style ('solid'|'dashed'|'dotted'; legacy 1/2)
   /** @param {string | number} s */
-  dash: (s) => (s === 'dashed' || s === 2) ? [6, 4] : (s === 'dotted' || s === 1) ? [2, 3] : [],
+  dash: (s) => (s === 'dashed' || s === 2 ? [6, 4] : s === 'dotted' || s === 1 ? [2, 3] : []),
 };

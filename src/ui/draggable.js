@@ -7,7 +7,11 @@
 export function makeDraggable(dialog, handle) {
   handle.style.cursor = 'move';
   handle.style.userSelect = 'none';
-  let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
+  let sx = 0,
+    sy = 0,
+    ox = 0,
+    oy = 0,
+    dragging = false;
 
   /** @param {number} v @param {number} lo @param {number} hi @returns {number} */
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -15,7 +19,8 @@ export function makeDraggable(dialog, handle) {
   const onMove = (e) => {
     if (!dragging) return;
     const r = dialog.getBoundingClientRect();
-    const maxL = window.innerWidth - 60, maxT = window.innerHeight - 40;
+    const maxL = window.innerWidth - 60,
+      maxT = window.innerHeight - 40;
     dialog.style.left = clamp(ox + e.clientX - sx, 60 - r.width, maxL) + 'px';
     dialog.style.top = clamp(oy + e.clientY - sy, 0, maxT) + 'px';
   };
@@ -31,7 +36,10 @@ export function makeDraggable(dialog, handle) {
     dialog.style.margin = '0';
     dialog.style.left = r.left + 'px';
     dialog.style.top = r.top + 'px';
-    ox = r.left; oy = r.top; sx = e.clientX; sy = e.clientY;
+    ox = r.left;
+    oy = r.top;
+    sx = e.clientX;
+    sy = e.clientY;
     dragging = true;
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);

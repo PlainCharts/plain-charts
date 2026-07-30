@@ -29,17 +29,24 @@ export function copyIds(e, ids) {
   /** @type {ClipEntry[]} */
   const out = [];
   ids.forEach((id) => {
-    const d = e.get(id), tool = d && getTool(d.tool);
+    const d = e.get(id),
+      tool = d && getTool(d.tool);
     if (!d || !tool || tool.kind !== 'draw' || !d.points) return;
     /** @type {ClipEntry} */
     const o = { tool: d.tool };
-    FIELDS.forEach((k) => { if (d[k] !== undefined) o[k] = d[k]; });
+    FIELDS.forEach((k) => {
+      if (d[k] !== undefined) o[k] = d[k];
+    });
     out.push(JSON.parse(JSON.stringify(o)));
   });
   if (!out.length) return false;
   clip = out;
-  clipSource = e;                                                  // remember the source chart (nudge decision)
-  if (chan) { try { chan.postMessage({ clip }); } catch (_) {} }   // share the buffer with every other window
+  clipSource = e; // remember the source chart (nudge decision)
+  if (chan) {
+    try {
+      chan.postMessage({ clip });
+    } catch (_) {}
+  } // share the buffer with every other window
   return true;
 }
 
@@ -62,6 +69,17 @@ export const hasClip = () => clip.length > 0;
 // with no local source engine (clipSource = null), so it always pastes at exact coords. BroadcastChannel does not
 // deliver a window its own messages, so the copying window keeps its own clipSource intact.
 export function initBuffer() {
-  try { chan = new BroadcastChannel(IPC.DRAWING_CLIPBOARD); } catch (_) { chan = null; }
-  if (chan) chan.onmessage = (ev) => { const m = ev.data; if (m && Array.isArray(m.clip)) { clip = m.clip; clipSource = null; } };
+  try {
+    chan = new BroadcastChannel(IPC.DRAWING_CLIPBOARD);
+  } catch (_) {
+    chan = null;
+  }
+  if (chan)
+    chan.onmessage = (ev) => {
+      const m = ev.data;
+      if (m && Array.isArray(m.clip)) {
+        clip = m.clip;
+        clipSource = null;
+      }
+    };
 }

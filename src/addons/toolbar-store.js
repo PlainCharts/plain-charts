@@ -15,8 +15,8 @@ const store = createStore('/api/addons-toolbar', { order: [], icons: {}, hotkeys
 export async function loadAddonBar() {
   const d = await store.load();
   data.order = Array.isArray(d.order) ? d.order.slice() : [];
-  data.icons = d.icons || {};       // id -> PNG data URL (or '' / undefined for the letter badge)
-  data.hotkeys = d.hotkeys || {};   // id -> combo string, e.g. 'Alt+1'
+  data.icons = d.icons || {}; // id -> PNG data URL (or '' / undefined for the letter badge)
+  data.hotkeys = d.hotkeys || {}; // id -> combo string, e.g. 'Alt+1'
   return data;
 }
 const saveOrder = () => store.set('order', data.order);
@@ -26,7 +26,8 @@ const saveOrder = () => store.set('order', data.order);
 export const iconFor = (id) => data.icons[id];
 /** @param {string} id @param {string | null | undefined} dataUrl */
 export function setIcon(id, dataUrl) {
-  if (dataUrl) data.icons[id] = dataUrl; else delete data.icons[id];
+  if (dataUrl) data.icons[id] = dataUrl;
+  else delete data.icons[id];
   store.set('icons', data.icons);
 }
 
@@ -35,7 +36,8 @@ export function setIcon(id, dataUrl) {
 export const hotkeyFor = (id) => data.hotkeys[id] || '';
 /** @param {string} id @param {string | null | undefined} combo */
 export function setHotkey(id, combo) {
-  if (combo) data.hotkeys[id] = combo; else delete data.hotkeys[id];
+  if (combo) data.hotkeys[id] = combo;
+  else delete data.hotkeys[id];
   store.set('hotkeys', data.hotkeys);
 }
 
@@ -65,7 +67,11 @@ export function placeAddon(dragId, targetId, after, allIds) {
   if (from < 0) return;
   ord.splice(from, 1);
   let to = ord.indexOf(targetId);
-  if (to < 0) { data.order = ord; saveOrder(); return; }
+  if (to < 0) {
+    data.order = ord;
+    saveOrder();
+    return;
+  }
   if (after) to += 1;
   ord.splice(to, 0, dragId);
   data.order = ord;
@@ -80,10 +86,12 @@ export function fileToIcon(file, cb) {
     const img = new Image();
     img.onload = () => {
       const N = 64;
-      const c = document.createElement('canvas'); c.width = c.height = N;
+      const c = document.createElement('canvas');
+      c.width = c.height = N;
       const g = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
       const s = Math.min(N / img.width, N / img.height);
-      const w = img.width * s, h = img.height * s;
+      const w = img.width * s,
+        h = img.height * s;
       g.drawImage(img, (N - w) / 2, (N - h) / 2, w, h);
       cb(c.toDataURL('image/png'));
     };

@@ -25,18 +25,27 @@ const hooks = [];
 function mountAdapterHooks() {
   hooks.length = 0;
   let dirs = [];
-  try { dirs = fs.readdirSync(ADAPTERS_DIR, { withFileTypes: true }).filter((e) => e.isDirectory()); } catch (_) {}
+  try {
+    dirs = fs.readdirSync(ADAPTERS_DIR, { withFileTypes: true }).filter((e) => e.isDirectory());
+  } catch (_) {}
   for (const e of dirs) {
     const file = path.join(ADAPTERS_DIR, e.name, 'server.js');
     if (!fs.existsSync(file)) continue;
     try {
       const make = require(file);
       const hook = typeof make === 'function' ? make(api) : null;
-      if (hook && typeof hook.prefix === 'string' && hook.prefix.startsWith('/api/') && typeof hook.handle === 'function') {
+      if (
+        hook &&
+        typeof hook.prefix === 'string' &&
+        hook.prefix.startsWith('/api/') &&
+        typeof hook.handle === 'function'
+      ) {
         hooks.push({ id: e.name, prefix: hook.prefix, handle: hook.handle });
         console.log('[adapter-hook] mounted ' + e.name + ' at ' + hook.prefix);
       } else {
-        console.error('[adapter-hook] ' + e.name + '/server.js must export (api) => ({ prefix: "/api/...", handle }) — skipped');
+        console.error(
+          '[adapter-hook] ' + e.name + '/server.js must export (api) => ({ prefix: "/api/...", handle }) — skipped',
+        );
       }
     } catch (err) {
       console.error('[adapter-hook] failed to load ' + e.name + '/server.js: ' + String((err && err.message) || err));

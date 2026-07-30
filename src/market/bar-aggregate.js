@@ -25,7 +25,7 @@ import { foldExtras } from '../../data_engine/index.js';
 export function baseTfFor(tf) {
   if (!tf || tf.unit === 'D' || tf.unit === 'W' || tf.unit === 'M') return null;
   const ms = barMs(tf);
-  if (ms <= 60000) return null;                       // 1m: finest, already clock-aligned
+  if (ms <= 60000) return null; // 1m: finest, already clock-aligned
   const FIVE = 5 * 60000;
   if (ms % FIVE === 0 && ms > FIVE) return { id: '5m', unit: 'm', n: 5 };
   return { id: '1m', unit: 'm', n: 1 };
@@ -37,7 +37,7 @@ export function baseTfFor(tf) {
 export function offGrid(bars, tfSec) {
   if (!bars || !tfSec) return false;
   for (const b of bars) {
-    if (b && Number.isFinite(b.time) && (b.time % tfSec) !== 0) return true;
+    if (b && Number.isFinite(b.time) && b.time % tfSec !== 0) return true;
   }
   return false;
 }
@@ -54,14 +54,16 @@ export function aggregate(baseBars, tfSec) {
     if (!b || !(b.close > 0)) continue;
     const bt = Math.floor(b.time / tfSec) * tfSec;
     let g = out.get(bt);
-    if (!g) { g = { time: bt, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 }; out.set(bt, g); }
-    else {
+    if (!g) {
+      g = { time: bt, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume || 0 };
+      out.set(bt, g);
+    } else {
       if (b.high > g.high) g.high = b.high;
       if (b.low < g.low) g.low = b.low;
       g.close = b.close;
-      g.volume += (b.volume || 0);
+      g.volume += b.volume || 0;
     }
-    foldExtras(g, b);   // carry openInterest / tickVolume / settlement / ... through aggregation
+    foldExtras(g, b); // carry openInterest / tickVolume / settlement / ... through aggregation
   }
-  return [...out.values()];   // insertion order == ascending (base was sorted)
+  return [...out.values()]; // insertion order == ascending (base was sorted)
 }

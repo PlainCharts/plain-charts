@@ -1,7 +1,7 @@
 // ESLint flat config -- the QUALITY lens, companion to tsc (the type lens). tsc answers "is this
 // correct?"; ESLint answers "is this good?": bug/smell rules tsc doesn't cover (unused vars, unreachable
-// code, `==`, empty blocks). ALL formatting/stylistic rules are OFF on purpose -- this codebase's dense
-// one-liner style is deliberate; layout is Prettier's job (or no one's), never ESLint's.
+// code, `==`, empty blocks). ALL formatting/stylistic rules are OFF on purpose -- layout is Prettier's
+// job (see .prettierrc.json / `npm run format`), never ESLint's, so the two never fight over style.
 //
 // Scope matches the type-checker: src/ + adapters/ + addons/. No type-aware rules (fast, no tsconfig
 // wiring). `no-undef` is OFF because tsc already resolves every reference (and knows the real imports/
@@ -10,18 +10,18 @@ import js from '@eslint/js';
 import importX from 'eslint-plugin-import-x';
 
 export default [
-  { ignores: ['**/*.d.ts', 'data_engine/terminal/**'] },   // .d.ts: espree can't parse (type-only). terminal/: a self-contained React+Ink dev tool with its own toolchain, not app/engine source.
+  { ignores: ['**/*.d.ts', 'data_engine/terminal/**'] }, // .d.ts: espree can't parse (type-only). terminal/: a self-contained React+Ink dev tool with its own toolchain, not app/engine source.
   {
     files: ['src/**/*.js', 'data_engine/**/*.js', 'addons/**/*.js'],
     languageOptions: { ecmaVersion: 2022, sourceType: 'module' },
     plugins: { 'import-x': importX },
     rules: {
       ...js.configs.recommended.rules,
-      'no-undef': 'off',                                                                        // tsc owns reference resolution
+      'no-undef': 'off', // tsc owns reference resolution
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }],
-      'eqeqeq': ['error', 'smart'],                                                             // require === but allow the intentional `== null`
-      'no-constant-condition': ['error', { checkLoops: false }],                                // allow `while (true)`
-      'no-empty': ['error', { allowEmptyCatch: true }],                                         // the many `catch (_) {}` are intentional
+      eqeqeq: ['error', 'smart'], // require === but allow the intentional `== null`
+      'no-constant-condition': ['error', { checkLoops: false }], // allow `while (true)`
+      'no-empty': ['error', { allowEmptyCatch: true }], // the many `catch (_) {}` are intentional
       // ENFORCE the layered DAG: dependencies point one direction only. A circular STATIC import means two modules
       // are really one responsibility -- fix by extracting the shared piece or inverting via a callback (store.render).
       // Now hard 'error': a new static cycle blocks the build, same automatic guard as tsc. ignoreExternal skips
@@ -37,10 +37,17 @@ export default [
   {
     files: ['src/**/*.js', 'addons/**/*.js'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [{
-        group: ['**/data_engine/**', '!**/data_engine/index.js'],
-        message: 'Import the engine through data_engine/index.js (the public API), never its internals.',
-      }] }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/data_engine/**', '!**/data_engine/index.js'],
+              message: 'Import the engine through data_engine/index.js (the public API), never its internals.',
+            },
+          ],
+        },
+      ],
     },
   },
   // addon ENTRY files are CommonJS (require / module.exports); an addon's manifest is eval'd as CJS.

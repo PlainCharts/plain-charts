@@ -46,14 +46,18 @@ export function buildPlaceIntent(p) {
   let goodThru = null;
   if (isLS) {
     if (!(Number(p.price) > 0)) return { ok: false, error: 'enter a price' };
-    if (p.tif === 'gtd') { const ms = p.gtdDate ? Date.parse(p.gtdDate + 'T00:00:00Z') : NaN; if (!Number.isFinite(ms)) return { ok: false, error: 'pick a GTD date' }; goodThru = ms; }   // UTC midnight of the date
+    if (p.tif === 'gtd') {
+      const ms = p.gtdDate ? Date.parse(p.gtdDate + 'T00:00:00Z') : NaN;
+      if (!Number.isFinite(ms)) return { ok: false, error: 'pick a GTD date' };
+      goodThru = ms;
+    } // UTC midnight of the date
   }
   const stake = p.qtType === 'stake';
   if (stake && !(p.stake > 0)) return { ok: false, error: 'enter a stake' };
-  if (stake && !(p.sl > 0)) return { ok: false, error: 'stake needs a stop' };   // sizing has no meaning without a stop basis
+  if (stake && !(p.sl > 0)) return { ok: false, error: 'stake needs a stop' }; // sizing has no meaning without a stop basis
   const sizing = stake ? { risk: p.stake, stop: p.sl } : null;
   // bracket = the Stop/Target fields; always on a market order, hedging-only on a pending order
-  const bracketOn = p.orderType === 'market' ? (p.sl > 0 || p.tp > 0) : (!!ctx.hedging && (p.sl > 0 || p.tp > 0));
+  const bracketOn = p.orderType === 'market' ? p.sl > 0 || p.tp > 0 : !!ctx.hedging && (p.sl > 0 || p.tp > 0);
   const bracket = bracketOn ? { stopLoss: p.sl, takeProfit: p.tp } : null;
   const base = { type: 'place', ctx, side: p.side, qty: p.qty, bracket, sizing };
   const intent = isLS ? { ...base, orderType: p.orderType, price: p.price, tif: p.tif, goodThru } : base;

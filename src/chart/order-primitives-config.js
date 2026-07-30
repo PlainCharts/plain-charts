@@ -7,30 +7,52 @@
 //               own namespace; the Settings > Trading > Primitives tab edits it via the primitive's renderSettings.
 // The module caches the loaded config (one GET per window) and emits on any change so live views can rebuild.
 import { createStore } from '../store.js';
-import { t } from '../i18n/i18n.js';   // vocabulary lookup -- the order-type abbreviations are overridable words
+import { t } from '../i18n/i18n.js'; // vocabulary lookup -- the order-type abbreviations are overridable words
 
 const store = createStore('/api/order-primitives', { active: 'string-beads', primitives: {} });
 
 /** @type {any} */
-let cache = null;                  // loaded config (live object; primitiveConfig hands out its sub-objects)
+let cache = null; // loaded config (live object; primitiveConfig hands out its sub-objects)
 /** @type {Promise<any>|null} */
-let loadP = null;                  // in-flight/settled load -- one fetch per window
+let loadP = null; // in-flight/settled load -- one fetch per window
 /** @type {Set<() => void>} */
 const subs = new Set();
-const emit = () => { for (const fn of subs) { try { fn(); } catch (_) {} } };
+const emit = () => {
+  for (const fn of subs) {
+    try {
+      fn();
+    } catch (_) {}
+  }
+};
 
 /** Load (once per window) and cache the config. Emits so views created before the load pick it up. */
 export function loadOrderPrimitives() {
-  if (!loadP) loadP = store.load().then((d) => { cache = d; if (!cache.primitives) cache.primitives = {}; emit(); return cache; });
+  if (!loadP)
+    loadP = store.load().then((d) => {
+      cache = d;
+      if (!cache.primitives) cache.primitives = {};
+      emit();
+      return cache;
+    });
   return loadP;
 }
 /** Any change to the active primitive or a primitive's config. @param {() => void} fn @returns {() => void} */
-export function subscribePrimitives(fn) { subs.add(fn); return () => subs.delete(fn); }
+export function subscribePrimitives(fn) {
+  subs.add(fn);
+  return () => subs.delete(fn);
+}
 
 /** The GLOBAL active primitive id (sync; default until the store loads). @returns {string} */
-export function activePrimitiveId() { return (cache && cache.active) || 'string-beads'; }
+export function activePrimitiveId() {
+  return (cache && cache.active) || 'string-beads';
+}
 /** @param {string} id */
-export function setActivePrimitive(id) { if (!cache) cache = { primitives: {} }; cache.active = id; store.set('active', id); emit(); }
+export function setActivePrimitive(id) {
+  if (!cache) cache = { primitives: {} };
+  cache.active = id;
+  store.set('active', id);
+  emit();
+}
 
 /** ONE primitive's config namespace -- a LIVE object (mutate it, then savePrimitiveConfig). @param {string} id @returns {any} */
 export function primitiveConfig(id) {
@@ -39,7 +61,11 @@ export function primitiveConfig(id) {
   return cache.primitives[id] || (cache.primitives[id] = {});
 }
 /** Persist the primitives map (after mutating a primitiveConfig object) and notify live views. */
-export function savePrimitiveConfig() { if (!cache) return; store.set('primitives', cache.primitives); emit(); }
+export function savePrimitiveConfig() {
+  if (!cache) return;
+  store.set('primitives', cache.primitives);
+  emit();
+}
 
 // ---- the PILL primitive's vocabulary --------------------------------------------------------------------------
 // COLOURS are the only user config (primitives.pill.colors, the Settings > Trading > Primitives swatches):
@@ -48,9 +74,18 @@ export function savePrimitiveConfig() { if (!cache) return; store.set('primitive
 //   entry orders) and stop / target (placed exits: hedge SL/TP, armed rungs, the entry-pill kebab pieces).
 // Type ABBREVIATIONS and the qty picker's step/min/max/presets are fixed vocabulary, not settings.
 /** @type {Record<string, string>} */
-export const PILL_COLOR_DEFAULTS = { buy: '#2962ff', sell: '#9c27b0', planStop: '#ef5350', planTarget: '#26a69a', stop: '#f5c518', target: '#26a69a' };
+export const PILL_COLOR_DEFAULTS = {
+  buy: '#2962ff',
+  sell: '#9c27b0',
+  planStop: '#ef5350',
+  planTarget: '#26a69a',
+  stop: '#f5c518',
+  target: '#26a69a',
+};
 /** one pill colour, user value over default. @param {string} key @returns {string} */
-export function pillColor(key) { return ((primitiveConfig('pill').colors || {})[key]) || PILL_COLOR_DEFAULTS[key] || '#2962ff'; }
+export function pillColor(key) {
+  return (primitiveConfig('pill').colors || {})[key] || PILL_COLOR_DEFAULTS[key] || '#2962ff';
+}
 
 /** @type {Record<string, string>} */
 const TYPE_LABELS = { market: 'MKT', limit: 'LMT', stop: 'STP', takeProfit: 'TP', stopLoss: 'SL' };
@@ -62,7 +97,10 @@ const QTY_PICKER_DEFAULT = { step: 1, min: 1, max: 1000, decimals: 0, presets: [
 /** @returns {{ step: number, min: number, max: number, decimals: number, presets: number[] }} */
 export function qtyPicker() {
   const p = primitiveConfig('pill').qtyPresets;
-  return { ...QTY_PICKER_DEFAULT, presets: (Array.isArray(p) && p.length) ? p.map(Number).filter((n) => isFinite(n)) : QTY_PICKER_DEFAULT.presets };
+  return {
+    ...QTY_PICKER_DEFAULT,
+    presets: Array.isArray(p) && p.length ? p.map(Number).filter((n) => isFinite(n)) : QTY_PICKER_DEFAULT.presets,
+  };
 }
 export const QTY_PRESET_DEFAULTS = QTY_PICKER_DEFAULT.presets;
 

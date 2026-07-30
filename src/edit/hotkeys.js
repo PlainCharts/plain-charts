@@ -17,8 +17,8 @@ import { toolForCombo, toolHotkeys } from '../tools/toolbar-store.js';
 import { setActiveTool } from '../tools/controller.js';
 import { listTools } from '../tools/registry.js';
 import { comboOf, isModifierKey, prettyCombo } from './combo.js';
-import { serveAppCombos, publishAppCombos, forwardQuickButton } from './order-hotkeys.js';   // publish this window's combos (so the order ticket's button editor can see them) + forward unclaimed chords to it
-export { comboOf, isModifierKey, prettyCombo };   // re-export the pure combo helpers (moved to combo.js so proxy windows can use them without this engine)
+import { serveAppCombos, publishAppCombos, forwardQuickButton } from './order-hotkeys.js'; // publish this window's combos (so the order ticket's button editor can see them) + forward unclaimed chords to it
+export { comboOf, isModifierKey, prettyCombo }; // re-export the pure combo helpers (moved to combo.js so proxy windows can use them without this engine)
 
 // combo -> command id, and the two wildcard slots -> command id. Built from the RESOLVED
 // bindings (defaults + user overrides), and rebuilt whenever a command registers or the user
@@ -30,7 +30,8 @@ const wildcardIndex = { letter: null, number: null };
 function buildIndex() {
   comboIndex = comboBindings();
   const w = wildcardBindings();
-  wildcardIndex.letter = w.letter; wildcardIndex.number = w.number;
+  wildcardIndex.letter = w.letter;
+  wildcardIndex.number = w.number;
 }
 
 // Reference rows for gestures / shortcuts owned elsewhere (mouse gestures, or handled by the
@@ -51,7 +52,9 @@ function inField() {
 
 // The reference gesture/shortcut rows for the Settings > Hotkeys panel. The rebindable command
 // rows are built by that panel directly from the command registry (see settings/sections/hotkeys.js).
-export function hotkeyCatalog() { return GESTURES.slice(); }
+export function hotkeyCatalog() {
+  return GESTURES.slice();
+}
 
 // live (read-only) list of per-tool hotkeys for the Settings > Hotkeys panel
 export function toolHotkeyCatalog() {
@@ -67,18 +70,27 @@ export function toolHotkeyCatalog() {
 function collectAppCombos() {
   /** @type {Array<{ combo: string, id: string, label: string, kind: string }>} */
   const out = [];
-  for (const [combo, id] of comboBindings()) { const c = getCommand(id); out.push({ combo, id, label: (c && c.title) || id, kind: 'command' }); }
+  for (const [combo, id] of comboBindings()) {
+    const c = getCommand(id);
+    out.push({ combo, id, label: (c && c.title) || id, kind: 'command' });
+  }
   const th = toolHotkeys();
-  for (const id in th) { const tool = listTools().find((t) => t.id === id); out.push({ combo: th[id], id, label: (tool && tool.name) || id, kind: 'tool' }); }
+  for (const id in th) {
+    const tool = listTools().find((t) => t.id === id);
+    out.push({ combo: th[id], id, label: (tool && tool.name) || id, kind: 'tool' });
+  }
   return out;
 }
 
 export function initHotkeys() {
   registerBuiltinCommands();
   buildIndex();
-  serveAppCombos(collectAppCombos);   // expose our combos to the order-ticket button editor (cross-window)
-  const rewire = () => { buildIndex(); publishAppCombos(); };
-  onDidRegister(rewire);      // new commands register -> rewire their keys + re-publish
+  serveAppCombos(collectAppCombos); // expose our combos to the order-ticket button editor (cross-window)
+  const rewire = () => {
+    buildIndex();
+    publishAppCombos();
+  };
+  onDidRegister(rewire); // new commands register -> rewire their keys + re-publish
   onKeybindingsChange(rewire); // user rebinds a key -> take effect live + re-publish
 
   document.addEventListener('keydown', (e) => {
@@ -86,15 +98,38 @@ export function initHotkeys() {
     const combo = comboOf(e);
     // a registered combo (with or without modifiers, e.g. Tab) takes priority
     const id = comboIndex.get(combo);
-    if (id) { e.preventDefault(); executeCommand(id, e); return; }
+    if (id) {
+      e.preventDefault();
+      executeCommand(id, e);
+      return;
+    }
     // a per-tool hotkey selects that drawing tool
     const toolId = toolForCombo(combo);
-    if (toolId) { e.preventDefault(); setActiveTool(toolId); return; }
+    if (toolId) {
+      e.preventDefault();
+      setActiveTool(toolId);
+      return;
+    }
     // an unclaimed MODIFIER chord may be an order-ticket quick-button hotkey. That button lives in another
     // window, so forward the chord: if it matches, the order ticket fires it (global reach, even when the
     // chart is focused). Conflict-checking at assignment guarantees it never shadows a command/tool above.
-    if (e.ctrlKey || e.metaKey || e.altKey) { forwardQuickButton(combo); return; }
-    if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) { if (wildcardIndex.letter) { e.preventDefault(); executeCommand(wildcardIndex.letter, e.key); } return; }
-    if (e.key.length === 1 && (/[0-9]/.test(e.key) || e.key === ',')) { if (wildcardIndex.number) { e.preventDefault(); executeCommand(wildcardIndex.number, e.key); } return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      forwardQuickButton(combo);
+      return;
+    }
+    if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+      if (wildcardIndex.letter) {
+        e.preventDefault();
+        executeCommand(wildcardIndex.letter, e.key);
+      }
+      return;
+    }
+    if (e.key.length === 1 && (/[0-9]/.test(e.key) || e.key === ',')) {
+      if (wildcardIndex.number) {
+        e.preventDefault();
+        executeCommand(wildcardIndex.number, e.key);
+      }
+      return;
+    }
   });
 }

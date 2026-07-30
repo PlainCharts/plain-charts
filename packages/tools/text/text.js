@@ -14,16 +14,24 @@ Tools.register({
   glyph: 'T',
   kind: 'draw',
   points: 1,
-  editOnCreate: true,   // text is the point of the tool -> open the in-place editor as soon as it's placed
+  editOnCreate: true, // text is the point of the tool -> open the in-place editor as soon as it's placed
   defaultStyle: {
-    bgOn: false, bg: '#1e222d',
-    borderOn: true, border: '#2962ff', borderWidth: 1,
+    bgOn: false,
+    bg: '#1e222d',
+    borderOn: true,
+    border: '#2962ff',
+    borderWidth: 1,
     wrap: false,
   },
   settings: {
     style: [
       { name: 'Background', toggle: 'bgOn', controls: [{ key: 'bg', type: 'color' }] },
-      { name: 'Border', toggle: 'borderOn', toggleDefault: true, controls: [{ key: 'border', type: 'color', width: 'borderWidth' }] },
+      {
+        name: 'Border',
+        toggle: 'borderOn',
+        toggleDefault: true,
+        controls: [{ key: 'border', type: 'color', width: 'borderWidth' }],
+      },
       { name: 'Text wrap', toggle: 'wrap' },
     ],
     text: {
@@ -47,7 +55,7 @@ Tools.register({
   _box(c, pts, d) {
     if (!pts.length) return null;
     const wrap = !!(d.style && d.style.wrap) && pts.length >= 2;
-    const wrapW = wrap ? Math.max(8, (pts[1].x - pts[0].x) - PADX * 2) : null;
+    const wrapW = wrap ? Math.max(8, pts[1].x - pts[0].x - PADX * 2) : null;
     const box = /** @type {TextBox} */ (measureBox(c, pts[0].x, pts[0].y, d.text, d.textStyle, wrapW));
     box.wrap = wrap;
     boxCache.set(d, box);
@@ -69,19 +77,43 @@ Tools.register({
     const out = [];
     /** @param {number} x @param {number} y */
     const sv = (x, y) => ({ vpx: 0, dx: x, vp: 0, dy: y });
-    if (s.bgOn !== false && s.bg) out.push({ closed: true, fill: s.bg, path: [sv(b.x, b.y), sv(b.x + b.w, b.y), sv(b.x + b.w, b.y + b.h), sv(b.x, b.y + b.h)] });
-    if (s.borderOn !== false) out.push({ closed: true, stroke: s.border || '#2962ff', width: s.borderWidth || 1,
-      path: [sv(b.x + 0.5, b.y + 0.5), sv(b.x + b.w - 0.5, b.y + 0.5), sv(b.x + b.w - 0.5, b.y + b.h - 0.5), sv(b.x + 0.5, b.y + b.h - 0.5)] });
+    if (s.bgOn !== false && s.bg)
+      out.push({
+        closed: true,
+        fill: s.bg,
+        path: [sv(b.x, b.y), sv(b.x + b.w, b.y), sv(b.x + b.w, b.y + b.h), sv(b.x, b.y + b.h)],
+      });
+    if (s.borderOn !== false)
+      out.push({
+        closed: true,
+        stroke: s.border || '#2962ff',
+        width: s.borderWidth || 1,
+        path: [
+          sv(b.x + 0.5, b.y + 0.5),
+          sv(b.x + b.w - 0.5, b.y + 0.5),
+          sv(b.x + b.w - 0.5, b.y + b.h - 0.5),
+          sv(b.x + 0.5, b.y + b.h - 0.5),
+        ],
+      });
     return out;
   },
   /** @param {CanvasRenderingContext2D} c @param {ToolScreenPoint[]} pts @param {ToolDrawing} d */
-  drawText(c, pts, d) { const b = this._box(c, pts, d); if (b) drawBoxText(c, b, d.textStyle); },
+  drawText(c, pts, d) {
+    const b = this._box(c, pts, d);
+    if (b) drawBoxText(c, b, d.textStyle);
+  },
   /** @param {CanvasRenderingContext2D} c @param {ToolScreenPoint[]} pts @param {ToolDrawing} d */
-  textGeom(c, pts, d) { const b = this._box(c, pts, d); return b ? boxTextGeom(b, d.style, b.wrap) : null; },
+  textGeom(c, pts, d) {
+    const b = this._box(c, pts, d);
+    return b ? boxTextGeom(b, d.style, b.wrap) : null;
+  },
 
   // right-edge width handle (pin) — present only while wrapping; see PINS in the helpers below.
   /** @param {ToolScreenPoint[]} pts @param {ToolDrawing} [d] */
-  handles(pts, d) { const box = d && boxCache.get(d); return box ? PINS.handles({ pts, box }) : []; },
+  handles(pts, d) {
+    const box = d && boxCache.get(d);
+    return box ? PINS.handles({ pts, box }) : [];
+  },
   /** @param {ToolScreenPoint[]} pts @param {number} x @param {number} y @param {number} tol @param {ToolDrawing} [d] @returns {ToolHitResult} */
   hitTest(pts, x, y, tol, d) {
     // Measure the box HERE from the current screen pts instead of trusting the render cache -- a cache
@@ -90,11 +122,14 @@ Tools.register({
     if (!box) return null;
     const i = PINS.hitPin({ pts, box }, x, y, tol);
     if (i >= 0) return { part: 'point', index: i };
-    if (x >= box.x - tol && x <= box.x + box.w + tol && y >= box.y - tol && y <= box.y + box.h + tol) return { part: 'body' };
+    if (x >= box.x - tol && x <= box.x + box.w + tol && y >= box.y - tol && y <= box.y + box.h + tol)
+      return { part: 'body' };
     return null;
   },
   /** @param {ToolDrawing} d @param {number} index @param {ToolDataPoint} dp */
-  reshape(d, index, dp) { PINS.reshape(d, index, dp); },
+  reshape(d, index, dp) {
+    PINS.reshape(d, index, dp);
+  },
 });
 
 // ---------------------------------------------------------------- box cache + reshape pin
@@ -102,8 +137,9 @@ Tools.register({
 /** @type {WeakMap<object, TextBox>} */
 const boxCache = new WeakMap();
 /** @type {CanvasRenderingContext2D | null} */
-let _mctx = null;   // offscreen ctx so marks() can measure the box without a render ctx
-const measureCtx = () => (_mctx || (_mctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'))));
+let _mctx = null; // offscreen ctx so marks() can measure the box without a render ctx
+const measureCtx = () =>
+  _mctx || (_mctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d')));
 
 // one pin: the right-edge width handle, present only while wrapping; dragging it sets the
 // width (point[1].time) and keeps the anchor. The show() condition lives on the pin.
@@ -111,6 +147,8 @@ const PINS = pinHandles([
   pin({
     show: (ctx) => !!(ctx.box && ctx.box.wrap),
     at: (ctx) => ({ x: ctx.box.x + ctx.box.w, y: ctx.box.y + ctx.box.h / 2 }),
-    drag: (d, dp) => { d.points = [d.points[0], { time: dp.time, price: d.points[0].price }]; },
+    drag: (d, dp) => {
+      d.points = [d.points[0], { time: dp.time, price: d.points[0].price }];
+    },
   }),
 ]);

@@ -29,5 +29,10 @@ export function requireRule(rule) {
 // capability surface (and each MCP tool) is built from.
 /** @template {(...a: any[]) => any} F @param {string} rule @param {F} fn @returns {F} */
 export function gated(rule, fn) {
-  return /** @type {F} */ ((/** @type {any[]} */ ...args) => { requireRule(rule); return fn(...args); });
+  return /** @type {F} */ (
+    (/** @type {any[]} */ ...args) => {
+      requireRule(rule);
+      return fn(...args);
+    }
+  );
 }

@@ -7,11 +7,26 @@ const { ipcRenderer, clipboard } = require('electron');
 // runs before the app UI, so this catches early failures too). Best-effort; never throws.
 try {
   window.addEventListener('error', (e) => {
-    try { ipcRenderer.send('diag:renderer-error', { type: 'error', message: e.message, source: e.filename, line: e.lineno, col: e.colno, stack: e.error && e.error.stack }); } catch (_) {}
+    try {
+      ipcRenderer.send('diag:renderer-error', {
+        type: 'error',
+        message: e.message,
+        source: e.filename,
+        line: e.lineno,
+        col: e.colno,
+        stack: e.error && e.error.stack,
+      });
+    } catch (_) {}
   });
   window.addEventListener('unhandledrejection', (e) => {
     const r = e && e.reason;
-    try { ipcRenderer.send('diag:renderer-error', { type: 'unhandledrejection', message: (r && (r.message || String(r))) || 'unhandledrejection', stack: r && r.stack }); } catch (_) {}
+    try {
+      ipcRenderer.send('diag:renderer-error', {
+        type: 'unhandledrejection',
+        message: (r && (r.message || String(r))) || 'unhandledrejection',
+        stack: r && r.stack,
+      });
+    } catch (_) {}
   });
 } catch (_) {}
 
@@ -39,14 +54,14 @@ window.desktop = {
   winMinimize: () => ipcRenderer.send('win-minimize'),
   winMaximizeToggle: () => ipcRenderer.send('win-maximize'),
   winClose: () => ipcRenderer.send('win-close'),
-  winAlwaysOnTopToggle: () => ipcRenderer.sendSync('win-always-on-top-toggle'),   // flips + returns the new state
+  winAlwaysOnTopToggle: () => ipcRenderer.sendSync('win-always-on-top-toggle'), // flips + returns the new state
   winIsAlwaysOnTop: () => ipcRenderer.sendSync('win-always-on-top-get'),
-  appQuit: () => ipcRenderer.send('app-quit'),   // quit the whole app, saving the desktop layout
-  newWindow: () => ipcRenderer.send('new-window'),   // open a fresh empty window to organize
-  openOrderTicket: (opts) => ipcRenderer.send('open-order-ticket', opts || {}),   // open the standalone order-ticket window (its own OS window); opts {tab, position}
-  onOrderTicketOpen: (cb) => ipcRenderer.on('order-ticket-open', (_e, opts) => cb(opts)),   // (ticket window) receive open/refocus payload {tab, position}
-  orderTicketReady: () => ipcRenderer.send('order-ticket-ready'),   // (ticket window) listener attached -> pull the pending open intent from main
-  orderTicketWidth: (w) => ipcRenderer.send('order-ticket-width', w),   // (ticket window) ask main to grow/shrink the window to fit the quick-button row
+  appQuit: () => ipcRenderer.send('app-quit'), // quit the whole app, saving the desktop layout
+  newWindow: () => ipcRenderer.send('new-window'), // open a fresh empty window to organize
+  openOrderTicket: (opts) => ipcRenderer.send('open-order-ticket', opts || {}), // open the standalone order-ticket window (its own OS window); opts {tab, position}
+  onOrderTicketOpen: (cb) => ipcRenderer.on('order-ticket-open', (_e, opts) => cb(opts)), // (ticket window) receive open/refocus payload {tab, position}
+  orderTicketReady: () => ipcRenderer.send('order-ticket-ready'), // (ticket window) listener attached -> pull the pending open intent from main
+  orderTicketWidth: (w) => ipcRenderer.send('order-ticket-width', w), // (ticket window) ask main to grow/shrink the window to fit the quick-button row
   onMaxChange: (cb) => ipcRenderer.on('win-max', (_e, v) => cb(v)),
   // open/close the DevTools console for this window + the hidden data host
   devtools: (on) => ipcRenderer.send('devtools', { on }),
@@ -62,7 +77,15 @@ window.desktop = {
     write: (sessionId, data) => ipcRenderer.send('pty-write', { sessionId, data }),
     resize: (sessionId, cols, rows) => ipcRenderer.send('pty-resize', { sessionId, cols, rows }),
     kill: (sessionId) => ipcRenderer.send('pty-kill', { sessionId }),
-    onData: (cb) => { const h = (_e, m) => cb(m); ipcRenderer.on('pty-data', h); return () => ipcRenderer.removeListener('pty-data', h); },
-    onExit: (cb) => { const h = (_e, m) => cb(m); ipcRenderer.on('pty-exit', h); return () => ipcRenderer.removeListener('pty-exit', h); },
+    onData: (cb) => {
+      const h = (_e, m) => cb(m);
+      ipcRenderer.on('pty-data', h);
+      return () => ipcRenderer.removeListener('pty-data', h);
+    },
+    onExit: (cb) => {
+      const h = (_e, m) => cb(m);
+      ipcRenderer.on('pty-exit', h);
+      return () => ipcRenderer.removeListener('pty-exit', h);
+    },
   },
 };

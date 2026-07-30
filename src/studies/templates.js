@@ -20,13 +20,16 @@ export const listStudyTemplates = () => store.get('templates') || [];
 /** @param {string} name @param {any[]} studies */
 export function saveStudyTemplate(name, studies) {
   const list = listStudyTemplates().filter((t) => t.name !== name);
-  list.unshift({ name, studies });            // newest first
+  list.unshift({ name, studies }); // newest first
   store.set('templates', list);
 }
 
 /** @param {string} name */
 export function deleteStudyTemplate(name) {
-  store.set('templates', listStudyTemplates().filter((t) => t.name !== name));
+  store.set(
+    'templates',
+    listStudyTemplates().filter((t) => t.name !== name),
+  );
 }
 
 // bump an applied template to the front of the "recently used" list

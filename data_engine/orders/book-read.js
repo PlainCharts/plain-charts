@@ -12,7 +12,7 @@ import { isTerminal } from '../data/adapter-contract.js';
 export const exitSide = (side) => (side === 'long' ? 'sell' : 'buy');
 
 /** @param {number} v */
-const cleanPx = (v) => (Number.isFinite(v) ? Number(v.toPrecision(12)) : v);   // strip IEEE754 scaling noise
+const cleanPx = (v) => (Number.isFinite(v) ? Number(v.toPrecision(12)) : v); // strip IEEE754 scaling noise
 
 // a WORKING order leg for the chart: every resting order in the book.
 /** @typedef {{ id: any, type: string, side: string, price: number, qty: number, accountId?: any, stopLoss?: number|null, takeProfit?: number|null }} OrderLeg */
@@ -25,7 +25,17 @@ const cleanPx = (v) => (Number.isFinite(v) ? Number(v.toPrecision(12)) : v);   /
  *  @returns {{ entry: number|null, side: string|null, qty: number, hedge: boolean, hedgeStop: number|null, hedgeStopQty: number|null, hedgeTarget: number|null, hedgeTargetQty: number|null, orders: OrderLeg[] }} */
 export function readActive(broker, symbol) {
   /** @type {{ entry: number|null, side: string|null, qty: number, hedge: boolean, hedgeStop: number|null, hedgeStopQty: number|null, hedgeTarget: number|null, hedgeTargetQty: number|null, orders: OrderLeg[] }} */
-  const empty = { entry: null, side: null, qty: 0, hedge: false, hedgeStop: null, hedgeStopQty: null, hedgeTarget: null, hedgeTargetQty: null, orders: [] };
+  const empty = {
+    entry: null,
+    side: null,
+    qty: 0,
+    hedge: false,
+    hedgeStop: null,
+    hedgeStopQty: null,
+    hedgeTarget: null,
+    hedgeTargetQty: null,
+    orders: [],
+  };
   if (!symbol) return empty;
   /** @param {any} x */
   const mine = (x) => x.symbol === symbol && (!broker || x.broker === broker);
@@ -34,23 +44,64 @@ export function readActive(broker, symbol) {
   /** @type {OrderLeg[]} */ const orders = [];
   for (const o of /** @type {any[]} */ (platform.orders.all())) {
     if (!mine(o) || isTerminal(o.status)) continue;
-    const raw = Number(o.type === 'stop' ? (o.stopPrice != null ? o.stopPrice : o.price) : (o.limitPrice != null ? o.limitPrice : o.price));
-    if (!Number.isFinite(raw)) continue;   // e.g. a market order in transit has no resting price -- nothing to draw
-    orders.push({ id: o.id, type: o.type, side: o.side, price: cleanPx(raw), qty: Number(o.qty), accountId: o.accountId, stopLoss: o.stopLoss != null ? Number(o.stopLoss) : null, takeProfit: o.takeProfit != null ? Number(o.takeProfit) : null });   // carry account + native SL/TP so the order-modify dialog can gate on hedging and prefill exits
+    const raw = Number(
+      o.type === 'stop' ? (o.stopPrice != null ? o.stopPrice : o.price) : o.limitPrice != null ? o.limitPrice : o.price,
+    );
+    if (!Number.isFinite(raw)) continue; // e.g. a market order in transit has no resting price -- nothing to draw
+    orders.push({
+      id: o.id,
+      type: o.type,
+      side: o.side,
+      price: cleanPx(raw),
+      qty: Number(o.qty),
+      accountId: o.accountId,
+      stopLoss: o.stopLoss != null ? Number(o.stopLoss) : null,
+      takeProfit: o.takeProfit != null ? Number(o.takeProfit) : null,
+    }); // carry account + native SL/TP so the order-modify dialog can gate on hedging and prefill exits
   }
   // HEDGING: per-ticket lots aggregate to one entry; SL/TP are lot ATTRIBUTES (no separate order).
   const lots = /** @type {any[]} */ (platform.positionLots.all()).filter((l) => mine(l) && Number(l.qty) > 0);
   if (lots.length) {
-    let q = 0, cost = 0, longQ = 0, shortQ = 0; let stop = null, target = null;
-    for (const l of lots) { const lq = Number(l.qty); q += lq; cost += lq * Number(l.avgPrice); if (l.side === 'short') shortQ += lq; else longQ += lq; if (l.stopLoss) stop = Number(l.stopLoss); if (l.takeProfit) target = Number(l.takeProfit); }
-    return { entry: q > 0 ? cost / q : null, side: longQ >= shortQ ? 'long' : 'short', qty: q, hedge: true,
-      hedgeStop: stop != null ? cleanPx(stop) : null, hedgeStopQty: stop != null ? q : null,
-      hedgeTarget: target != null ? cleanPx(target) : null, hedgeTargetQty: target != null ? q : null, orders };
+    let q = 0,
+      cost = 0,
+      longQ = 0,
+      shortQ = 0;
+    let stop = null,
+      target = null;
+    for (const l of lots) {
+      const lq = Number(l.qty);
+      q += lq;
+      cost += lq * Number(l.avgPrice);
+      if (l.side === 'short') shortQ += lq;
+      else longQ += lq;
+      if (l.stopLoss) stop = Number(l.stopLoss);
+      if (l.takeProfit) target = Number(l.takeProfit);
+    }
+    return {
+      entry: q > 0 ? cost / q : null,
+      side: longQ >= shortQ ? 'long' : 'short',
+      qty: q,
+      hedge: true,
+      hedgeStop: stop != null ? cleanPx(stop) : null,
+      hedgeStopQty: stop != null ? q : null,
+      hedgeTarget: target != null ? cleanPx(target) : null,
+      hedgeTargetQty: target != null ? q : null,
+      orders,
+    };
   }
   // NETTING / FLAT: the net position entry (if any) + all the working orders collected above.
   const pos = /** @type {any[]} */ (platform.positions.all()).find((p) => mine(p) && Number(p.qty) > 0);
-  return { entry: pos ? Number(pos.avgPrice) : null, side: pos ? pos.side : null, qty: pos ? Number(pos.qty) : 0, hedge: false,
-    hedgeStop: null, hedgeStopQty: null, hedgeTarget: null, hedgeTargetQty: null, orders };
+  return {
+    entry: pos ? Number(pos.avgPrice) : null,
+    side: pos ? pos.side : null,
+    qty: pos ? Number(pos.qty) : 0,
+    hedge: false,
+    hedgeStop: null,
+    hedgeStopQty: null,
+    hedgeTarget: null,
+    hedgeTargetQty: null,
+    orders,
+  };
 }
 
 // The LIVE resting exit order for a netting position: the freshest working 'stop'/'limit' on the exit side. The order
@@ -61,9 +112,14 @@ export function readActive(broker, symbol) {
 /** @param {string} brokerId @param {string} symbol @param {'stop'|'limit'} type @param {string} side @returns {any|null} */
 export function freshestExitOrder(brokerId, symbol, type, side) {
   const freshness = (/** @type {any} */ o) => Math.max(Number(o.updateTime) || 0, Number(o.time) || 0);
-  return /** @type {any[]} */ (platform.orders.all())
-    .filter((o) => o.broker === brokerId && o.symbol === symbol && o.type === type && o.side === side && !isTerminal(o.status))
-    .sort((a, b) => freshness(b) - freshness(a))[0] || null;
+  return (
+    /** @type {any[]} */ (platform.orders.all())
+      .filter(
+        (o) =>
+          o.broker === brokerId && o.symbol === symbol && o.type === type && o.side === side && !isTerminal(o.status),
+      )
+      .sort((a, b) => freshness(b) - freshness(a))[0] || null
+  );
 }
 
 // The CURRENT open position for a ctx: a hedging lot (by ticket, else the sole lot for the symbol) or the net
@@ -71,13 +127,28 @@ export function freshestExitOrder(brokerId, symbol, type, side) {
 // hedging symbol has several lots and no ticket pins which one. (Moved verbatim from exec.currentPosition().)
 /** @param {{broker:string, symbol:string, ticket?:any}} ctx @returns {any} */
 export function currentPosition(ctx) {
-  const lots = /** @type {any[]} */ (platform.positionLots.all()).filter((l) => (!ctx.broker || l.broker === ctx.broker) && l.symbol === ctx.symbol && Number(l.qty) > 0);
+  const lots = /** @type {any[]} */ (platform.positionLots.all()).filter(
+    (l) => (!ctx.broker || l.broker === ctx.broker) && l.symbol === ctx.symbol && Number(l.qty) > 0,
+  );
   if (lots.length) {
     let lot = ctx.ticket != null ? lots.find((l) => String(l.ticket) === String(ctx.ticket)) : null;
-    if (!lot) { if (lots.length === 1) lot = lots[0]; else throw new Error('several ' + ctx.symbol + ' positions -- open the ticket on the one to modify'); }
-    return { net: false, ticket: lot.ticket, side: lot.side, entry: Number(lot.avgPrice), qty: Number(lot.qty), stopLoss: lot.stopLoss, takeProfit: lot.takeProfit };
+    if (!lot) {
+      if (lots.length === 1) lot = lots[0];
+      else throw new Error('several ' + ctx.symbol + ' positions -- open the ticket on the one to modify');
+    }
+    return {
+      net: false,
+      ticket: lot.ticket,
+      side: lot.side,
+      entry: Number(lot.avgPrice),
+      qty: Number(lot.qty),
+      stopLoss: lot.stopLoss,
+      takeProfit: lot.takeProfit,
+    };
   }
-  const p = /** @type {any[]} */ (platform.positions.all()).find((/** @type {any} */ x) => (!ctx.broker || x.broker === ctx.broker) && x.symbol === ctx.symbol && Number(x.qty) > 0);
+  const p = /** @type {any[]} */ (platform.positions.all()).find(
+    (/** @type {any} */ x) => (!ctx.broker || x.broker === ctx.broker) && x.symbol === ctx.symbol && Number(x.qty) > 0,
+  );
   return p ? { net: true, side: p.side, entry: Number(p.avgPrice), qty: Number(p.qty) } : null;
 }
 
@@ -85,7 +156,13 @@ export function currentPosition(ctx) {
 // closed. (Moved verbatim from order-ticket window.livePosition().)
 /** @param {any} p @returns {any} the live position for `p` (by broker:ticket, else net by broker:symbol), or null if fully closed */
 export function livePosition(p) {
-  const lot = /** @type {any[]} */ (platform.positionLots.all()).find((l) => String(l.ticket) === String(p.ticket) && (!p.broker || l.broker === p.broker));
+  const lot = /** @type {any[]} */ (platform.positionLots.all()).find(
+    (l) => String(l.ticket) === String(p.ticket) && (!p.broker || l.broker === p.broker),
+  );
   if (lot) return lot;
-  return /** @type {any[]} */ (platform.positions.all()).find((n) => n.symbol === p.symbol && (!p.broker || n.broker === p.broker)) || null;
+  return (
+    /** @type {any[]} */ (platform.positions.all()).find(
+      (n) => n.symbol === p.symbol && (!p.broker || n.broker === p.broker),
+    ) || null
+  );
 }

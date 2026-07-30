@@ -31,7 +31,11 @@ const FN_NAMES = ['t', 'tr'];
 // walk a dir for .js files (skips node_modules just in case)
 function walk(dir, out) {
   let entries = [];
-  try { entries = fs.readdirSync(dir); } catch (_) { return out; }
+  try {
+    entries = fs.readdirSync(dir);
+  } catch (_) {
+    return out;
+  }
   for (const name of entries) {
     if (name === 'node_modules' || name.startsWith('.')) continue;
     const full = path.join(dir, name);
@@ -63,7 +67,7 @@ function collectKeys(files) {
     CALL.lastIndex = 0;
     while ((m = CALL.exec(text))) {
       const raw = m[2];
-      if (raw.indexOf('${') !== -1) continue;   // interpolated -> not a static key
+      if (raw.indexOf('${') !== -1) continue; // interpolated -> not a static key
       const key = unescape(raw);
       if (key.trim()) keys.add(key);
     }
@@ -77,7 +81,8 @@ function attrKeys(files) {
   const RE = /data-i18n(?:-title|-ph)?=["']([^"']+)["']/g;
   for (const f of files) {
     const text = fs.readFileSync(f, 'utf-8');
-    let m; RE.lastIndex = 0;
+    let m;
+    RE.lastIndex = 0;
     while ((m = RE.exec(text))) keys.add(m[1]);
   }
   return keys;
@@ -87,11 +92,22 @@ function attrKeys(files) {
 // Returns { added, pruned, total }.
 function writeCatalog(enFile, keys, prune) {
   let existing = {};
-  try { existing = JSON.parse(fs.readFileSync(enFile, 'utf-8')); } catch (_) {}
+  try {
+    existing = JSON.parse(fs.readFileSync(enFile, 'utf-8'));
+  } catch (_) {}
   let pruned = 0;
-  if (prune) for (const k of prune) if (Object.prototype.hasOwnProperty.call(existing, k)) { delete existing[k]; pruned++; }
+  if (prune)
+    for (const k of prune)
+      if (Object.prototype.hasOwnProperty.call(existing, k)) {
+        delete existing[k];
+        pruned++;
+      }
   let added = 0;
-  for (const k of keys) if (!Object.prototype.hasOwnProperty.call(existing, k)) { existing[k] = k; added++; }
+  for (const k of keys)
+    if (!Object.prototype.hasOwnProperty.call(existing, k)) {
+      existing[k] = k;
+      added++;
+    }
   const sorted = {};
   for (const k of Object.keys(existing).sort()) sorted[k] = existing[k];
   fs.mkdirSync(path.dirname(enFile), { recursive: true });
@@ -102,16 +118,31 @@ function writeCatalog(enFile, keys, prune) {
 // ---- addon catalogs: scan each addons/<id> into its OWN locales/en.json ----
 // Do these first so we know every addon-owned key, then keep those out of the app catalog.
 let addonDirs = [];
-try { addonDirs = fs.readdirSync(ADDONS_DIR, { withFileTypes: true }).filter((d) => d.isDirectory() && fs.existsSync(path.join(ADDONS_DIR, d.name, 'index.js'))).map((d) => d.name); } catch (_) {}
+try {
+  addonDirs = fs
+    .readdirSync(ADDONS_DIR, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && fs.existsSync(path.join(ADDONS_DIR, d.name, 'index.js')))
+    .map((d) => d.name);
+} catch (_) {}
 const addonUnion = new Set();
 const addonReports = [];
 for (const id of addonDirs) {
   const files = walk(path.join(ADDONS_DIR, id), []);
   const keys = collectKeys(files);
-  if (!keys.size) continue;   // an addon with no keyed strings gets no locales folder
+  if (!keys.size) continue; // an addon with no keyed strings gets no locales folder
   keys.forEach((k) => addonUnion.add(k));
   const r = writeCatalog(path.join(ADDONS_DIR, id, 'locales', 'en.json'), keys);
-  addonReports.push('i18n-extract: addon   -> addons/' + id + '/locales/en.json  (' + keys.size + ' keyed, +' + r.added + ' new, ' + r.total + ' total)');
+  addonReports.push(
+    'i18n-extract: addon   -> addons/' +
+      id +
+      '/locales/en.json  (' +
+      keys.size +
+      ' keyed, +' +
+      r.added +
+      ' new, ' +
+      r.total +
+      ' total)',
+  );
 }
 
 // ---- app catalog: scan src/ ----
@@ -123,5 +154,17 @@ const appKeys = collectKeys(appFiles);
 const appAll = new Set([...appKeys, ...attrKeys([...appFiles, path.join(ROOT, 'index.html')])]);
 const pruneFromApp = [...addonUnion].filter((k) => !appAll.has(k));
 const app = writeCatalog(path.join(ROOT, 'packages', 'vocab', 'en.json'), appKeys, pruneFromApp);
-console.log('i18n-extract: app     -> packages/vocab/en.json  (' + appFiles.length + ' files, ' + appKeys.size + ' keyed, +' + app.added + ' new, -' + app.pruned + ' addon-owned, ' + app.total + ' total)');
+console.log(
+  'i18n-extract: app     -> packages/vocab/en.json  (' +
+    appFiles.length +
+    ' files, ' +
+    appKeys.size +
+    ' keyed, +' +
+    app.added +
+    ' new, -' +
+    app.pruned +
+    ' addon-owned, ' +
+    app.total +
+    ' total)',
+);
 addonReports.forEach((line) => console.log(line));

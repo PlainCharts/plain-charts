@@ -40,9 +40,10 @@ import { applyWorkspace, getActivePane } from '../chart/layout.js';
  * @returns {LayoutDef}
  */
 export function studyBoardGrid(n) {
-  const cells = Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i));   // a, b, c, ...
+  const cells = Array.from({ length: n }, (_, i) => String.fromCharCode(97 + i)); // a, b, c, ...
   return {
-    type: 'custom', count: n,
+    type: 'custom',
+    count: n,
     cols: '1fr',
     rows: Array(n).fill('1fr').join(' '),
     areas: cells.map((c) => `"${c}"`).join(' '),
@@ -72,17 +73,19 @@ export function studyBoardWorkspace(rows, opts = {}) {
   return /** @type {Workspace} */ ({
     type: 'studyboard',
     linkedTo: linkedTo || null,
-    linkedPane: linkedPane == null ? null : linkedPane,   // which chart in the anchored workspace's layout
-    boardTf: tf || null,                                  // the anchored chart's timeframe, shared by all studies
+    linkedPane: linkedPane == null ? null : linkedPane, // which chart in the anchored workspace's layout
+    boardTf: tf || null, // the anchored chart's timeframe, shared by all studies
     // board<->chart LINK sync (cross-window), set in the board dialog -- SEPARATE from the layout's
     // SYNC IN LAYOUT toggles (those only align panes within one layout). Default: both on.
     link: { range: !(link && link.range === false), crosshair: !(link && link.crosshair === false) },
-    sharedTimeAxis: sharedTimeAxis !== false,   // only the BOTTOM pane shows the time scale + labels
+    sharedTimeAxis: sharedTimeAxis !== false, // only the BOTTOM pane shows the time scale + labels
     layout: 'custom',
     grid: studyBoardGrid(rows.length),
     sizes: { cols: [1], rows: rows.map(() => 1) },
     panes: rows.map((r, i) => ({
-      symbol: r.symbol, tfId: tf || r.tfId || null, broker: r.broker || null,
+      symbol: r.symbol,
+      tfId: tf || r.tfId || null,
+      broker: r.broker || null,
       settings: paneSettings(r, sharedTimeAxis !== false && i !== last),
     })),
     // time-linked by default; symbols stay independent per row (timeframe is shared = the anchor's)
@@ -102,8 +105,20 @@ export function studyBoardWorkspace(rows, opts = {}) {
  */
 function paneSettings(r, hideTimeAxis) {
   const ta = hideTimeAxis ? { timeScale: false } : {};
-  if (r.compare) return { board: true, pricePane: true, chartType: r.chartType || 'candles', statusLine: { title: true, chartValues: true }, ...ta };
-  return { board: true, studies: [{ id: r.studyId, params: r.params || {} }], statusLine: { title: false, chartValues: false }, ...ta };
+  if (r.compare)
+    return {
+      board: true,
+      pricePane: true,
+      chartType: r.chartType || 'candles',
+      statusLine: { title: true, chartValues: true },
+      ...ta,
+    };
+  return {
+    board: true,
+    studies: [{ id: r.studyId, params: r.params || {} }],
+    statusLine: { title: false, chartValues: false },
+    ...ta,
+  };
 }
 
 // extract row specs from a saved board workspace (reverse of studyBoardWorkspace) -- for editing.
@@ -114,13 +129,26 @@ function paneSettings(r, hideTimeAxis) {
  * @returns {BoardRow[]}
  */
 export function boardRowsFromWs(ws) {
-  return (((ws && ws.panes) || [])).map((p) => {
+  return ((ws && ws.panes) || []).map((p) => {
     const s = p.settings || {};
-    if (s.pricePane) return { symbol: p.symbol, broker: p.broker || null, compare: true, chartType: s.chartType || 'candles',
-                              _settings: s, _range: p.range || null };
+    if (s.pricePane)
+      return {
+        symbol: p.symbol,
+        broker: p.broker || null,
+        compare: true,
+        chartType: s.chartType || 'candles',
+        _settings: s,
+        _range: p.range || null,
+      };
     const st = (s.studies && s.studies[0]) || {};
-    return { symbol: p.symbol, broker: p.broker || null, studyId: st.id, params: st.params || {},
-             _settings: s, _range: p.range || null };
+    return {
+      symbol: p.symbol,
+      broker: p.broker || null,
+      studyId: st.id,
+      params: st.params || {},
+      _settings: s,
+      _range: p.range || null,
+    };
   });
 }
 // the board's timeframe (shared by all studies) -- the anchored chart's tf; falls back to a pane's tfId
@@ -157,18 +185,33 @@ export function mergeStudyBoard(orig, rows, opts = {}) {
     sharedTimeAxis: sharedTimeAxis !== false,
     layout: 'custom',
     grid: studyBoardGrid(rows.length),
-    sizes: (sameCount && orig.sizes) ? orig.sizes : { cols: [1], rows: rows.map(() => 1) },
+    sizes: sameCount && orig.sizes ? orig.sizes : { cols: [1], rows: rows.map(() => 1) },
     panes: rows.map((r, i) => {
-      const settings = /** @type {any} */ (r._settings ? { ...r._settings } : {});   // keep drawings / appearance / per-pane state
+      const settings = /** @type {any} */ (r._settings ? { ...r._settings } : {}); // keep drawings / appearance / per-pane state
       settings.board = true;
-      if (r.compare) { settings.pricePane = true; delete settings.studies; if (!settings.chartType) settings.chartType = r.chartType || 'candles'; if (!settings.statusLine) settings.statusLine = { title: true, chartValues: true }; }
+      if (r.compare) {
+        settings.pricePane = true;
+        delete settings.studies;
+        if (!settings.chartType) settings.chartType = r.chartType || 'candles';
+        if (!settings.statusLine) settings.statusLine = { title: true, chartValues: true };
+      }
       // oscillator pane: no candles -> the OHLC status line reads NaN, so force it off (keep any font/colour prefs)
-      else { delete settings.pricePane; settings.studies = [{ id: r.studyId, params: r.params || {} }]; settings.statusLine = { ...(settings.statusLine || {}), title: false, chartValues: false }; }
-      settings.timeScale = (sharedTimeAxis !== false && i !== last) ? false : true;   // shared time axis: only the bottom pane shows it
-      return { symbol: r.symbol, tfId: tf || r.tfId || null, broker: r.broker || null, range: r._range || null, settings };
+      else {
+        delete settings.pricePane;
+        settings.studies = [{ id: r.studyId, params: r.params || {} }];
+        settings.statusLine = { ...(settings.statusLine || {}), title: false, chartValues: false };
+      }
+      settings.timeScale = sharedTimeAxis !== false && i !== last ? false : true; // shared time axis: only the bottom pane shows it
+      return {
+        symbol: r.symbol,
+        tfId: tf || r.tfId || null,
+        broker: r.broker || null,
+        range: r._range || null,
+        settings,
+      };
     }),
-    synced: (orig && orig.synced) || {},   // shared-per-symbol drawings
-    layers: (orig && orig.layers) || {},    // drawing layers + folder organization
+    synced: (orig && orig.synced) || {}, // shared-per-symbol drawings
+    layers: (orig && orig.layers) || {}, // drawing layers + folder organization
     sync: (orig && orig.sync) || { syncSymbol: false, syncInterval: false, syncCrosshair: true, syncRange: true },
   });
 }
@@ -179,11 +222,16 @@ export function mergeStudyBoard(orig, rows, opts = {}) {
 export function testStudyBoard() {
   const p = getActivePane();
   const base = p ? { symbol: p.symbol, broker: p.broker } : { symbol: '', broker: null };
-  applyWorkspace(studyBoardWorkspace([
-    { ...base, studyId: 'rsi', params: { length: 14 } },
-    { ...base, studyId: 'rsi', params: { length: 7 } },
-    { ...base, studyId: 'rsi', params: { length: 28 } },
-  ], { tf: (p && p.tfId) || '5m' }));
+  applyWorkspace(
+    studyBoardWorkspace(
+      [
+        { ...base, studyId: 'rsi', params: { length: 14 } },
+        { ...base, studyId: 'rsi', params: { length: 7 } },
+        { ...base, studyId: 'rsi', params: { length: 28 } },
+      ],
+      { tf: (p && p.tfId) || '5m' },
+    ),
+  );
 }
 
 if (typeof window !== 'undefined') /** @type {any} */ (window).testStudyBoard = testStudyBoard;

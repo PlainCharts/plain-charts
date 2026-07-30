@@ -50,8 +50,26 @@ export const priceLineMethods = {
     // the side chip ("Bid" / "Ask") is the tag that pokes out of the scale; priceTags off drops the chip
     // and leaves only the price on the axis. (undefined -> shown, so old settings keep the chip.)
     const tag = (/** @type {string} */ side) => (s.priceTags !== false ? side : '');
-    this.bidLineObj = this.lineFor('bidLineObj', s.bidLine, s.bidLabel, this.bid, s.bidLineColor || '#26a69a', tag('Bid'), s.bidLineWidth, s.bidLineDash);
-    this.askLineObj = this.lineFor('askLineObj', s.askLine, s.askLabel, this.ask, s.askLineColor || '#ef5350', tag('Ask'), s.askLineWidth, s.askLineDash);
+    this.bidLineObj = this.lineFor(
+      'bidLineObj',
+      s.bidLine,
+      s.bidLabel,
+      this.bid,
+      s.bidLineColor || '#26a69a',
+      tag('Bid'),
+      s.bidLineWidth,
+      s.bidLineDash,
+    );
+    this.askLineObj = this.lineFor(
+      'askLineObj',
+      s.askLine,
+      s.askLabel,
+      this.ask,
+      s.askLineColor || '#ef5350',
+      tag('Ask'),
+      s.askLineWidth,
+      s.askLineDash,
+    );
   },
   // line and label are independent: keep the price line if either is wanted,
   // and toggle the line vs the axis tag separately.
@@ -62,13 +80,32 @@ export const priceLineMethods = {
    * @param {number} [width] @param {string} [dash]
    */
   lineFor(prop, lineOn, labelOn, price, color, title, width, dash) {
-    if ((!lineOn && !labelOn) || price == null) { this.removeLine(prop); return null; }
-    const opts = { price, color, lineWidth: width || 1, lineStyle: dashToStroke(/** @type {string} */ (dash)), showLine: lineOn, showAxisLabel: labelOn, title };
-    if (this[prop]) { this[prop].configure(opts); return this[prop]; }
-    return this.series ? this.series.addLevel(opts) : null;   // board pane may have no series yet
+    if ((!lineOn && !labelOn) || price == null) {
+      this.removeLine(prop);
+      return null;
+    }
+    const opts = {
+      price,
+      color,
+      lineWidth: width || 1,
+      lineStyle: dashToStroke(/** @type {string} */ (dash)),
+      showLine: lineOn,
+      showAxisLabel: labelOn,
+      title,
+    };
+    if (this[prop]) {
+      this[prop].configure(opts);
+      return this[prop];
+    }
+    return this.series ? this.series.addLevel(opts) : null; // board pane may have no series yet
   },
   /** @this {PriceLineCtx} @param {'bidLineObj'|'askLineObj'} prop */
-  removeLine(prop) { if (this[prop]) { if (this.series) this.series.removeLevel(this[prop]); this[prop] = null; } },
+  removeLine(prop) {
+    if (this[prop]) {
+      if (this.series) this.series.removeLevel(this[prop]);
+      this[prop] = null;
+    }
+  },
 
   // ---- countdown to bar close ----
   /** @this {PriceLineCtx} */
@@ -76,20 +113,31 @@ export const priceLineMethods = {
     if (this.settings.countdown) {
       this.countdownEl.style.color = this.settings.countdownColor || '#e8e8e8';
       this.countdownEl.style.background = this.settings.countdownBg || '#363a45';
-      if (!this.cdTimer) { this.tickCountdown(); this.cdTimer = setInterval(() => this.tickCountdown(), 1000); }
+      if (!this.cdTimer) {
+        this.tickCountdown();
+        this.cdTimer = setInterval(() => this.tickCountdown(), 1000);
+      }
     } else {
-      if (this.cdTimer) { clearInterval(this.cdTimer); this.cdTimer = null; }
+      if (this.cdTimer) {
+        clearInterval(this.cdTimer);
+        this.cdTimer = null;
+      }
       this.countdownEl.style.display = 'none';
     }
   },
   /** @this {PriceLineCtx} */
   tickCountdown() {
     const tf = this.tf();
-    if (!tf) { this.countdownEl.style.display = 'none'; return; }
+    if (!tf) {
+      this.countdownEl.style.display = 'none';
+      return;
+    }
     const ms = barMs(tf);
     const remaining = Math.max(0, Math.ceil(Date.now() / ms) * ms - Date.now());
     const secs = Math.floor(remaining / 1000);
-    const hh = Math.floor(secs / 3600), mm = Math.floor((secs % 3600) / 60), ss = secs % 60;
+    const hh = Math.floor(secs / 3600),
+      mm = Math.floor((secs % 3600) / 60),
+      ss = secs % 60;
     /** @param {number} n */
     const pad = (n) => String(n).padStart(2, '0');
     this.countdownEl.textContent = hh > 0 ? `${hh}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
@@ -99,7 +147,7 @@ export const priceLineMethods = {
     this.countdownEl.style.width = this.chart.priceAxis(left ? 'left' : 'right').width() + 'px';
     this.countdownEl.style.left = left ? '0' : '';
     this.countdownEl.style.right = left ? '' : '0';
-    if (this.settings.spreadMeter) this.updateSpread();   // keep the spread label stacked above
+    if (this.settings.spreadMeter) this.updateSpread(); // keep the spread label stacked above
   },
 
   // ---- spread meter: live ask-bid on the price scale, above the countdown ----
@@ -110,12 +158,16 @@ export const priceLineMethods = {
   },
   /** @this {PriceLineCtx} */
   updateSpread() {
-    const el = this.spreadEl; if (!el) return;
-    if (!this.settings.spreadMeter || this.bid == null || this.ask == null) { el.style.display = 'none'; return; }
+    const el = this.spreadEl;
+    if (!el) return;
+    if (!this.settings.spreadMeter || this.bid == null || this.ask == null) {
+      el.style.display = 'none';
+      return;
+    }
     const spread = this.ask - this.bid;
     const max = parseFloat(/** @type {string} */ (this.settings.spreadMax)) || 0;
     const over = max > 0 && spread >= max;
-    el.style.background = over ? (this.settings.spreadMaxColor || '#ef5350') : (this.settings.spreadColor || '#363a45');
+    el.style.background = over ? this.settings.spreadMaxColor || '#ef5350' : this.settings.spreadColor || '#363a45';
     el.textContent = spread.toFixed(/** @type {number} */ (this.priceDecimals));
     el.style.display = 'block';
     // pin to the price-scale side, sitting just above the countdown (when it's shown)
@@ -124,6 +176,6 @@ export const priceLineMethods = {
     el.style.left = left ? '0' : '';
     el.style.right = left ? '' : '0';
     const cdShown = this.settings.countdown && this.countdownEl.style.display !== 'none';
-    el.style.bottom = (28 + (cdShown ? this.countdownEl.offsetHeight : 0)) + 'px';
+    el.style.bottom = 28 + (cdShown ? this.countdownEl.offsetHeight : 0) + 'px';
   },
 };

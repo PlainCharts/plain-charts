@@ -15,8 +15,17 @@ Studies.register({
     { key: 'rows', type: 'number', name: 'Row size', default: 24, min: 5, max: 100, legend: false },
     { key: 'width', type: 'number', name: 'Width %', default: 30, min: 5, max: 80, legend: false },
     { key: 'va', type: 'number', name: 'Value Area %', default: 70, min: 30, max: 95, legend: false },
-    { key: 'side', type: 'select', name: 'Side', default: 'right',
-      options: [{ key: 'right', name: 'Right' }, { key: 'left', name: 'Left' }], legend: false },
+    {
+      key: 'side',
+      type: 'select',
+      name: 'Side',
+      default: 'right',
+      options: [
+        { key: 'right', name: 'Right' },
+        { key: 'left', name: 'Left' },
+      ],
+      legend: false,
+    },
     { key: 'vaUp', type: 'color', name: 'Value area up', default: 'rgba(33,150,243,0.9)', legend: false },
     { key: 'vaDown', type: 'color', name: 'Value area down', default: 'rgba(255,152,0,0.9)', legend: false },
     // outside the value area: light tints (opaque enough to read blue/orange on any background)
@@ -28,13 +37,17 @@ Studies.register({
     const N = Math.min(p.lookback || 150, bars.length);
     if (N < 2) return { plots: [] };
     const slice = bars.slice(-N);
-    let top = -Infinity, bot = Infinity;
-    for (const b of slice) { if (b.high > top) top = b.high; if (b.low < bot) bot = b.low; }
+    let top = -Infinity,
+      bot = Infinity;
+    for (const b of slice) {
+      if (b.high > top) top = b.high;
+      if (b.low < bot) bot = b.low;
+    }
     if (!(top > bot)) return { plots: [] };
     const cnum = Math.max(2, p.rows || 24);
     const step = (top - bot) / cnum;
     /** @param {number} x */
-    const level = (x) => bot + step * x;   // bottom edge of level x
+    const level = (x) => bot + step * x; // bottom edge of level x
     // overlap length of segments [a1,a2] and [b1,b2], times vol/height (LonesomeTheBlue's get_vol)
     /**
      * @param {number} a1 @param {number} a2 @param {number} b1 @param {number} b2
@@ -42,22 +55,33 @@ Studies.register({
      */
     const getVol = (a1, a2, b1, b2, height, vol) => {
       if (!(height > 0)) return 0;
-      const inter = Math.max(0, Math.min(Math.max(a1, a2), Math.max(b1, b2)) - Math.max(Math.min(a1, a2), Math.min(b1, b2)));
-      return inter * vol / height;
+      const inter = Math.max(
+        0,
+        Math.min(Math.max(a1, a2), Math.max(b1, b2)) - Math.max(Math.min(a1, a2), Math.min(b1, b2)),
+      );
+      return (inter * vol) / height;
     };
-    const up = new Array(cnum).fill(0), down = new Array(cnum).fill(0);
+    const up = new Array(cnum).fill(0),
+      down = new Array(cnum).fill(0);
     for (const b of slice) {
-      const vol = b.volume || 0; if (!vol) continue;
-      const bt = Math.max(b.close, b.open), bb = Math.min(b.close, b.open);
+      const vol = b.volume || 0;
+      if (!vol) continue;
+      const bt = Math.max(b.close, b.open),
+        bb = Math.min(b.close, b.open);
       const green = b.close >= b.open;
-      const tw = b.high - bt, bw = bb - b.low, body = bt - bb;
+      const tw = b.high - bt,
+        bw = bb - b.low,
+        body = bt - bb;
       const denom = 2 * tw + 2 * bw + body;
       if (denom <= 0) continue;
-      const bodyvol = body * vol / denom, twvol = 2 * tw * vol / denom, bwvol = 2 * bw * vol / denom;
+      const bodyvol = (body * vol) / denom,
+        twvol = (2 * tw * vol) / denom,
+        bwvol = (2 * bw * vol) / denom;
       const s = Math.max(0, Math.floor((b.low - bot) / step));
       const e = Math.min(cnum - 1, Math.floor((b.high - bot) / step));
       for (let x = s; x <= e; x++) {
-        const lx = level(x), lx1 = level(x + 1);
+        const lx = level(x),
+          lx1 = level(x + 1);
         const bodyPart = getVol(lx, lx1, bb, bt, body, bodyvol);
         const wickPart = getVol(lx, lx1, bt, b.high, tw, twvol) / 2 + getVol(lx, lx1, bb, b.low, bw, bwvol) / 2;
         up[x] += (green ? bodyPart : 0) + wickPart;
@@ -65,15 +89,25 @@ Studies.register({
       }
     }
     const total = up.map((u, x) => u + down[x]);
-    let poc = 0; for (let x = 1; x < cnum; x++) if (total[x] > total[poc]) poc = x;
+    let poc = 0;
+    for (let x = 1; x < cnum; x++) if (total[x] > total[poc]) poc = x;
     // value area: grow out from the PoC until it holds `va`% of total volume
     const target = total.reduce((a, v) => a + v, 0) * ((p.va || 70) / 100);
-    let laP = poc, lbP = poc, acc = total[poc], guard = cnum * 2;
+    let laP = poc,
+      lbP = poc,
+      acc = total[poc],
+      guard = cnum * 2;
     while (acc < target && guard-- > 0) {
       const u = laP < cnum - 1 ? total[laP + 1] : 0;
       const d = lbP > 0 ? total[lbP - 1] : 0;
       if (u === 0 && d === 0) break;
-      if (u >= d) { acc += u; laP++; } else { acc += d; lbP--; }
+      if (u >= d) {
+        acc += u;
+        laP++;
+      } else {
+        acc += d;
+        lbP--;
+      }
     }
     const data = total.map((tv, x) => {
       const inVA = x >= lbP && x <= laP;
@@ -87,9 +121,19 @@ Studies.register({
     });
     return {
       // hbar points are PRICE-anchored ({price, segments}), not the time/value StudyPlotPoint shape -- cast at this boundary
-      plots: [{ key: 'vp', name: 'VP', type: 'hbar', legend: false, side: p.side || 'right', widthFrac: (p.width || 30) / 100, data: /** @type {StudyPlotPoint[]} */ (/** @type {unknown} */ (data)) }],
+      plots: [
+        {
+          key: 'vp',
+          name: 'VP',
+          type: 'hbar',
+          legend: false,
+          side: p.side || 'right',
+          widthFrac: (p.width || 30) / 100,
+          data: /** @type {StudyPlotPoint[]} */ (/** @type {unknown} */ (data)),
+        },
+      ],
       shapes: [
-        { type: 'hline', price: level(poc) + step / 2, color: p.pocColor, width: 2 },   // Point of Control (the only line the original draws)
+        { type: 'hline', price: level(poc) + step / 2, color: p.pocColor, width: 2 }, // Point of Control (the only line the original draws)
       ],
     };
   },

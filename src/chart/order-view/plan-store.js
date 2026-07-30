@@ -46,26 +46,53 @@ const state = new Map();
 /** @type {Set<() => void>} */
 const subs = new Set();
 const ch = new BroadcastChannel(IPC.ORDER_PLAN);
-const notify = () => subs.forEach((f) => { try { f(); } catch (_) {} });
+const notify = () =>
+  subs.forEach((f) => {
+    try {
+      f();
+    } catch (_) {}
+  });
 
 ch.onmessage = (/** @type {MessageEvent} */ e) => {
-  const m = e.data; if (!m || !m.op) return;
-  if (m.op === 'set') { const cur = state.get(m.key) || {}; state.set(m.key, { ...cur, ...m.patch }); notify(); }
-  else if (m.op === 'query') { try { ch.postMessage({ op: 'snapshot', entries: [...state.entries()] }); } catch (_) {} }
-  else if (m.op === 'snapshot' && Array.isArray(m.entries)) {
+  const m = e.data;
+  if (!m || !m.op) return;
+  if (m.op === 'set') {
+    const cur = state.get(m.key) || {};
+    state.set(m.key, { ...cur, ...m.patch });
+    notify();
+  } else if (m.op === 'query') {
+    try {
+      ch.postMessage({ op: 'snapshot', entries: [...state.entries()] });
+    } catch (_) {}
+  } else if (m.op === 'snapshot' && Array.isArray(m.entries)) {
     let changed = false;
-    for (const [k, v] of m.entries) { if (!state.has(k)) { state.set(k, v); changed = true; } }   // fill only gaps; a local opinion wins
+    for (const [k, v] of m.entries) {
+      if (!state.has(k)) {
+        state.set(k, v);
+        changed = true;
+      }
+    } // fill only gaps; a local opinion wins
     if (changed) notify();
   }
 };
 // HYDRATE from disk (the persisted plan), then ask any already-open window for in-session changes. Disk load lets a
 // projection survive an app restart; the snapshot query catches a mid-session window up to unsaved-but-live changes.
-getJSON('/api/order-plan').then((saved) => {
-  let changed = false;
-  if (saved && typeof saved === 'object') for (const k of Object.keys(saved)) { if (!state.has(k)) { state.set(k, saved[k]); changed = true; } }
-  if (changed) notify();
-}).catch(() => {});
-try { ch.postMessage({ op: 'query' }); } catch (_) {}
+getJSON('/api/order-plan')
+  .then((saved) => {
+    let changed = false;
+    if (saved && typeof saved === 'object')
+      for (const k of Object.keys(saved)) {
+        if (!state.has(k)) {
+          state.set(k, saved[k]);
+          changed = true;
+        }
+      }
+    if (changed) notify();
+  })
+  .catch(() => {});
+try {
+  ch.postMessage({ op: 'query' });
+} catch (_) {}
 
 // SAVE the plan to disk (only the ACTIVE entries -- an untoggled instrument is dropped, so the file stays clean).
 // Written immediately on a local change so a toggle isn't lost if the window closes right after (no debounce race).
@@ -74,8 +101,12 @@ try { ch.postMessage({ op: 'query' }); } catch (_) {}
 function persist() {
   /** @type {Record<string, { project?: boolean }>} */
   const obj = {};
-  for (const [k, v] of state) { if (v && v.project) obj[k] = { project: true }; }
-  try { postJSON('/api/order-plan', obj); } catch (_) {}
+  for (const [k, v] of state) {
+    if (v && v.project) obj[k] = { project: true };
+  }
+  try {
+    postJSON('/api/order-plan', obj);
+  } catch (_) {}
 }
 
 /** local write + broadcast, optionally persist @param {string} broker @param {string} symbol @param {Plan} patch @param {boolean} [doPersist] */
@@ -85,35 +116,85 @@ function set(broker, symbol, patch, doPersist) {
   const cur = state.get(key) || {};
   state.set(key, { ...cur, ...patch });
   notify();
-  try { ch.postMessage({ op: 'set', key, patch }); } catch (_) {}
-  if (doPersist) persist();   // only flag changes hit disk; level drags just sync in memory
+  try {
+    ch.postMessage({ op: 'set', key, patch });
+  } catch (_) {}
+  if (doPersist) persist(); // only flag changes hit disk; level drags just sync in memory
 }
 
 /** @param {Plan|undefined} v @param {'project'|'bracket'|'armed'} flag */
 const flagOn = (v, flag) => !!(v && v[flag]);
 /** is (broker, symbol)'s <flag> on? a broker-agnostic (empty-broker) plan matches any broker. @param {string} broker @param {string} symbol @param {'project'|'bracket'|'armed'} flag */
-function isFlag(broker, symbol, flag) { if (!symbol) return false; return flagOn(state.get(keyOf(broker, symbol)), flag) || flagOn(state.get(keyOf('', symbol)), flag); }
+function isFlag(broker, symbol, flag) {
+  if (!symbol) return false;
+  return flagOn(state.get(keyOf(broker, symbol)), flag) || flagOn(state.get(keyOf('', symbol)), flag);
+}
 
 /** @param {string} broker @param {string} symbol */
-export function isProjecting(broker, symbol) { return isFlag(broker, symbol, 'project'); }
+export function isProjecting(broker, symbol) {
+  return isFlag(broker, symbol, 'project');
+}
 /** bracket is an EXTENSION of project: it only counts while projecting, so a stale bracket-without-project reads as off. @param {string} broker @param {string} symbol */
-export function isBracket(broker, symbol) { return isFlag(broker, symbol, 'bracket') && isProjecting(broker, symbol); }
+export function isBracket(broker, symbol) {
+  return isFlag(broker, symbol, 'bracket') && isProjecting(broker, symbol);
+}
 /** armed is an EXTENSION of bracket: the plan went LIVE. Only counts while a bracket is projected. @param {string} broker @param {string} symbol */
-export function isArmed(broker, symbol) { return isFlag(broker, symbol, 'armed') && isBracket(broker, symbol); }
+export function isArmed(broker, symbol) {
+  return isFlag(broker, symbol, 'armed') && isBracket(broker, symbol);
+}
 /** the full plan for (broker, symbol): empty-broker base merged with the exact entry. @param {string} broker @param {string} symbol @returns {Plan} */
-export function getPlan(broker, symbol) { if (!symbol) return {}; return { ...(state.get(keyOf('', symbol)) || {}), ...(state.get(keyOf(broker, symbol)) || {}) }; }
+export function getPlan(broker, symbol) {
+  if (!symbol) return {};
+  return { ...(state.get(keyOf('', symbol)) || {}), ...(state.get(keyOf(broker, symbol)) || {}) };
+}
 
 // Bracket is an EXTENSION of Project (Project = the entry dot; Bracket adds the stop/target dots). The invariant is
 // bracket => project: you cannot have a bracket without a projection. These two setters keep it true from any caller
 // (dialog, chart, assistant), so the state can never be bracket-without-project.
 /** turning Project OFF also drops the bracket (its extension), the armed flag and the seeded levels. @param {string} broker @param {string} symbol @param {boolean} on */
-export function setProjecting(broker, symbol, on) { set(broker, symbol, on ? { project: true, anchor: null } : { project: false, bracket: false, armed: false, ref: null, levels: [], dir: null, anchor: null, activeIdx: null, qty: null, orderType: null, side: null, owner: null, sizing: null }, true); }
+export function setProjecting(broker, symbol, on) {
+  set(
+    broker,
+    symbol,
+    on
+      ? { project: true, anchor: null }
+      : {
+          project: false,
+          bracket: false,
+          armed: false,
+          ref: null,
+          levels: [],
+          dir: null,
+          anchor: null,
+          activeIdx: null,
+          qty: null,
+          orderType: null,
+          side: null,
+          owner: null,
+          sizing: null,
+        },
+    true,
+  );
+}
 /** turning Bracket ON implies Project ON; turning it OFF clears the armed flag + the seeded levels (Project stays). @param {string} broker @param {string} symbol @param {boolean} on */
-export function setBracket(broker, symbol, on) { set(broker, symbol, on ? { project: true, bracket: true } : { bracket: false, armed: false, ref: null, levels: [], dir: null, activeIdx: null }, true); }
+export function setBracket(broker, symbol, on) {
+  set(
+    broker,
+    symbol,
+    on
+      ? { project: true, bracket: true }
+      : { bracket: false, armed: false, ref: null, levels: [], dir: null, activeIdx: null },
+    true,
+  );
+}
 /** ARM/disarm the projected bracket (session-only): flips the plan LIVE without touching the levels. @param {string} broker @param {string} symbol @param {boolean} on */
-export function setArmed(broker, symbol, on) { set(broker, symbol, { armed: !!on }, false); }
+export function setArmed(broker, symbol, on) {
+  set(broker, symbol, { armed: !!on }, false);
+}
 /** update the plan's non-rung fields (ref / dir / anchor) -- in-memory + synced, NOT persisted. @param {string} broker @param {string} symbol @param {Plan} patch */
-export function setLevels(broker, symbol, patch) { set(broker, symbol, patch, false); }
+export function setLevels(broker, symbol, patch) {
+  set(broker, symbol, patch, false);
+}
 /** set ONE ladder rung's stop/target by index (grows the ladder as needed). @param {string} broker @param {string} symbol @param {number} i @param {PlanLevel} patch */
 export function setLevel(broker, symbol, i, patch) {
   if (!symbol || !(i >= 0)) return;
@@ -124,7 +205,9 @@ export function setLevel(broker, symbol, i, patch) {
   set(broker, symbol, { levels }, false);
 }
 /** REPLACE the whole ladder (all rungs at once) -- for a multi-level caller pushing its N levels. @param {string} broker @param {string} symbol @param {PlanLevel[]} levels */
-export function setLadder(broker, symbol, levels) { set(broker, symbol, { levels: Array.isArray(levels) ? levels.slice() : [] }, false); }
+export function setLadder(broker, symbol, levels) {
+  set(broker, symbol, { levels: Array.isArray(levels) ? levels.slice() : [] }, false);
+}
 /** merge a per-category dot VISIBILITY patch (session-only, synced): { entry?, stop?, target? } booleans.
  *  @param {string} broker @param {string} symbol @param {PlanVis} patch */
 export function setVis(broker, symbol, patch) {
@@ -143,10 +226,13 @@ export function setVis(broker, symbol, patch) {
 export function commitStop(broker, symbol, i, stop, opts = {}) {
   if (!symbol || !(i >= 0) || stop == null || !isFinite(stop)) return;
   const p = getPlan(broker, symbol);
-  const ref = p.ref != null ? Number(p.ref) : (opts.pivot != null ? Number(opts.pivot) : null);
-  if (i > 0 || !opts.flip || ref == null) { setLevel(broker, symbol, i, { stop }); return; }
+  const ref = p.ref != null ? Number(p.ref) : opts.pivot != null ? Number(opts.pivot) : null;
+  if (i > 0 || !opts.flip || ref == null) {
+    setLevel(broker, symbol, i, { stop });
+    return;
+  }
   const l0 = (Array.isArray(p.levels) && p.levels[0]) || {};
-  const q = typeof opts.snap === 'function' ? opts.snap : ((/** @type {number} */ v) => v);
+  const q = typeof opts.snap === 'function' ? opts.snap : (/** @type {number} */ v) => v;
   const r = stopDragFlip(stop, ref, p.dir, l0.target);
   setLevel(broker, symbol, 0, { stop: r.stop, target: r.target != null ? q(r.target) : r.target });
   // the stop's side vs the pivot IS the direction -- sync the planned SIDE with it, so the pill controller
@@ -154,4 +240,7 @@ export function commitStop(broker, symbol, i, stop, opts = {}) {
   setLevels(broker, symbol, { dir: r.dir, side: r.dir === 'short' ? 'sell' : 'buy' });
 }
 /** subscribe to any plan change (returns an unsubscribe). @param {() => void} fn @returns {() => void} */
-export function subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }
+export function subscribe(fn) {
+  subs.add(fn);
+  return () => subs.delete(fn);
+}

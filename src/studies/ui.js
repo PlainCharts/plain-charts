@@ -8,5 +8,8 @@ import { $ } from '../dom.js';
 export function initStudies() {
   const btn = $('btnStudies');
   if (!btn) return;
-  btn.onclick = (e) => { e.stopPropagation(); openLibrary(); };
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    openLibrary();
+  };
 }

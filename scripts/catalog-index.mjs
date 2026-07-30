@@ -28,8 +28,11 @@ const INFO_FILE = 'info.md';
 // Read a folder package's meta.json (name/description/icon) -- the single source of package metadata,
 // never scraped from the code. Returns {} when absent/invalid.
 function readMeta(dir) {
-  try { return JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')) || {}; }
-  catch { return {}; }
+  try {
+    return JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')) || {};
+  } catch {
+    return {};
+  }
 }
 
 // Every content class -> where it lives (relative to repo root) and how to read a package's metadata.
@@ -37,13 +40,13 @@ function readMeta(dir) {
 //   file classes:   <root>/<name>.json; the JSON carries name (+ description); no icon.
 // Vocabulary is intentionally omitted: its files are Weblate-owned / local-only, handled separately.
 const CLASSES = {
-  studies:           { root: 'packages/studies',        kind: 'folder', runtime: (id) => id + '.js' },
-  tools:             { root: 'packages/tools',          kind: 'folder', runtime: (id) => id + '.js' },
-  addons:            { root: 'addons',                  kind: 'folder', runtime: () => 'index.js' },
-  adapters:          { root: 'data_engine/adapters',    kind: 'folder', runtime: () => 'index.js' },
-  primitives:        { root: 'packages/primitives',     kind: 'folder', runtime: () => 'index.js' },
-  themes:            { root: 'packages/themes',         kind: 'file' },
-  'chart-themes':    { root: 'packages/chart-themes',   kind: 'file' },
+  studies: { root: 'packages/studies', kind: 'folder', runtime: (id) => id + '.js' },
+  tools: { root: 'packages/tools', kind: 'folder', runtime: (id) => id + '.js' },
+  addons: { root: 'addons', kind: 'folder', runtime: () => 'index.js' },
+  adapters: { root: 'data_engine/adapters', kind: 'folder', runtime: () => 'index.js' },
+  primitives: { root: 'packages/primitives', kind: 'folder', runtime: () => 'index.js' },
+  themes: { root: 'packages/themes', kind: 'file' },
+  'chart-themes': { root: 'packages/chart-themes', kind: 'file' },
 };
 
 // A folder package's file manifest, relative to the package folder, forward-slashed and sorted. raw
@@ -66,13 +69,24 @@ const packages = [];
 for (const [cls, cfg] of Object.entries(CLASSES)) {
   const dir = path.join(ROOT, cfg.root);
   let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }   // class absent -> skip
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    continue;
+  } // class absent -> skip
 
   if (cfg.kind === 'file') {
     for (const e of entries) {
       if (!e.isFile() || !e.name.endsWith('.json')) continue;
-      let name = e.name.slice(0, -5), description = '';
-      try { const obj = JSON.parse(fs.readFileSync(path.join(dir, e.name), 'utf8')); if (obj && obj.name) name = obj.name; if (obj && obj.description) description = obj.description; } catch { /* keep filename */ }
+      let name = e.name.slice(0, -5),
+        description = '';
+      try {
+        const obj = JSON.parse(fs.readFileSync(path.join(dir, e.name), 'utf8'));
+        if (obj && obj.name) name = obj.name;
+        if (obj && obj.description) description = obj.description;
+      } catch {
+        /* keep filename */
+      }
       packages.push({ class: cls, id: name, name, description, icon: '', path: cfg.root, runtime: e.name });
     }
     continue;
@@ -83,7 +97,7 @@ for (const [cls, cfg] of Object.entries(CLASSES)) {
     const id = e.name;
     const runtime = cfg.runtime(id);
     const file = path.join(dir, id, runtime);
-    if (!fs.existsSync(file)) continue;   // not a package (reference dir, icon-only folder, ...)
+    if (!fs.existsSync(file)) continue; // not a package (reference dir, icon-only folder, ...)
     const meta = readMeta(path.join(dir, id));
     packages.push({
       class: cls,
@@ -110,10 +124,16 @@ try {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (!e.isFile() || !e.name.endsWith('.json')) continue;
     const code = e.name.slice(0, -5);
-    try { dn.of(code); } catch { continue; }   // not a language tag -> skip junk
+    try {
+      dn.of(code);
+    } catch {
+      continue;
+    } // not a language tag -> skip junk
     packages.push({ class: 'vocab', id: code, name: '', description: '', icon: '', path: VOCAB_DIR, runtime: e.name });
   }
-} catch { /* no static/locale -> no vocabulary */ }
+} catch {
+  /* no static/locale -> no vocabulary */
+}
 
 packages.sort((a, b) => a.class.localeCompare(b.class) || a.id.localeCompare(b.id));
 const out = { packages };

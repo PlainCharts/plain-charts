@@ -1,0 +1,30 @@
+# Prettier scope mirrors the type/lint scope: our authored JS source only.
+# Everything below is generated, vendored, runtime state, or owns a separate toolchain.
+
+# dependencies + build output
+node_modules/
+dist/
+package-lock.json
+
+# runtime state / local-only data (all gitignored)
+userdata/
+settings/
+data/
+logs/
+sounds/
+.temp/
+
+# generated catalog (rebuilt by the pre-commit hook)
+index.json
+
+# separate git repo — formatted from its own config + baseline (lib/kapelka/.prettierrc.json)
+lib/
+
+# self-contained dev tool with its own toolchain (eslint ignores it too)
+data_engine/terminal/
+
+# separate Astro project with its own conventions
+docs/web/
+
+# internal design docs / scratch (gitignored)
+.docs/

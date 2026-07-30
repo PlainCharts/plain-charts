@@ -13,19 +13,27 @@ export const textEditMethods = {
   // at the label's anchor (computed in primitive.js → engine._textBox). ----
   /** @this {Ix} @param {string} id */
   _startTextEdit(id) {
-    const d = this.engine.get(id); const tool = d && getTool(d.tool);
+    const d = this.engine.get(id);
+    const tool = d && getTool(d.tool);
     if (!d || !tool || !(tool.settings && tool.settings.text) || (tool.textEnabled && !tool.textEnabled(d))) return;
     const box = this.engine._textBox;
-    if (!box || box.id !== id) return;   // need the freshly-painted anchor
+    if (!box || box.id !== id) return; // need the freshly-painted anchor
     this._closeTextEdit();
     if (!d.textStyle) {
       const def = tool.settings.text.defaults || {};
-      d.textStyle = { color: '#787b86', size: 14, bold: false, italic: false, vAlign: def.vAlign || 'middle', hAlign: def.hAlign || 'center' };
+      d.textStyle = {
+        color: '#787b86',
+        size: 14,
+        bold: false,
+        italic: false,
+        vAlign: def.vAlign || 'middle',
+        hAlign: def.hAlign || 'center',
+      };
     }
     const ts = d.textStyle;
     this._editOrig = d.text || '';
     this.engine._editingId = id;
-    this.engine.requestUpdate();   // hide the rendered label / placeholder while editing
+    this.engine.requestUpdate(); // hide the rendered label / placeholder while editing
 
     const ed = document.createElement('div');
     ed.className = 'draw-text-edit';
@@ -39,12 +47,12 @@ export const textEditMethods = {
       // rotated label: pin the editor's anchor corner at (cx,cy) and rotate to the slope
       const ty = box.baseline === 'bottom' ? '-100%' : box.baseline === 'middle' ? '-50%' : '0';
       ed.style.left = box.cx + 'px';
-      ed.style.top = (/** @type {number} */ (box.cy) + yoff) + 'px';
+      ed.style.top = /** @type {number} */ (box.cy) + yoff + 'px';
       ed.style.transformOrigin = '0 0';
       ed.style.transform = `rotate(${box.angle}rad) translate(${tx}, ${ty})`;
     } else {
       ed.style.left = box.x + 'px';
-      ed.style.top = (/** @type {number} */ (box.yTop) + yoff) + 'px';
+      ed.style.top = /** @type {number} */ (box.yTop) + yoff + 'px';
       ed.style.transform = 'translateX(' + tx + ')';
     }
     ed.style.textAlign = /** @type {string} */ (box.ha);
@@ -54,58 +62,83 @@ export const textEditMethods = {
     // textGeom asks for it). Offset by the box padding so the caret sits over the text.
     if (box.editor) {
       ed.style.transform = 'none';
-      ed.style.left = (/** @type {number} */ (box.cx) + box.editor.offX) + 'px';
-      ed.style.top = (/** @type {number} */ (box.cy) + yoff + box.editor.offY) + 'px';
-      ed.style.background = box.editor.bg || 'transparent';   // match the Style background (WYSIWYG)
-      if (box.editor.wrap) {                          // fixed width, WORD wrap (never split a word)
+      ed.style.left = /** @type {number} */ (box.cx) + box.editor.offX + 'px';
+      ed.style.top = /** @type {number} */ (box.cy) + yoff + box.editor.offY + 'px';
+      ed.style.background = box.editor.bg || 'transparent'; // match the Style background (WYSIWYG)
+      if (box.editor.wrap) {
+        // fixed width, WORD wrap (never split a word)
         ed.style.width = box.editor.width + 'px';
         ed.style.whiteSpace = 'pre-wrap';
         ed.style.overflowWrap = 'normal';
         ed.style.wordBreak = 'normal';
-      } else {                                        // grow with the text, keep newlines
+      } else {
+        // grow with the text, keep newlines
         ed.style.whiteSpace = 'pre';
       }
     }
     this.pane.el.appendChild(ed);
     this._textEdit = { id, ed };
 
-    ed.addEventListener('input', () => { d.text = ed.innerText; this.engine.liveUpdate(d); });
+    ed.addEventListener('input', () => {
+      d.text = ed.innerText;
+      this.engine.liveUpdate(d);
+    });
     ed.addEventListener('keydown', (ev) => {
-      ev.stopPropagation();   // keep Delete/Backspace/hotkeys from acting on the drawing
-      if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); this._commitTextEdit(); }
-      else if (ev.key === 'Escape') { ev.preventDefault(); this._cancelTextEdit(); }
+      ev.stopPropagation(); // keep Delete/Backspace/hotkeys from acting on the drawing
+      if (ev.key === 'Enter' && !ev.shiftKey) {
+        ev.preventDefault();
+        this._commitTextEdit();
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        this._cancelTextEdit();
+      }
     });
     ed.addEventListener('blur', () => this._commitTextEdit());
     setTimeout(() => {
       ed.focus();
-      const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false);   // caret at end
-      const sel = /** @type {Selection} */ (window.getSelection()); sel.removeAllRanges(); sel.addRange(r);
+      const r = document.createRange();
+      r.selectNodeContents(ed);
+      r.collapse(false); // caret at end
+      const sel = /** @type {Selection} */ (window.getSelection());
+      sel.removeAllRanges();
+      sel.addRange(r);
     }, 0);
   },
   /** @this {Ix} */
   _commitTextEdit() {
-    const te = this._textEdit; if (!te) return;
+    const te = this._textEdit;
+    if (!te) return;
     const txt = te.ed.innerText.replace(/\n$/, '').trim();
     this._closeTextEdit();
     this.engine._editingId = null;
     const d = this.engine.get(te.id);
-    if (d) { d.text = txt || undefined; this.engine.persist(); this.engine.liveUpdate(d); }
+    if (d) {
+      d.text = txt || undefined;
+      this.engine.persist();
+      this.engine.liveUpdate(d);
+    }
     this.engine.requestUpdate();
   },
   /** @this {Ix} */
   _cancelTextEdit() {
-    const te = this._textEdit; if (!te) return;
+    const te = this._textEdit;
+    if (!te) return;
     this._closeTextEdit();
     this.engine._editingId = null;
     const d = this.engine.get(te.id);
-    if (d) { d.text = this._editOrig || undefined; this.engine.liveUpdate(d); }
+    if (d) {
+      d.text = this._editOrig || undefined;
+      this.engine.liveUpdate(d);
+    }
     this.engine.requestUpdate();
   },
   /** @this {Ix} */
   _closeTextEdit() {
     const te = this._textEdit;
     if (!te) return;
-    this._textEdit = null;                 // null FIRST so the re-entrant blur this remove() fires is a no-op
-    try { te.ed.remove(); } catch (_) {}
+    this._textEdit = null; // null FIRST so the re-entrant blur this remove() fires is a no-op
+    try {
+      te.ed.remove();
+    } catch (_) {}
   },
 };

@@ -11,14 +11,16 @@ import { platform } from '../platform/index.js';
 
 const Q = new URLSearchParams(location.search);
 const WIN = Q.get('win') || 'solo';
-const IS_WORKER = Q.get('role') === 'orders';                 // the dedicated order-host process
-const LOCAL = !IS_WORKER && !Q.get('win');                    // solo/browser: no separate hosts -> run in-page
+const IS_WORKER = Q.get('role') === 'orders'; // the dedicated order-host process
+const LOCAL = !IS_WORKER && !Q.get('win'); // solo/browser: no separate hosts -> run in-page
 const chan = LOCAL ? null : new BroadcastChannel(IPC.ORDER_BUS);
 
 /** @type {Map<string, (cmd: any) => any>} */
 const handlers = new Map();
 /** Install a command handler (worker side, or in-page for solo). @param {string} type @param {(cmd: any) => any} fn */
-export function register(type, fn) { handlers.set(type, fn); }
+export function register(type, fn) {
+  handlers.set(type, fn);
+}
 
 /** @param {any} cmd */
 async function run(cmd) {
@@ -30,11 +32,21 @@ async function run(cmd) {
 // WORKER: answer commands on the bus.
 if (IS_WORKER && chan) {
   chan.addEventListener('message', async (/** @type {MessageEvent} */ e) => {
-    const m = e.data; if (!m || m.dir !== 'cmd') return;
+    const m = e.data;
+    if (!m || m.dir !== 'cmd') return;
     /** @type {import('../ipc.js').OrderAck} */
     let ack;
-    try { ack = { dir: 'ack', to: m.win, callId: m.callId, ok: true, result: await run(m.cmd) }; }
-    catch (err) { ack = { dir: 'ack', to: m.win, callId: m.callId, ok: false, error: (/** @type {any} */ (err) && /** @type {any} */ (err).message) || String(err) }; }
+    try {
+      ack = { dir: 'ack', to: m.win, callId: m.callId, ok: true, result: await run(m.cmd) };
+    } catch (err) {
+      ack = {
+        dir: 'ack',
+        to: m.win,
+        callId: m.callId,
+        ok: false,
+        error: /** @type {any} */ (err && /** @type {any} */ (err).message) || String(err),
+      };
+    }
     chan.postMessage(ack);
   });
 }
@@ -45,10 +57,14 @@ const pending = new Map();
 let seq = 0;
 if (!IS_WORKER && chan) {
   chan.addEventListener('message', (/** @type {MessageEvent} */ e) => {
-    const m = e.data; if (!m || m.dir !== 'ack' || m.to !== WIN) return;
-    const p = pending.get(m.callId); if (!p) return;
-    pending.delete(m.callId); clearInterval(p.timer);
-    if (m.ok) p.resolve(m.result); else p.reject(new Error(m.error || 'order command failed'));
+    const m = e.data;
+    if (!m || m.dir !== 'ack' || m.to !== WIN) return;
+    const p = pending.get(m.callId);
+    if (!p) return;
+    pending.delete(m.callId);
+    clearInterval(p.timer);
+    if (m.ok) p.resolve(m.result);
+    else p.reject(new Error(m.error || 'order command failed'));
   });
 }
 
@@ -67,13 +83,18 @@ const SLOW_ACK_MS = 8000;
  * @returns {Promise<any>}
  */
 export function command(cmd) {
-  if (LOCAL || !chan) return Promise.resolve().then(() => run(cmd));   // solo: no worker process, run here
+  if (LOCAL || !chan) return Promise.resolve().then(() => run(cmd)); // solo: no worker process, run here
   return new Promise((resolve, reject) => {
     const callId = ++seq;
     const sent = Date.now();
     const timer = setInterval(() => {
       const secs = Math.round((Date.now() - sent) / 1000);
-      platform.console.post({ level: 'warn', cat: 'journal', src: 'orders', msg: 'no ack yet for "' + cmd.type + '" (' + secs + 's) -- worker busy or broker slow; the book will confirm' });
+      platform.console.post({
+        level: 'warn',
+        cat: 'journal',
+        src: 'orders',
+        msg: 'no ack yet for "' + cmd.type + '" (' + secs + 's) -- worker busy or broker slow; the book will confirm',
+      });
     }, SLOW_ACK_MS);
     pending.set(callId, { resolve, reject, timer });
     /** @type {import('../ipc.js').OrderCmd} */

@@ -26,7 +26,9 @@ export function pinHandles(pins) {
   const shown = (p, ctx) => !p.show || p.show(ctx);
   return {
     /** @param {any} ctx */
-    handles(ctx) { return pins.filter((p) => shown(p, ctx)).map((p) => p.at(ctx)); },
+    handles(ctx) {
+      return pins.filter((p) => shown(p, ctx)).map((p) => p.at(ctx));
+    },
     /** @param {any} ctx @param {number} x @param {number} y @param {number} tol */
     hitPin(ctx, x, y, tol) {
       for (let i = 0; i < pins.length; i++) {
@@ -37,6 +39,9 @@ export function pinHandles(pins) {
       return -1;
     },
     /** @param {any} d @param {number} index @param {any} dp */
-    reshape(d, index, dp) { const p = pins[index]; if (p && p.drag) p.drag(d, dp); },
+    reshape(d, index, dp) {
+      const p = pins[index];
+      if (p && p.drag) p.drag(d, dp);
+    },
   };
 }

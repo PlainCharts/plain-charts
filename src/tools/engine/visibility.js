@@ -55,10 +55,22 @@ export function intervalPreset(tf, mode) {
   /** @type {Visibility} */
   const v = {};
   VIS_CATEGORIES.forEach((c, i) => {
-    let on = true, min = c.min, max = c.max;
-    if (mode === 'only') { on = i === idx; if (on) { min = n; max = n; } }
-    else if (mode === 'above') { if (i < idx) on = false; else if (i === idx) min = n; }
-    else if (mode === 'below') { if (i > idx) on = false; else if (i === idx) max = n; }
+    let on = true,
+      min = c.min,
+      max = c.max;
+    if (mode === 'only') {
+      on = i === idx;
+      if (on) {
+        min = n;
+        max = n;
+      }
+    } else if (mode === 'above') {
+      if (i < idx) on = false;
+      else if (i === idx) min = n;
+    } else if (mode === 'below') {
+      if (i > idx) on = false;
+      else if (i === idx) max = n;
+    }
     v[c.key] = { on, min, max };
   });
   return v;
@@ -73,11 +85,13 @@ export function matchesPreset(v, tf, mode) {
   const catEq = (a, b, c) => {
     const x = a || { on: true, min: c.min, max: c.max };
     const y = b || { on: true, min: c.min, max: c.max };
-    const xmin = x.min == null ? c.min : x.min, xmax = x.max == null ? c.max : x.max;
-    const ymin = y.min == null ? c.min : y.min, ymax = y.max == null ? c.max : y.max;
+    const xmin = x.min == null ? c.min : x.min,
+      xmax = x.max == null ? c.max : x.max;
+    const ymin = y.min == null ? c.min : y.min,
+      ymax = y.max == null ? c.max : y.max;
     return (x.on !== false) === (y.on !== false) && xmin === ymin && xmax === ymax;
   };
-  if (!target) return !v || VIS_CATEGORIES.every((c) => catEq(v[c.key], null, c));   // 'all'
+  if (!target) return !v || VIS_CATEGORIES.every((c) => catEq(v[c.key], null, c)); // 'all'
   if (!v) return false;
   return VIS_CATEGORIES.every((c) => catEq(v[c.key], target[c.key], c));
 }

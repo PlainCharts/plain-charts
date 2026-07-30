@@ -27,14 +27,20 @@ import { loadSettings } from '../settings/settings.js';
 import { IPC } from '../ipc-contract.js';
 
 /** @type {BroadcastChannel|null} */
-let firedChan = null; try { firedChan = new BroadcastChannel(IPC.ALERT_FIRED); } catch (_) {}
+let firedChan = null;
+try {
+  firedChan = new BroadcastChannel(IPC.ALERT_FIRED);
+} catch (_) {}
 // A window dismissing an alert (popup/toast) posts { kind:'dismiss' } back on this channel; the host stops
 // the notification sound it's playing (a long sound file shouldn't outlive the alert the user just cleared).
-if (firedChan) firedChan.onmessage = (/** @type {MessageEvent} */ e) => { if (e && e.data && e.data.kind === 'dismiss') stopSound(); };
+if (firedChan)
+  firedChan.onmessage = (/** @type {MessageEvent} */ e) => {
+    if (e && e.data && e.data.kind === 'dismiss') stopSound();
+  };
 
 // ---- authoritative store ---------------------------------------------------------------------------
-const store = createAlertStore();   // authoritative: writes + broadcasts to every window's mirror
-const log = createAlertLog();       // authoritative fire LOG (the mailbox): host appends, mirrors read
+const store = createAlertStore(); // authoritative: writes + broadcasts to every window's mirror
+const log = createAlertLog(); // authoritative fire LOG (the mailbox): host appends, mirrors read
 
 // ---- persistence (settings/market/alert-rules.json) ------------------------------------------------
 /** @type {any} */
@@ -55,34 +61,52 @@ function scheduleSaveLog() {
 async function loadLog() {
   try {
     const doc = await getJSON('/api/alert-log');
-    const entries = (doc && Array.isArray(doc.entries)) ? doc.entries : [];
-    log.reset(entries.filter((/** @type {any} */ e) => e && e.at).map((/** @type {any} */ e) => e.id ? e : { ...e, id: newLogId() }));
-    console.info(`[alert-host] loaded ${log.size()} log entr${log.size() === 1 ? 'y' : 'ies'} from settings/market/alert-log.json`);
+    const entries = doc && Array.isArray(doc.entries) ? doc.entries : [];
+    log.reset(
+      entries
+        .filter((/** @type {any} */ e) => e && e.at)
+        .map((/** @type {any} */ e) => (e.id ? e : { ...e, id: newLogId() })),
+    );
+    console.info(
+      `[alert-host] loaded ${log.size()} log entr${log.size() === 1 ? 'y' : 'ies'} from settings/market/alert-log.json`,
+    );
   } catch (err) {
-    console.error('[alert-host] failed to load alert-log.json', (/** @type {any} */ (err) && /** @type {any} */ (err).message) || err);
+    console.error(
+      '[alert-host] failed to load alert-log.json',
+      /** @type {any} */ (err && /** @type {any} */ (err).message) || err,
+    );
   }
 }
 // Persist on every real mutation (a fire append or a clear); the load-time `reset` is skipped -- it would
 // only re-save what we just read.
-log.subscribe((ev) => { if (ev.type !== 'reset') scheduleSaveLog(); });
+log.subscribe((ev) => {
+  if (ev.type !== 'reset') scheduleSaveLog();
+});
 async function loadRules() {
   try {
     const doc = await getJSON('/api/alert-rules');
     /** @type {any[]} */
-    const list = (doc && Array.isArray(doc.alerts)) ? doc.alerts : [];
-    store.reset(list.filter((a) => a && a.id).map((a) => {
-      // stamp the producer once: every record that predates the field is a price alert (the only kind there was).
-      if (a.source == null) a = { ...a, source: 'price' };
-      // stamp the stable cadence once for any record that predates the field (so the eval loop never parses a label).
-      if (a.cadence == null) a = { ...a, cadence: cadenceOf(a.trigger) };
-      // normalize legacy records: a Once-only alert that already fired is Stopped (the auto-stop-on-fire rule).
-      if (a.enabled && a.rt && a.rt.fired && a.cadence === 'once') a = { ...a, enabled: false };
-      return /** @type {[string, any]} */ ([a.id, a]);
-    }));
-    scheduleSave();   // persist any normalization
+    const list = doc && Array.isArray(doc.alerts) ? doc.alerts : [];
+    store.reset(
+      list
+        .filter((a) => a && a.id)
+        .map((a) => {
+          // stamp the producer once: every record that predates the field is a price alert (the only kind there was).
+          if (a.source == null) a = { ...a, source: 'price' };
+          // stamp the stable cadence once for any record that predates the field (so the eval loop never parses a label).
+          if (a.cadence == null) a = { ...a, cadence: cadenceOf(a.trigger) };
+          // normalize legacy records: a Once-only alert that already fired is Stopped (the auto-stop-on-fire rule).
+          if (a.enabled && a.rt && a.rt.fired && a.cadence === 'once') a = { ...a, enabled: false };
+          return /** @type {[string, any]} */ ([a.id, a]);
+        }),
+    );
+    scheduleSave(); // persist any normalization
     console.info(`[alert-host] loaded ${store.size()} rule(s) from settings/market/alert-rules.json`);
   } catch (err) {
-    console.error('[alert-host] failed to load alert-rules.json', (/** @type {any} */ (err) && /** @type {any} */ (err).message) || err);
+    console.error(
+      '[alert-host] failed to load alert-rules.json',
+      /** @type {any} */ (err && /** @type {any} */ (err).message) || err,
+    );
   }
 }
 
@@ -97,20 +121,32 @@ let wlDoc = { lists: [] };
 let wlSig = '';
 /** cheap signature of every list's ordered symbol membership -- reconcile only when this changes. @param {any} doc */
 function wlSignature(doc) {
-  const lists = (doc && Array.isArray(doc.lists)) ? doc.lists : [];
-  return lists.map((/** @type {any} */ l) => l.id + ':' + listSymbols(doc, l.id).map((s) => (s.broker || '*') + s.symbol).join(',')).join('|');
+  const lists = doc && Array.isArray(doc.lists) ? doc.lists : [];
+  return lists
+    .map(
+      (/** @type {any} */ l) =>
+        l.id +
+        ':' +
+        listSymbols(doc, l.id)
+          .map((s) => (s.broker || '*') + s.symbol)
+          .join(','),
+    )
+    .join('|');
 }
 async function refreshWatchlists() {
-  if (!store.all().some((r) => applyOf(r).kind === 'watchlist')) return;   // no watchlist alert -> nothing to track
+  if (!store.all().some((r) => applyOf(r).kind === 'watchlist')) return; // no watchlist alert -> nothing to track
   try {
     const doc = await getJSON('/api/watchlist');
     const sig = wlSignature(doc);
-    if (sig === wlSig) return;   // membership unchanged -> no re-arm
-    wlDoc = doc; wlSig = sig;
-    reconcile();                 // a symbol was added/removed -> bring feeds in line
-  } catch (err) { console.error('[alert-host] failed to load watchlist snapshot', errStr(err)); }
+    if (sig === wlSig) return; // membership unchanged -> no re-arm
+    wlDoc = doc;
+    wlSig = sig;
+    reconcile(); // a symbol was added/removed -> bring feeds in line
+  } catch (err) {
+    console.error('[alert-host] failed to load watchlist snapshot', errStr(err));
+  }
 }
-setInterval(refreshWatchlists, 4000);   // membership edits land within a few seconds (gated: no-ops with no watchlist alert)
+setInterval(refreshWatchlists, 4000); // membership edits land within a few seconds (gated: no-ops with no watchlist alert)
 
 /** hex id unique within the store */
 function newId() {
@@ -137,14 +173,16 @@ registerAlertHandler('create', (draft) => {
   return rec;
 });
 registerAlertHandler('update', ({ id, patch }) => {
-  const cur = store.get(id); if (!cur) throw new Error('no such alert: ' + id);
+  const cur = store.get(id);
+  if (!cur) throw new Error('no such alert: ' + id);
   const rec = { ...cur, ...patch, id };
   store.set(id, rec);
   scheduleSave();
   return rec;
 });
 registerAlertHandler('toggle', ({ id, enabled }) => {
-  const cur = store.get(id); if (!cur) throw new Error('no such alert: ' + id);
+  const cur = store.get(id);
+  if (!cur) throw new Error('no such alert: ' + id);
   const rec = { ...cur, enabled: enabled != null ? !!enabled : !cur.enabled };
   store.set(id, rec);
   scheduleSave();
@@ -152,15 +190,21 @@ registerAlertHandler('toggle', ({ id, enabled }) => {
 });
 registerAlertHandler('remove', ({ id }) => {
   store.remove(id);
-  log.pruneByAlert(id);   // CASCADE: an alert's fire history is part of the alert -- it goes when the alert goes
+  log.pruneByAlert(id); // CASCADE: an alert's fire history is part of the alert -- it goes when the alert goes
   scheduleSave();
   return { id, removed: true };
 });
 // Clear the mailbox. The log is host-owned, so the panel's "Clear log" routes here (windows never write it).
 // log.clear() broadcasts to mirrors; the log.subscribe wire persists the now-empty ring.
-registerAlertHandler('log-clear', () => { log.clear(); return { cleared: true }; });
+registerAlertHandler('log-clear', () => {
+  log.clear();
+  return { cleared: true };
+});
 // Remove ONE mailbox entry by id -- the alert stays untouched (this only edits the log).
-registerAlertHandler('log-remove', ({ id }) => { log.remove(id); return { id, removed: true }; });
+registerAlertHandler('log-remove', ({ id }) => {
+  log.remove(id);
+  return { id, removed: true };
+});
 
 // ---- evaluation loop -------------------------------------------------------------------------------
 // Each ARMED alert (enabled, not expired, with at least one supported price term) holds a shared bar-feed
@@ -185,7 +229,8 @@ function armed(rec) {
  * @param {any} rec @returns {{ broker:(string|null), symbol:string }[]} */
 function targetsOf(rec) {
   const ap = applyOf(rec);
-  if (ap.kind === 'watchlist') return listSymbols(wlDoc, ap.listId).map((s) => ({ broker: s.broker || rec.broker || null, symbol: s.symbol }));
+  if (ap.kind === 'watchlist')
+    return listSymbols(wlDoc, ap.listId).map((s) => ({ broker: s.broker || rec.broker || null, symbol: s.symbol }));
   return [{ broker: rec.broker || null, symbol: rec.symbol }];
 }
 /** @param {string|null} broker @param {string} symbol @param {any} tfObj */
@@ -203,15 +248,24 @@ const subs = new Map();
 const timers = new Map();
 
 /** @param {string} id */
-function clearTimer(id) { const ex = timers.get(id); if (ex) { clearTimeout(ex.handle); timers.delete(id); } }
+function clearTimer(id) {
+  const ex = timers.get(id);
+  if (ex) {
+    clearTimeout(ex.handle);
+    timers.delete(id);
+  }
+}
 
 /** Arm (or re-arm) a time alert's timer to its next fire. @param {any} rec */
 function armTimer(rec) {
   const now = Date.now();
   const at = nextFire(rec.schedule, now, alertTzOffsetMin());
-  if (at == null) { clearTimer(rec.id); return; }   // a spent one-shot: nothing more to schedule
+  if (at == null) {
+    clearTimer(rec.id);
+    return;
+  } // a spent one-shot: nothing more to schedule
   const ex = timers.get(rec.id);
-  if (ex && ex.at === at) return;                    // already armed to this exact instant
+  if (ex && ex.at === at) return; // already armed to this exact instant
   if (ex) clearTimeout(ex.handle);
   timers.set(rec.id, { handle: setTimeout(() => onTimer(rec.id), Math.max(0, at - now)), at });
 }
@@ -223,14 +277,14 @@ function onTimer(id) {
   timers.delete(id);
   const rec = store.get(id);
   const now = Date.now();
-  if (!rec || !rec.enabled || isExpired(rec.expiryMs, now)) return;   // gone / disabled / expired -> stay disarmed
+  if (!rec || !rec.enabled || isExpired(rec.expiryMs, now)) return; // gone / disabled / expired -> stay disarmed
   const once = rec.schedule && rec.schedule.kind === 'once';
   const next = { ...rec, rt: { ...(rec.rt || {}), fired: true, lastFireMs: now }, lastFire: { at: now } };
   if (once) next.enabled = false;
-  store.set(id, next);   // broadcast + (via store.subscribe) reconcile -> re-arm daily/weekly, drop a spent once
+  store.set(id, next); // broadcast + (via store.subscribe) reconcile -> re-arm daily/weekly, drop a spent once
   scheduleSave();
   console.info(`[alert-host] FIRE (time) "${rec.name || id}" (${rec.schedule && rec.schedule.kind})`);
-  logFire(rec, null, now);   // mailbox first (no bar -> no price) -- then the loud actions
+  logFire(rec, null, now); // mailbox first (no bar -> no price) -- then the loud actions
   runActions(rec, null);
 }
 
@@ -240,16 +294,23 @@ function onFeed(id, symbol, ev) {
   const rec = store.get(id);
   if (!rec || !rec.enabled) return;
   const now = Date.now();
-  if (isExpired(rec.expiryMs, now)) { reconcile(); return; }
-  const cadence = /** @type {any} */ (rec.cadence);   // stable field stamped by the dialog / normalized on load (never a label parse)
+  if (isExpired(rec.expiryMs, now)) {
+    reconcile();
+    return;
+  }
+  const cadence = /** @type {any} */ (rec.cadence); // stable field stamped by the dialog / normalized on load (never a label parse)
   const onClosed = cadence === 'per-bar-close';
   const bar = onClosed ? ev.closed : ev.last;
   if (!bar) return;
-  if (!conditionFires(rec.compiled, bar, ev.tail)) return;   // ev.tail feeds the relative Moving % terms
+  if (!conditionFires(rec.compiled, bar, ev.tail)) return; // ev.tail feeds the relative Moving % terms
   const isWatch = applyOf(rec).kind === 'watchlist';
   // the latch is per-symbol for a watchlist alert (one symbol firing must not latch another) and flat otherwise.
   if (!cadenceAllows(cadence, rtFor(rec, symbol), bar.time, now, onClosed)) return;
-  const next = { ...rec, ...withRt(rec, symbol, markFired(bar.time, now)), lastFire: { at: now, price: bar.close, barTime: bar.time, symbol } };
+  const next = {
+    ...rec,
+    ...withRt(rec, symbol, markFired(bar.time, now)),
+    lastFire: { at: now, price: bar.close, barTime: bar.time, symbol },
+  };
   // 'Once only' is spent after it fires -> auto-STOP the alert (enabled=false). For a WATCHLIST
   // alert "once" is once-PER-SYMBOL: the per-symbol latch above spends that symbol; the rule stays armed for the
   // rest of the list. Recurring cadences stay armed either way. Disabling disarms the feeds on the next reconcile.
@@ -257,7 +318,7 @@ function onFeed(id, symbol, ev) {
   store.set(id, next);
   scheduleSave();
   console.info(`[alert-host] FIRE "${rec.name || id}" ${symbol} @ ${bar.close} (${rec.trigger})`);
-  logFire(rec, bar, now, isWatch ? symbol : undefined);   // watchlist fires tag the symbol; single-symbol reads the alert's own
+  logFire(rec, bar, now, isWatch ? symbol : undefined); // watchlist fires tag the symbol; single-symbol reads the alert's own
   runActions(rec, bar);
 }
 
@@ -271,7 +332,7 @@ function logFire(rec, bar, at, symbol) {
   const entry = { id: newLogId(), at, alertId: rec.id };
   if (bar && bar.close != null) entry.price = bar.close;
   if (symbol) entry.symbol = symbol;
-  log.push(entry);   // broadcasts to mirrors; the log.subscribe wire persists it
+  log.push(entry); // broadcasts to mirrors; the log.subscribe wire persists it
 }
 
 // ---- actions --------------------------------------------------------------------------------------
@@ -289,9 +350,12 @@ function runActions(rec, bar) {
   const acts = (rec && rec.actions) || [];
   const title = (rec.name && String(rec.name)) || 'Alert';
   // Price fire -> "SYMBOL @ price — message"; time fire (no bar) -> just the message, or the name.
-  const body = (bar && bar.close != null)
-    ? (`${rec.symbol || ''} @ ${bar.close}` + (rec.message ? ` — ${rec.message}` : ''))
-    : (rec.message ? String(rec.message) : title);
+  const body =
+    bar && bar.close != null
+      ? `${rec.symbol || ''} @ ${bar.close}` + (rec.message ? ` — ${rec.message}` : '')
+      : rec.message
+        ? String(rec.message)
+        : title;
   if (acts.includes('System notification')) osNotify(title, body);
   if (acts.includes('Toast notification')) emitFired('toast', rec, title, body);
   if (acts.includes('Popup window')) emitFired('popup', rec, title, body);
@@ -306,30 +370,42 @@ function runActions(rec, bar) {
 let soundEl = null;
 function playSound() {
   try {
-    stopSound();   // never stack two sounds
+    stopSound(); // never stack two sounds
     const url = soundObjectUrl(alertSoundPath());
-    if (!url) return;   // no sound chosen (or file gone)
+    if (!url) return; // no sound chosen (or file gone)
     soundEl = new Audio(url);
     soundEl.play().catch((e) => console.warn('[alert-host] Play sound skipped -', (e && e.message) || e));
-  } catch (err) { console.error('[alert-host] Play sound failed', errStr(err)); }
+  } catch (err) {
+    console.error('[alert-host] Play sound failed', errStr(err));
+  }
 }
 // Stop the sound a fire started -- called when the user dismisses the alert.
 function stopSound() {
   if (!soundEl) return;
-  try { soundEl.pause(); soundEl.currentTime = 0; } catch (_) {}
+  try {
+    soundEl.pause();
+    soundEl.currentTime = 0;
+  } catch (_) {}
   soundEl = null;
 }
 /** @param {string} title @param {string} body */
 function osNotify(title, body) {
-  try { new Notification(title, { body }); }
-  catch (err) { console.error('[alert-host] system notification failed', errStr(err)); }
+  try {
+    new Notification(title, { body });
+  } catch (err) {
+    console.error('[alert-host] system notification failed', errStr(err));
+  }
 }
 /** @param {'toast'|'popup'} kind @param {any} rec @param {string} title @param {string} body */
 function emitFired(kind, rec, title, body) {
-  if (firedChan) { try { firedChan.postMessage({ kind, id: rec.id, title, body, at: Date.now() }); } catch (_) {} }
+  if (firedChan) {
+    try {
+      firedChan.postMessage({ kind, id: rec.id, title, body, at: Date.now() });
+    } catch (_) {}
+  }
 }
 /** @param {any} err */
-const errStr = (err) => (/** @type {any} */ (err) && /** @type {any} */ (err).message) || String(err);
+const errStr = (err) => /** @type {any} */ (err && /** @type {any} */ (err).message) || String(err);
 
 // Read the current SMTP account and send. Config is fetched per fire (email alerts are cadence-gated, not
 // per-tick) so a just-edited account takes effect immediately. Loads nodemailer lazily (only when used).
@@ -337,22 +413,32 @@ const errStr = (err) => (/** @type {any} */ (err) && /** @type {any} */ (err).me
 async function emailAction(rec, subject, text) {
   try {
     const cfg = await getJSON('/api/email-smtp');
-    if (!cfg || !cfg.host || !(cfg.to || cfg.user)) { console.warn('[alert-host] Send email skipped for', rec.id, '- SMTP not configured'); return; }
+    if (!cfg || !cfg.host || !(cfg.to || cfg.user)) {
+      console.warn('[alert-host] Send email skipped for', rec.id, '- SMTP not configured');
+      return;
+    }
     const { sendEmail } = await import('./email.js');
     await sendEmail(cfg, { subject, text });
     console.info('[alert-host] email sent for', rec.id);
-  } catch (err) { console.error('[alert-host] email send failed for', rec.id, '-', errStr(err)); }
+  } catch (err) {
+    console.error('[alert-host] email send failed for', rec.id, '-', errStr(err));
+  }
 }
 // Read the current Telegram bot config and send PLAIN text (alert content may contain Markdown metacharacters).
 /** @param {any} rec @param {string} title @param {string} body */
 async function telegramAction(rec, title, body) {
   try {
     const cfg = await getJSON('/api/telegram');
-    if (!cfg || !cfg.token || !cfg.chatId) { console.warn('[alert-host] Telegram skipped for', rec.id, '- not configured'); return; }
+    if (!cfg || !cfg.token || !cfg.chatId) {
+      console.warn('[alert-host] Telegram skipped for', rec.id, '- not configured');
+      return;
+    }
     const { sendTelegram } = await import('./telegram.js');
     await sendTelegram(cfg, title + '\n' + body, { markdown: false });
     console.info('[alert-host] telegram sent for', rec.id);
-  } catch (err) { console.error('[alert-host] telegram send failed for', rec.id, '-', errStr(err)); }
+  } catch (err) {
+    console.error('[alert-host] telegram send failed for', rec.id, '-', errStr(err));
+  }
 }
 
 // Bring live feed subscriptions in line with the armed set. Re-subscribes when an alert's broker/symbol/tf
@@ -363,7 +449,11 @@ function reconcile() {
   for (const rec of store.all()) {
     if (!armed(rec)) continue;
     // TIME alerts branch to a timer; PRICE alerts branch to a bar feed. That is the ONLY divergence.
-    if (sourceOf(rec) === 'time') { liveTimers.add(rec.id); armTimer(rec); continue; }
+    if (sourceOf(rec) === 'time') {
+      liveTimers.add(rec.id);
+      armTimer(rec);
+      continue;
+    }
     // one feed per target symbol -- a single-symbol alert has one target, a watchlist alert one per list member.
     // All sample at the alert's own interval (rec.tfObj, from the dialog's picker), never the chart's.
     for (const tgt of targetsOf(rec)) {
@@ -371,30 +461,47 @@ function reconcile() {
       liveFeeds.add(key);
       const sig = sigOf(tgt.broker, tgt.symbol, rec.tfObj);
       const ex = subs.get(key);
-      if (ex && ex.sig !== sig) { ex.unsub(); subs.delete(key); }
+      if (ex && ex.sig !== sig) {
+        ex.unsub();
+        subs.delete(key);
+      }
       if (!subs.has(key)) {
         const unsub = subscribeBarFeed(tgt.broker, tgt.symbol, rec.tfObj, (ev) => onFeed(rec.id, tgt.symbol, ev));
         subs.set(key, { unsub, sig });
       }
     }
   }
-  for (const [id, e] of subs) if (!liveFeeds.has(id)) { e.unsub(); subs.delete(id); }
-  for (const [id] of timers) if (!liveTimers.has(id)) clearTimer(id);   // drop timers for disarmed/removed time alerts
+  for (const [id, e] of subs)
+    if (!liveFeeds.has(id)) {
+      e.unsub();
+      subs.delete(id);
+    }
+  for (const [id] of timers) if (!liveTimers.has(id)) clearTimer(id); // drop timers for disarmed/removed time alerts
 }
 
-store.subscribe(() => reconcile());   // any create/update/toggle/remove re-arms the loop
+store.subscribe(() => reconcile()); // any create/update/toggle/remove re-arms the loop
 
 // ---- boot ------------------------------------------------------------------------------------------
 // P1 liveness probe: prove the proxy bridge is live by reporting the connection snapshot / active adapter.
 /** @param {string} reason */
 function report(reason) {
   const conns = (broker.connections && broker.connections()) || [];
-  const label = (broker.active && broker.active()) ? (broker.labelOf && broker.labelOf()) : '(none)';
+  const label = broker.active && broker.active() ? broker.labelOf && broker.labelOf() : '(none)';
   console.info(`[alert-host] ${reason}: ${conns.length} connection(s), active=${label}, rules=${store.size()}`);
 }
 // A broker connecting can un-idle feeds created while disconnected -- retry, then re-arm.
-bus.on('connections:changed', () => { report('connections:changed'); retryIdle(); reconcile(); refreshWatchlists(); });
-bus.on('logon', () => { report('logon'); retryIdle(); reconcile(); refreshWatchlists(); });
+bus.on('connections:changed', () => {
+  report('connections:changed');
+  retryIdle();
+  reconcile();
+  refreshWatchlists();
+});
+bus.on('logon', () => {
+  report('logon');
+  retryIdle();
+  reconcile();
+  refreshWatchlists();
+});
 
 // Load rules + the mailbox + settings (the alert tz the time branch schedules in) BEFORE the first reconcile,
 // so nothing arms or fires against half-loaded state. Then pull the watchlist snapshot (needs rules loaded to

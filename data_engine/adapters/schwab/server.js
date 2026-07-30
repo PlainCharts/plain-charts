@@ -40,19 +40,26 @@ module.exports = (api) => {
       },
       body,
     }).catch((/** @type {any} */ e) => ({ status: 0, body: '', netError: String((e && e.message) || e) }));
-    let j; try { j = JSON.parse(r.body); } catch (_) { j = {}; }
+    let j;
+    try {
+      j = JSON.parse(r.body);
+    } catch (_) {
+      j = {};
+    }
     if (r.status !== 200 || !j.access_token) {
       // 4xx from the token endpoint = Schwab rejected the grant (dead/invalid refresh
       // token -> user must re-Authorize). status 0 / 5xx = network or server blip we can
       // retry. 'kind' lets auth/status distinguish "expired" (red) from "transient" (amber).
-      const kind = (r.status >= 400 && r.status < 500) ? 'auth' : 'transient';
-      return { error: j.error_description || j.error || r.netError || ('HTTP ' + r.status), kind };
+      const kind = r.status >= 400 && r.status < 500 ? 'auth' : 'transient';
+      return { error: j.error_description || j.error || r.netError || 'HTTP ' + r.status, kind };
     }
     writeSettingsFile('brokers/schwab-tokens.json', {
       access: j.access_token,
       refresh: j.refresh_token,
       expiresAt: Date.now() + (j.expires_in || 1800) * 1000,
-      clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri: creds.redirectUri || 'https://127.0.0.1',
+      clientId: creds.clientId,
+      clientSecret: creds.clientSecret,
+      redirectUri: creds.redirectUri || 'https://127.0.0.1',
     });
     return { ok: true };
   }
@@ -63,18 +70,22 @@ module.exports = (api) => {
   // (network/5xx -> retry). This is the single source of truth for "are we live".
   async function schwabAccessDetailed() {
     const t = schwabTokens();
-    if (!t.access || !t.refresh) return { access: null, reason: 'no_token', error: 'no stored Schwab token — Authorize first' };
+    if (!t.access || !t.refresh)
+      return { access: null, reason: 'no_token', error: 'no stored Schwab token — Authorize first' };
     if (t.expiresAt && t.expiresAt - Date.now() > 60000) return { access: t.access, reason: 'ok' };
-    if (!t.clientId) return { access: t.access, reason: 'ok' };   // can't refresh; use what we have
+    if (!t.clientId) return { access: t.access, reason: 'ok' }; // can't refresh; use what we have
     const r = await schwabTokenExchange(
       { clientId: t.clientId, clientSecret: t.clientSecret, redirectUri: t.redirectUri },
-      { grant_type: 'refresh_token', refresh_token: t.refresh });
+      { grant_type: 'refresh_token', refresh_token: t.refresh },
+    );
     if (r.ok) return { access: schwabTokens().access, reason: 'ok' };
     // carry Schwab's actual words (e.g. "Refresh token is invalid, expired or revoked") so the UI can show it
     return { access: null, reason: r.kind === 'auth' ? 'refresh_expired' : 'transient', error: r.error };
   }
   // thin wrapper: callers that only need the token (md proxy, streamer info).
-  async function schwabAccess() { return (await schwabAccessDetailed()).access; }
+  async function schwabAccess() {
+    return (await schwabAccessDetailed()).access;
+  }
 
   /** @param {any} req @param {any} res */
   async function handleSchwab(req, res) {
@@ -102,8 +113,12 @@ module.exports = (api) => {
         const clientId = (d.clientId || '').trim();
         if (!clientId) return sendJson(res, 400, { error: 'enter your App Key (Client ID) first' });
         const redirectUri = (d.redirectUri || '').trim() || 'https://127.0.0.1';
-        const url = SCHWAB_AUTH + '?response_type=code&client_id=' + encodeURIComponent(clientId) +
-                    '&redirect_uri=' + encodeURIComponent(redirectUri);
+        const url =
+          SCHWAB_AUTH +
+          '?response_type=code&client_id=' +
+          encodeURIComponent(clientId) +
+          '&redirect_uri=' +
+          encodeURIComponent(redirectUri);
         sendJson(res, 200, { url });
       });
     }
@@ -112,15 +127,24 @@ module.exports = (api) => {
     if (p === '/api/schwab/auth/exchange' && req.method === 'POST') {
       return readBody(req, async (/** @type {any} */ data) => {
         let code = (data.code || '').trim();
-        if (!code && data.url) { try { code = new URL(data.url).searchParams.get('code') || ''; } catch (_) {} }
+        if (!code && data.url) {
+          try {
+            code = new URL(data.url).searchParams.get('code') || '';
+          } catch (_) {}
+        }
         if (!code) return sendJson(res, 400, { error: 'no authorization code found in input' });
         const creds = {
           clientId: (data.clientId || '').trim(),
           clientSecret: (data.clientSecret || '').trim(),
           redirectUri: (data.redirectUri || '').trim() || 'https://127.0.0.1',
         };
-        if (!creds.clientId || !creds.clientSecret) return sendJson(res, 400, { error: 'enter App Key and App Secret first' });
-        const r = await schwabTokenExchange(creds, { grant_type: 'authorization_code', code, redirect_uri: creds.redirectUri });
+        if (!creds.clientId || !creds.clientSecret)
+          return sendJson(res, 400, { error: 'enter App Key and App Secret first' });
+        const r = await schwabTokenExchange(creds, {
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: creds.redirectUri,
+        });
         sendJson(res, r.error ? 400 : 200, r);
       });
     }
@@ -134,7 +158,7 @@ module.exports = (api) => {
       return sendJson(res, 200, {
         authorized: !!access,
         reason,
-        error: error || null,   // Schwab's real message when a refresh/exchange failed
+        error: error || null, // Schwab's real message when a refresh/exchange failed
         expiresInSec: t.expiresAt ? Math.max(0, Math.round((t.expiresAt - Date.now()) / 1000)) : 0,
       });
     }
@@ -144,12 +168,20 @@ module.exports = (api) => {
     if (p === '/api/schwab/stream-info') {
       const access = await schwabAccess();
       if (!access) return sendJson(res, 401, { error: 'not authorized' });
-      const r = await httpsRequest('GET', SCHWAB_API + '/trader/v1/userPreference',
-        { headers: { Authorization: 'Bearer ' + access, Accept: 'application/json' } });
-      let pref; try { pref = JSON.parse(r.body); } catch (_) { pref = null; }
+      const r = await httpsRequest('GET', SCHWAB_API + '/trader/v1/userPreference', {
+        headers: { Authorization: 'Bearer ' + access, Accept: 'application/json' },
+      });
+      let pref;
+      try {
+        pref = JSON.parse(r.body);
+      } catch (_) {
+        pref = null;
+      }
       const s = pref && Array.isArray(pref.streamerInfo) && pref.streamerInfo[0];
       if (r.status !== 200 || !s) {
-        return sendJson(res, 200, { error: 'no streamer access (add the Accounts and Trading product and re-authorize)' });
+        return sendJson(res, 200, {
+          error: 'no streamer access (add the Accounts and Trading product and re-authorize)',
+        });
       }
       return sendJson(res, 200, {
         socketUrl: s.streamerSocketUrl,
@@ -166,7 +198,9 @@ module.exports = (api) => {
       const access = await schwabAccess();
       if (!access) return sendJson(res, 401, { error: 'not authorized' });
       const target = SCHWAB_API + '/marketdata/v1/' + p.slice('/api/schwab/md/'.length) + (u.search || '');
-      const r = await httpsRequest('GET', target, { headers: { Authorization: 'Bearer ' + access, Accept: 'application/json' } });
+      const r = await httpsRequest('GET', target, {
+        headers: { Authorization: 'Bearer ' + access, Accept: 'application/json' },
+      });
       res.writeHead(r.status, { 'Content-Type': 'application/json; charset=utf-8' });
       return res.end(r.body || '{}');
     }
@@ -179,7 +213,9 @@ module.exports = (api) => {
       const access = await schwabAccess();
       if (!access) return sendJson(res, 401, { error: 'not authorized' });
       const target = SCHWAB_API + '/trader/v1/' + p.slice('/api/schwab/trader/'.length) + (u.search || '');
-      const r = await httpsRequest('GET', target, { headers: { Authorization: 'Bearer ' + access, Accept: 'application/json' } });
+      const r = await httpsRequest('GET', target, {
+        headers: { Authorization: 'Bearer ' + access, Accept: 'application/json' },
+      });
       res.writeHead(r.status, { 'Content-Type': 'application/json; charset=utf-8' });
       return res.end(r.body || '{}');
     }

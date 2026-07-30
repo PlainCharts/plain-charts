@@ -12,14 +12,23 @@ const cfg = () => getSetting(KEY) || {};
 /** @type {Set<() => void>} */
 const listeners = new Set();
 /** Subscribe to desk-config changes (surfaces re-render on these). @param {() => void} fn */
-export function onDeskConfigChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-function notify() { listeners.forEach((fn) => { try { fn(); } catch (_) {} }); }
+export function onDeskConfigChange(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+function notify() {
+  listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (_) {}
+  });
+}
 
 // Display offset (minutes east of UTC) for every desk time column. Default: the local timezone (same default
 // the chart uses), until the user picks one in the Configure dialog.
 export function getDeskOffsetMin() {
   const c = cfg();
-  return (typeof c.tzOffsetMin === 'number') ? c.tzOffsetMin : -new Date().getTimezoneOffset();
+  return typeof c.tzOffsetMin === 'number' ? c.tzOffsetMin : -new Date().getTimezoneOffset();
 }
 /** @param {number} m */
 export function setDeskOffsetMin(m) {
@@ -31,7 +40,10 @@ export function setDeskOffsetMin(m) {
 // lands within +/- this of zero is a BREAKEVEN (scratch); above it is a hit, below it a miss. Drives the Trades
 // (H/BE/M) breakdown and, later, per-trade Status -- so we can classify outcomes without needing a TP/SL.
 /** @returns {number} */
-export function getDeskBeThreshold() { const c = cfg(); return (typeof c.beThreshold === 'number' && c.beThreshold >= 0) ? c.beThreshold : 0; }
+export function getDeskBeThreshold() {
+  const c = cfg();
+  return typeof c.beThreshold === 'number' && c.beThreshold >= 0 ? c.beThreshold : 0;
+}
 /** @param {number} v */
 export function setDeskBeThreshold(v) {
   const n = Number(v);
@@ -61,14 +73,24 @@ export function getDeskStats() {
   const s = cfg().stats || {};
   const saved = Array.isArray(s.items) ? s.items.filter((i) => i && STAT_KEYS.has(i.key)) : [];
   const order = saved.map((i) => i.key);
-  STATS_CATALOG.forEach((c) => { if (!order.includes(c.key)) order.push(c.key); });
+  STATS_CATALOG.forEach((c) => {
+    if (!order.includes(c.key)) order.push(c.key);
+  });
   const onMap = new Map(saved.map((i) => [i.key, !!i.on]));
-  const items = order.map((k) => { const c = /** @type {any} */ (STATS_CATALOG.find((x) => x.key === k)); return { key: k, label: c.label, on: onMap.has(k) ? !!onMap.get(k) : c.on }; });
+  const items = order.map((k) => {
+    const c = /** @type {any} */ (STATS_CATALOG.find((x) => x.key === k));
+    return { key: k, label: c.label, on: onMap.has(k) ? !!onMap.get(k) : c.on };
+  });
   return { enabled: s.enabled !== false, items };
 }
 /** @param {{ enabled: boolean, items: { key: string, on: boolean }[] }} v */
 export function setDeskStats(v) {
-  setSetting(KEY, Object.assign({}, cfg(), { stats: { enabled: !!v.enabled, items: (v.items || []).map((i) => ({ key: i.key, on: !!i.on })) } }));
+  setSetting(
+    KEY,
+    Object.assign({}, cfg(), {
+      stats: { enabled: !!v.enabled, items: (v.items || []).map((i) => ({ key: i.key, on: !!i.on })) },
+    }),
+  );
   notify();
 }
 
@@ -79,7 +101,10 @@ export const DESK_COLOR_DEFAULTS = { out: '#e79457', in: '#4fb6c9' };
 /** @returns {{ out: string, in: string }} */
 export function getDeskColors() {
   const c = cfg().colors || {};
-  return { out: typeof c.out === 'string' ? c.out : DESK_COLOR_DEFAULTS.out, in: typeof c.in === 'string' ? c.in : DESK_COLOR_DEFAULTS.in };
+  return {
+    out: typeof c.out === 'string' ? c.out : DESK_COLOR_DEFAULTS.out,
+    in: typeof c.in === 'string' ? c.in : DESK_COLOR_DEFAULTS.in,
+  };
 }
 /** @param {{ out?: string, in?: string }} v */
 export function setDeskColors(v) {
@@ -98,7 +123,17 @@ export function fmtDeskTime(ms) {
   if (ms == null || ms === '') return '—';
   const d = new Date(Number(ms) + getDeskOffsetMin() * 60000);
   if (Number.isNaN(d.getTime())) return '—';
-  return pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + ' ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+  return (
+    pad(d.getUTCMonth() + 1) +
+    '-' +
+    pad(d.getUTCDate()) +
+    ' ' +
+    pad(d.getUTCHours()) +
+    ':' +
+    pad(d.getUTCMinutes()) +
+    ':' +
+    pad(d.getUTCSeconds())
+  );
 }
 
 // UTC epoch ms -> 'HH:MM:SS' in the desk's display timezone (the Console clock column).
@@ -115,13 +150,20 @@ export function fmtDeskTag(ms) {
   if (ms == null || ms === '') return '—';
   const d = new Date(Number(ms) + getDeskOffsetMin() * 60000);
   if (Number.isNaN(d.getTime())) return '—';
-  return pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + d.getUTCFullYear() + '-' + pad(d.getUTCHours()) + pad(d.getUTCMinutes());
+  return (
+    pad(d.getUTCMonth() + 1) +
+    pad(d.getUTCDate()) +
+    d.getUTCFullYear() +
+    '-' +
+    pad(d.getUTCHours()) +
+    pad(d.getUTCMinutes())
+  );
 }
 
 // 'UTC+HH:MM' label for the current desk offset (for the Configure dialog / any tz indicator).
 /** @param {number} [m] @returns {string} */
 export function fmtDeskOffsetLabel(m) {
-  const off = (typeof m === 'number') ? m : getDeskOffsetMin();
+  const off = typeof m === 'number' ? m : getDeskOffsetMin();
   const sign = off < 0 ? '-' : '+';
   const a = Math.abs(off);
   return 'UTC' + sign + pad(Math.floor(a / 60)) + ':' + pad(a % 60);

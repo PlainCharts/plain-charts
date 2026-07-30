@@ -27,19 +27,25 @@ export function timeToX(pane, time) {
   let logical;
   if (time <= times[0]) {
     const span = times[1] - times[0];
-    logical = span > 0 ? (time - times[0]) / span : 0;                          // <= 0
+    logical = span > 0 ? (time - times[0]) / span : 0; // <= 0
   } else if (time >= times[n - 1]) {
     const span = times[n - 1] - times[n - 2];
-    logical = (n - 1) + (span > 0 ? (time - times[n - 1]) / span : 0);          // >= n-1
+    logical = n - 1 + (span > 0 ? (time - times[n - 1]) / span : 0); // >= n-1
   } else {
-    let lo = 0, hi = n - 1;
-    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (times[mid] <= time) lo = mid; else hi = mid; }
+    let lo = 0,
+      hi = n - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid] <= time) lo = mid;
+      else hi = mid;
+    }
     const span = times[hi] - times[lo];
     logical = lo + (span > 0 ? (time - times[lo]) / span : 0);
   }
   // barToX only accepts INTEGER indices (a fraction returns 0), so
   // interpolate in pixels: bar spacing is constant, x = coord(0) + logical * barPx.
-  const c0 = ts.barToX(0), c1 = ts.barToX(1);
+  const c0 = ts.barToX(0),
+    c1 = ts.barToX(1);
   if (c0 == null || c1 == null) return null;
   return c0 + logical * (c1 - c0);
 }
@@ -51,7 +57,7 @@ export function timeToX(pane, time) {
 export function toScreen(pane, p, series) {
   const x = timeToX(pane, p.time);
   const y = (series || pane.series).priceToY(p.price);
-  return (x == null || y == null) ? null : { x, y };
+  return x == null || y == null ? null : { x, y };
 }
 
 // magnet: snap a cursor (screen x,y) to the nearest OHLC point of the nearest bar.
@@ -81,7 +87,7 @@ export function magnetSnap(pane, x, y, mode, series, bars) {
   // (barArr), keyed by position not time. The main drawing surface passes pane.bars itself, so route to
   // barArr whenever the surface map IS pane.bars (or absent); only a genuinely different sub-pane surface
   // (e.g. a compare) stays keyed by time.
-  const bar = (bars && bars !== pane.bars) ? bars.get(times[idx]) : (pane.barArr && pane.barArr[idx]);
+  const bar = bars && bars !== pane.bars ? bars.get(times[idx]) : pane.barArr && pane.barArr[idx];
   if (!bar) return { x, y };
   const barX = ts.barToX(idx);
   if (barX == null) return { x, y };
@@ -97,10 +103,13 @@ export function magnetSnap(pane, x, y, mode, series, bars) {
     // carry the EXACT OHLC value v: the caller uses it directly instead of round-tripping py back
     // through yToPrice, which floors to an integer pixel and biases the price up by ~1px worth --
     // a couple of ticks off at forex zoom (one pixel spans several pipettes).
-    if (dy < bestDy) { bestDy = dy; best = { x: barX, y: py, price: v }; }
+    if (dy < bestDy) {
+      bestDy = dy;
+      best = { x: barX, y: py, price: v };
+    }
   }
   if (!best) return { x, y };
-  if (mode === 'weak' && bestDy > 14) return { x, y };   // weak: only when near a candle point
+  if (mode === 'weak' && bestDy > 14) return { x, y }; // weak: only when near a candle point
   return best;
 }
 
@@ -126,14 +135,19 @@ export function toData(pane, x, y, series) {
   const ts = pane.chart.timeAxis();
   let time = ts.xToTime(x);
   if (time == null) {
-    const times = pane.barTimes, l = ts.xToBar(x);
+    const times = pane.barTimes,
+      l = ts.xToBar(x);
     if (l != null && times && times.length >= 2) {
       const n = times.length;
       if (l >= n - 1) time = Math.round(times[n - 1] + (l - (n - 1)) * (times[n - 1] - times[n - 2]));
       else if (l <= 0) time = Math.round(times[0] + l * (times[1] - times[0]));
-      else { const lo = Math.floor(l); time = Math.round(times[lo] + (l - lo) * (times[lo + 1] - times[lo])); }
+      else {
+        const lo = Math.floor(l);
+        time = Math.round(times[lo] + (l - lo) * (times[lo + 1] - times[lo]));
+      }
     } else {
-      const r = ts.timeWindow(); if (r) time = (x < 0 ? r.from : r.to);
+      const r = ts.timeWindow();
+      if (r) time = x < 0 ? r.from : r.to;
     }
   }
   const price = (series || pane.series).yToPrice(y);
@@ -147,7 +161,8 @@ export const geom = {
   dist: (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by),
   /** @param {number} px @param {number} py @param {number} ax @param {number} ay @param {number} bx @param {number} by @returns {number} */
   distToSegment(px, py, ax, ay, bx, by) {
-    const dx = bx - ax, dy = by - ay;
+    const dx = bx - ax,
+      dy = by - ay;
     const len2 = dx * dx + dy * dy;
     let t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
     t = Math.max(0, Math.min(1, t));

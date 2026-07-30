@@ -13,8 +13,9 @@ import { assistantAllows } from '../settings/assistant-policy.js';
 import { requestOrderConfirm } from './confirm-host.js';
 
 setExecGate(async (method, arg, brokerId) => {
-  await loadSettings();   // FRESH read -- honor a policy the user just changed
-  if (!assistantAllows('execute.orders')) throw new Error('assistant execution not permitted (Settings > App > Assistant)');
+  await loadSettings(); // FRESH read -- honor a policy the user just changed
+  if (!assistantAllows('execute.orders'))
+    throw new Error('assistant execution not permitted (Settings > App > Assistant)');
   if (assistantAllows('execute.confirm')) {
     const ok = await requestOrderConfirm(method, arg, brokerId);
     if (!ok) throw new Error('assistant order not approved');

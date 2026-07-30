@@ -29,7 +29,9 @@ export function upsertAccount(acct) {
 }
 
 /** @param {string} name */
-export function setLastUsed(name) { store.lastUsed = name; }
+export function setLastUsed(name) {
+  store.lastUsed = name;
+}
 
 /** @param {string} name */
 export function removeAccount(name) {

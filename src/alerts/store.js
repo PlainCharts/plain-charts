@@ -22,23 +22,46 @@ function makeStore(owner) {
   /** @type {Set<(ev: AlertStoreEvent) => void>} */
   const subs = new Set();
   /** @type {BroadcastChannel | null} */
-  let bc = null; try { bc = new BroadcastChannel(IPC.ALERT_STORE); } catch (_) {}
+  let bc = null;
+  try {
+    bc = new BroadcastChannel(IPC.ALERT_STORE);
+  } catch (_) {}
 
   /** @param {AlertStoreEvent} ev */
-  const notify = (ev) => { for (const fn of subs) { try { fn(ev); } catch (_) {} } };
+  const notify = (ev) => {
+    for (const fn of subs) {
+      try {
+        fn(ev);
+      } catch (_) {}
+    }
+  };
   /** @param {string} key @param {any} value */
-  const applySet = (key, value) => { map.set(key, value); notify({ type: 'set', key, value }); };
+  const applySet = (key, value) => {
+    map.set(key, value);
+    notify({ type: 'set', key, value });
+  };
   /** @param {string} key */
-  const applyRemove = (key) => { if (map.delete(key)) notify({ type: 'remove', key }); };
+  const applyRemove = (key) => {
+    if (map.delete(key)) notify({ type: 'remove', key });
+  };
   /** @param {[string, any][]} [entries] */
-  const applyReset = (entries) => { map.clear(); (entries || []).forEach(([k, v]) => map.set(k, v)); notify({ type: 'reset' }); };
+  const applyReset = (entries) => {
+    map.clear();
+    (entries || []).forEach(([k, v]) => map.set(k, v));
+    notify({ type: 'reset' });
+  };
 
   if (bc) {
     bc.onmessage = (e) => {
-      const d = e && e.data; if (!d) return;
+      const d = e && e.data;
+      if (!d) return;
       if (owner) {
         // authoritative: mirrors never write, so the host only answers snapshot requests from late joiners.
-        if (d.reqSnapshot) { try { bc.postMessage({ reset: [...map.entries()] }); } catch (_) {} }
+        if (d.reqSnapshot) {
+          try {
+            bc.postMessage({ reset: [...map.entries()] });
+          } catch (_) {}
+        }
         return;
       }
       // mirror: adopt the host's broadcasts (read-only).
@@ -46,7 +69,11 @@ function makeStore(owner) {
       else if (d.remove) applyRemove(d.remove.key);
       else if (d.reset) applyReset(d.reset);
     };
-    if (!owner) { try { bc.postMessage({ reqSnapshot: true }); } catch (_) {} }   // pull current state on join
+    if (!owner) {
+      try {
+        bc.postMessage({ reqSnapshot: true });
+      } catch (_) {}
+    } // pull current state on join
   }
 
   // Single shape (so the host gets the writable type). A mirror's writers exist but are never exposed --
@@ -56,18 +83,44 @@ function makeStore(owner) {
     all: () => [...map.values()],
     keys: () => [...map.keys()],
     size: () => map.size,
-    /** @param {(ev: AlertStoreEvent) => void} fn */ subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); },
+    /** @param {(ev: AlertStoreEvent) => void} fn */ subscribe: (fn) => {
+      subs.add(fn);
+      return () => subs.delete(fn);
+    },
     /** @param {string} key @param {any} value */
-    set(key, value) { applySet(key, value); if (bc) { try { bc.postMessage({ set: { key, value } }); } catch (_) {} } },
+    set(key, value) {
+      applySet(key, value);
+      if (bc) {
+        try {
+          bc.postMessage({ set: { key, value } });
+        } catch (_) {}
+      }
+    },
     /** @param {string} key */
-    remove(key) { applyRemove(key); if (bc) { try { bc.postMessage({ remove: { key } }); } catch (_) {} } },
+    remove(key) {
+      applyRemove(key);
+      if (bc) {
+        try {
+          bc.postMessage({ remove: { key } });
+        } catch (_) {}
+      }
+    },
     /** @param {[string, any][]} [entries] */
-    reset(entries = []) { applyReset(entries); if (bc) { try { bc.postMessage({ reset: [...map.entries()] }); } catch (_) {} } },
+    reset(entries = []) {
+      applyReset(entries);
+      if (bc) {
+        try {
+          bc.postMessage({ reset: [...map.entries()] });
+        } catch (_) {}
+      }
+    },
   };
 }
 
 /** The authoritative store -- the alert-host's single writer. */
-export function createAlertStore() { return makeStore(true); }
+export function createAlertStore() {
+  return makeStore(true);
+}
 
 // The window-side read-only mirror singleton -- every surface (Alerts panel, chart) reads the same replica.
 // It omits set/remove/reset, so a window cannot mutate; mutations go through the command funnel to the host.

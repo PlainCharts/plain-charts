@@ -13,7 +13,7 @@
 import { createPriceLine } from './thread.js';
 
 /** @type {Record<string, number>} */
-const STROKE = { solid: 0, dotted: 1, dashed: 2 };   // kapelka Stroke enum (Solid/Dotted/Dashed)
+const STROKE = { solid: 0, dotted: 1, dashed: 2 }; // kapelka Stroke enum (Solid/Dotted/Dashed)
 
 /**
  * @param {any} pane   a kapelka pane
@@ -28,7 +28,7 @@ export function createOrderLine(pane, opts = {}) {
     price: opts.price,
     color: opts.color || '#2962ff',
     lineWidth: opts.lineWidth || 1,
-    title: opts.label || '',            // the right-axis label
+    title: opts.label || '', // the right-axis label
     showAxisLabel: true,
     draggable: !!opts.draggable,
     onDrag: opts.onMove,
@@ -36,11 +36,22 @@ export function createOrderLine(pane, opts = {}) {
   });
   if (!line) return null;
   /** @param {string} [s] */
-  const applyStyle = (s) => { const v = STROKE[String(s || 'solid')]; try { line.update({ lineStyle: v == null ? 0 : v }); } catch (_) {} };
+  const applyStyle = (s) => {
+    const v = STROKE[String(s || 'solid')];
+    try {
+      line.update({ lineStyle: v == null ? 0 : v });
+    } catch (_) {}
+  };
   applyStyle(opts.lineStyle);
 
   // ---- TASK 2: the LEFT-EDGE tag (a light DOM overlay tracking the line's y each frame) ----
-  const state = { price: Number(opts.price) || 0, color: opts.color || '#2962ff', label: opts.label || '', qty: opts.qty != null ? opts.qty : null, hidden: false };
+  const state = {
+    price: Number(opts.price) || 0,
+    color: opts.color || '#2962ff',
+    label: opts.label || '',
+    qty: opts.qty != null ? opts.qty : null,
+    hidden: false,
+  };
   const host = pane.chart.rootEl();
   if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
   const layer = document.createElement('div');
@@ -48,18 +59,36 @@ export function createOrderLine(pane, opts = {}) {
   host.appendChild(layer);
 
   const tag = document.createElement('div');
-  tag.style.cssText = 'position:absolute;left:6px;display:inline-flex;align-items:center;transform:translateY(-50%);'
-    + 'background:var(--bg,#14161a);border-radius:4px;overflow:hidden;font:600 11px system-ui,sans-serif;white-space:nowrap;pointer-events:auto;';
-  const qtyEl = document.createElement('span'); qtyEl.style.cssText = 'padding:2px 6px;';
-  const labelEl = document.createElement('span'); labelEl.style.cssText = 'padding:2px 8px;';
-  const xEl = document.createElement('span'); xEl.textContent = '✕'; xEl.title = 'Cancel order'; xEl.style.cssText = 'padding:2px 7px;cursor:pointer;';
+  tag.style.cssText =
+    'position:absolute;left:6px;display:inline-flex;align-items:center;transform:translateY(-50%);' +
+    'background:var(--bg,#14161a);border-radius:4px;overflow:hidden;font:600 11px system-ui,sans-serif;white-space:nowrap;pointer-events:auto;';
+  const qtyEl = document.createElement('span');
+  qtyEl.style.cssText = 'padding:2px 6px;';
+  const labelEl = document.createElement('span');
+  labelEl.style.cssText = 'padding:2px 8px;';
+  const xEl = document.createElement('span');
+  xEl.textContent = '✕';
+  xEl.title = 'Cancel order';
+  xEl.style.cssText = 'padding:2px 7px;cursor:pointer;';
   tag.append(qtyEl, labelEl, xEl);
   layer.appendChild(tag);
 
   // TASK 3: the [X] cell -- present only when onCancel is supplied; hover fills, click fires onCancel.
-  xEl.onmouseenter = () => { xEl.style.background = state.color; xEl.style.color = '#fff'; };
-  xEl.onmouseleave = () => { xEl.style.background = 'none'; xEl.style.color = state.color; };
-  xEl.onclick = (e) => { e.stopPropagation(); e.preventDefault(); try { opts.onCancel && opts.onCancel(); } catch (_) {} };
+  xEl.onmouseenter = () => {
+    xEl.style.background = state.color;
+    xEl.style.color = '#fff';
+  };
+  xEl.onmouseleave = () => {
+    xEl.style.background = 'none';
+    xEl.style.color = state.color;
+  };
+  xEl.onclick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      opts.onCancel && opts.onCancel();
+    } catch (_) {}
+  };
 
   const paintTag = () => {
     const c = state.color;
@@ -77,14 +106,29 @@ export function createOrderLine(pane, opts = {}) {
   paintTag();
 
   /** @param {number} pr @returns {number|null} */
-  const p2y = (pr) => { try { return pane.series.priceToY(pr); } catch (_) { return null; } };
-  let raf = 0, dead = false;
+  const p2y = (pr) => {
+    try {
+      return pane.series.priceToY(pr);
+    } catch (_) {
+      return null;
+    }
+  };
+  let raf = 0,
+    dead = false;
   const layout = () => {
     const y = p2y(state.price);
-    if (y == null || state.hidden || !state.label && state.qty == null) { tag.style.display = 'none'; return; }
-    tag.style.display = ''; tag.style.top = y + 'px';
+    if (y == null || state.hidden || (!state.label && state.qty == null)) {
+      tag.style.display = 'none';
+      return;
+    }
+    tag.style.display = '';
+    tag.style.top = y + 'px';
   };
-  const tick = () => { if (dead) return; layout(); raf = requestAnimationFrame(tick); };
+  const tick = () => {
+    if (dead) return;
+    layout();
+    raf = requestAnimationFrame(tick);
+  };
   tick();
 
   return {
@@ -93,13 +137,28 @@ export function createOrderLine(pane, opts = {}) {
       const { label, lineStyle, qty, ...rest } = o;
       if (rest.price != null) state.price = Number(rest.price);
       if (rest.color) state.color = rest.color;
-      if (label != null) { state.label = label; /** @type {any} */ (rest).title = label; }   // 'label' feeds both the axis title and the tag
+      if (label != null) {
+        state.label = label;
+        /** @type {any} */ (rest).title = label;
+      } // 'label' feeds both the axis title and the tag
       if (qty !== undefined) state.qty = qty;
       line.update(rest);
       if (lineStyle != null) applyStyle(lineStyle);
-      paintTag(); layout();
+      paintTag();
+      layout();
     },
-    setVisible: (on) => { state.hidden = !on; line.setVisible(on); layout(); },
-    remove: () => { dead = true; if (raf) cancelAnimationFrame(raf); try { layer.remove(); } catch (_) {} line.remove(); },
+    setVisible: (on) => {
+      state.hidden = !on;
+      line.setVisible(on);
+      layout();
+    },
+    remove: () => {
+      dead = true;
+      if (raf) cancelAnimationFrame(raf);
+      try {
+        layer.remove();
+      } catch (_) {}
+      line.remove();
+    },
   };
 }

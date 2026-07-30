@@ -33,32 +33,56 @@ function ingest(entries) {
   const m = new Map();
   for (const e of entries || []) if (e && e.combo) m.set(e.combo, { id: e.id, label: e.label, kind: e.kind });
   appCombos = m;
-  changeListeners.forEach((fn) => { try { fn(); } catch (_) {} });
+  changeListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (_) {}
+  });
 }
 regCh.onmessage = (/** @type {MessageEvent} */ ev) => {
   const d = ev.data || {};
-  if (d.req) { if (sourceGetter) regCh.postMessage({ entries: sourceGetter() }); return; }   // a consumer asked -> re-serve fresh
+  if (d.req) {
+    if (sourceGetter) regCh.postMessage({ entries: sourceGetter() });
+    return;
+  } // a consumer asked -> re-serve fresh
   if (d.entries) ingest(d.entries);
 };
 
 /** OWNER (chart window): register a live getter and push the current combos to windows already open. @param {() => Array<{ combo: string } & ComboOwner>} getEntries */
-export function serveAppCombos(getEntries) { sourceGetter = getEntries; regCh.postMessage({ entries: getEntries() }); }
+export function serveAppCombos(getEntries) {
+  sourceGetter = getEntries;
+  regCh.postMessage({ entries: getEntries() });
+}
 /** OWNER: re-publish after a command rebind (or any change to the served set). */
-export function publishAppCombos() { if (sourceGetter) regCh.postMessage({ entries: sourceGetter() }); }
+export function publishAppCombos() {
+  if (sourceGetter) regCh.postMessage({ entries: sourceGetter() });
+}
 /** CONSUMER (order ticket): ask owners to (re)serve; the cache updates via onmessage. Call before showing the editor. */
-export function requestAppCombos() { regCh.postMessage({ req: true }); }
+export function requestAppCombos() {
+  regCh.postMessage({ req: true });
+}
 /** CONSUMER: the command/tool occupying `combo`, or null. @param {string} combo @returns {ComboOwner | null} */
-export function appComboConflict(combo) { return appCombos.get(combo) || null; }
+export function appComboConflict(combo) {
+  return appCombos.get(combo) || null;
+}
 /** @param {() => void} fn */
-export function onAppCombosChange(fn) { changeListeners.add(fn); return () => changeListeners.delete(fn); }
+export function onAppCombosChange(fn) {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+}
 
 // ---- 2. dispatch: fire a quick button by combo, from any window ----
 const fireCh = new BroadcastChannel(FIRE);
 /** FORWARDER (focused non-order-ticket window): route an unclaimed modifier chord to the order ticket. @param {string} combo */
-export function forwardQuickButton(combo) { fireCh.postMessage({ combo }); }
+export function forwardQuickButton(combo) {
+  fireCh.postMessage({ combo });
+}
 /** EXECUTOR (order-ticket window): run cb(combo) for every forwarded chord. Returns an unsubscribe fn. @param {(combo: string) => void} cb */
 export function onQuickButtonForward(cb) {
-  const h = (/** @type {MessageEvent} */ ev) => { const c = ev.data && ev.data.combo; if (c) cb(c); };
+  const h = (/** @type {MessageEvent} */ ev) => {
+    const c = ev.data && ev.data.combo;
+    if (c) cb(c);
+  };
   fireCh.addEventListener('message', h);
   return () => fireCh.removeEventListener('message', h);
 }

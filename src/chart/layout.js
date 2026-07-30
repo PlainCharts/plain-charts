@@ -5,7 +5,7 @@
 import { Pane } from './pane.js';
 import { broker } from '../../data_engine/index.js';
 import { bus } from '../bus.js';
-import { bus as engineBus } from '../../data_engine/index.js';   // engine events (logon / connections:changed)
+import { bus as engineBus } from '../../data_engine/index.js'; // engine events (logon / connections:changed)
 import { byId, firstTf } from '../workspace/timeframes.js';
 import { $ } from '../dom.js';
 import * as syncStore from '../tools/engine/sync-store.js';
@@ -80,7 +80,8 @@ export function defaultWorkspace() {
   const tset = defaultPaneSettings();
   const mkPane = () => ({ symbol: '', settings: tset ? structuredClone(tset) : {} });
   const dl = getSetting('defaultLayout');
-  if (dl && dl.areas && dl.count) return { layout: 'custom', grid: dl, panes: Array.from({ length: dl.count }, mkPane), sync };
+  if (dl && dl.areas && dl.count)
+    return { layout: 'custom', grid: dl, panes: Array.from({ length: dl.count }, mkPane), sync };
   return { layout: '1', panes: [mkPane()], sync };
 }
 // the chosen default chart template flattened into pane.settings shape (or null)
@@ -89,7 +90,13 @@ function defaultPaneSettings() {
   if (!name) return null;
   const t = (listTemplates() || []).find((/** @type {any} */ x) => x.name === name);
   if (!t) return null;
-  return { ...(t.lines || {}), candles: t.candles, canvas: t.canvas, statusLine: t.statusLine, indicators: t.indicators };
+  return {
+    ...(t.lines || {}),
+    candles: t.candles,
+    canvas: t.canvas,
+    statusLine: t.statusLine,
+    indicators: t.indicators,
+  };
 }
 
 // Each layout = CSS grid columns/rows + template-areas; `cells[i]` is the area
@@ -97,17 +104,17 @@ function defaultPaneSettings() {
 // Grouped by `count` in the picker.
 /** @type {LayoutDef[]} */
 const LAYOUTS = [
-  { type: '1',   count: 1, cols: '1fr',         rows: '1fr',         areas: '"a"',         cells: ['a'] },
+  { type: '1', count: 1, cols: '1fr', rows: '1fr', areas: '"a"', cells: ['a'] },
   // 2
-  { type: '2v',  count: 2, cols: '1fr 1fr',     rows: '1fr',         areas: '"a b"',       cells: ['a', 'b'] },
-  { type: '2h',  count: 2, cols: '1fr',         rows: '1fr 1fr',     areas: '"a" "b"',     cells: ['a', 'b'] },
+  { type: '2v', count: 2, cols: '1fr 1fr', rows: '1fr', areas: '"a b"', cells: ['a', 'b'] },
+  { type: '2h', count: 2, cols: '1fr', rows: '1fr 1fr', areas: '"a" "b"', cells: ['a', 'b'] },
   // 3
-  { type: '3v',  count: 3, cols: '1fr 1fr 1fr', rows: '1fr',         areas: '"a b c"',     cells: ['a', 'b', 'c'] },
-  { type: '3h',  count: 3, cols: '1fr',         rows: '1fr 1fr 1fr', areas: '"a" "b" "c"', cells: ['a', 'b', 'c'] },
-  { type: '3lr', count: 3, cols: '1fr 1fr',     rows: '1fr 1fr',     areas: '"a b" "a c"', cells: ['a', 'b', 'c'] }, // left big
-  { type: '3tb', count: 3, cols: '1fr 1fr',     rows: '1fr 1fr',     areas: '"a a" "b c"', cells: ['a', 'b', 'c'] }, // top big
-  { type: '3rl', count: 3, cols: '1fr 1fr',     rows: '1fr 1fr',     areas: '"b a" "c a"', cells: ['a', 'b', 'c'] }, // right big
-  { type: '3bt', count: 3, cols: '1fr 1fr',     rows: '1fr 1fr',     areas: '"b c" "a a"', cells: ['a', 'b', 'c'] }, // bottom big
+  { type: '3v', count: 3, cols: '1fr 1fr 1fr', rows: '1fr', areas: '"a b c"', cells: ['a', 'b', 'c'] },
+  { type: '3h', count: 3, cols: '1fr', rows: '1fr 1fr 1fr', areas: '"a" "b" "c"', cells: ['a', 'b', 'c'] },
+  { type: '3lr', count: 3, cols: '1fr 1fr', rows: '1fr 1fr', areas: '"a b" "a c"', cells: ['a', 'b', 'c'] }, // left big
+  { type: '3tb', count: 3, cols: '1fr 1fr', rows: '1fr 1fr', areas: '"a a" "b c"', cells: ['a', 'b', 'c'] }, // top big
+  { type: '3rl', count: 3, cols: '1fr 1fr', rows: '1fr 1fr', areas: '"b a" "c a"', cells: ['a', 'b', 'c'] }, // right big
+  { type: '3bt', count: 3, cols: '1fr 1fr', rows: '1fr 1fr', areas: '"b c" "a a"', cells: ['a', 'b', 'c'] }, // bottom big
 ];
 /** @param {string} t */
 const byType = (t) => LAYOUTS.find((l) => l.type === t);
@@ -117,18 +124,23 @@ const byType = (t) => LAYOUTS.find((l) => l.type === t);
 /** @type {LayoutDef|null} */
 let customDef = null;
 /** @returns {LayoutDef} */
-const curDef = () => (layoutType === 'custom' && customDef) ? customDef : /** @type {LayoutDef} */ (byType(layoutType));
+const curDef = () => (layoutType === 'custom' && customDef ? customDef : /** @type {LayoutDef} */ (byType(layoutType)));
 
 // resolve layoutType + customDef from a workspace (a built layout stores ws.layout==='custom'
 // plus ws.grid; presets just store the type string)
 /** @param {Workspace} ws */
 function setLayoutFromWs(ws) {
-  if (ws && ws.layout === 'custom' && ws.grid) { layoutType = 'custom'; customDef = ws.grid; }
-  else { layoutType = (ws && byType(/** @type {string} */ (ws.layout))) ? /** @type {string} */ (ws.layout) : '1'; customDef = null; }
-  wsLinkedTo = (ws && ws.linkedTo) || null;   // preserve the board's chart link across save/load
-  wsLinkedPane = (ws && ws.linkedPane != null) ? ws.linkedPane : null;   // which chart (pane index) in that workspace
+  if (ws && ws.layout === 'custom' && ws.grid) {
+    layoutType = 'custom';
+    customDef = ws.grid;
+  } else {
+    layoutType = ws && byType(/** @type {string} */ (ws.layout)) ? /** @type {string} */ (ws.layout) : '1';
+    customDef = null;
+  }
+  wsLinkedTo = (ws && ws.linkedTo) || null; // preserve the board's chart link across save/load
+  wsLinkedPane = ws && ws.linkedPane != null ? ws.linkedPane : null; // which chart (pane index) in that workspace
   wsLink = (ws && ws.link) || null;
-  wsSharedTimeAxis = !(ws && ws.sharedTimeAxis === false);   // default on unless explicitly saved false
+  wsSharedTimeAxis = !(ws && ws.sharedTimeAxis === false); // default on unless explicitly saved false
 }
 /** @param {string} s */
 const trackCount = (s) => s.trim().split(/\s+/).length;
@@ -140,14 +152,19 @@ let panesEl = /** @type {HTMLElement} */ (/** @type {unknown} */ (null));
 /** @type {PaneRef[]} */
 let panes = [];
 /** @type {SurfaceHandle|null} */
-let surface = null;   // when the active tab is a SURFACE (non-chart) workspace, its mounted handle (else null)
+let surface = null; // when the active tab is a SURFACE (non-chart) workspace, its mounted handle (else null)
 
 // tear down whatever the chart area currently holds (panes and/or a surface); leaves it empty + chart-styled
 function teardownContent() {
   panes.forEach((p) => p.destroy());
   panes = [];
-  activePane = null;   // no live chart while a surface is up; getActivePane() consumers all null-guard
-  if (surface) { try { surface.destroy(); } catch (_) {} surface = null; }
+  activePane = null; // no live chart while a surface is up; getActivePane() consumers all null-guard
+  if (surface) {
+    try {
+      surface.destroy();
+    } catch (_) {}
+    surface = null;
+  }
   document.body.classList.remove('surface-active');
   if (panesEl) panesEl.classList.remove('surface-host');
 }
@@ -155,7 +172,7 @@ function teardownContent() {
 /** @param {Workspace} ws */
 function mountSurfaceWs(ws) {
   panesEl.innerHTML = '';
-  panesEl.removeAttribute('style');   // drop the grid template left by a chart layout
+  panesEl.removeAttribute('style'); // drop the grid template left by a chart layout
   panesEl.classList.add('surface-host');
   document.body.classList.add('surface-active');
   surface = /** @type {SurfaceHandle} */ (mountSurface(panesEl, /** @type {{ surface?: { kind?: string } }} */ (ws)));
@@ -164,12 +181,12 @@ function mountSurfaceWs(ws) {
 let activePane = null;
 let layoutType = '1';
 /** @type {string|null} */
-let wsLinkedTo = null;   // study board: the main-chart workspace this board is time-linked to (persisted)
+let wsLinkedTo = null; // study board: the main-chart workspace this board is time-linked to (persisted)
 /** @type {number|null} */
 let wsLinkedPane = null; // study board: which chart (pane index) inside that workspace's layout is the anchor
 /** @type {Object|null} */
-let wsLink = null;       // study board: { range, crosshair } -- which links are on (persisted; set in the board dialog)
-let wsSharedTimeAxis = true;   // study board: "show only the bottom time scale & labels" (persisted; set in the board dialog)
+let wsLink = null; // study board: { range, crosshair } -- which links are on (persisted; set in the board dialog)
+let wsSharedTimeAxis = true; // study board: "show only the bottom time scale & labels" (persisted; set in the board dialog)
 /** @type {PaneRef|null} */
 let maximized = null;
 // user-resizable track fractions for the current layout (draggable gutters)
@@ -210,8 +227,8 @@ export function initLayout(ws) {
     sync.syncCrosshair = ws.sync ? ws.sync.syncCrosshair === true : false;
     sync.syncRange = ws.sync ? ws.sync.syncRange === true : false;
 
-    syncStore.loadLayout(ws.synced || {});   // active tab's layout-synced drawings
-    syncStore.loadLayers(ws.layers || {});   // shared-per-symbol drawing layers + folder organization (else they vanish on reload)
+    syncStore.loadLayout(ws.synced || {}); // active tab's layout-synced drawings
+    syncStore.loadLayers(ws.layers || {}); // shared-per-symbol drawing layers + folder organization (else they vanish on reload)
     restoreSizes(ws);
     buildPanes(ws.panes, ws.maximizedPane);
   }
@@ -221,17 +238,35 @@ export function initLayout(ws) {
     applySync,
     clearCrosshairs: () => panes.forEach((p) => p.clearCrosshair()),
     applyCustomLayout,
-    currentCustomDef: () => (layoutType === 'custom' && customDef) ? customDef : null,
+    currentCustomDef: () => (layoutType === 'custom' && customDef ? customDef : null),
   });
-  if (!gutterRO && window.ResizeObserver) { gutterRO = new ResizeObserver(() => gut.position()); gutterRO.observe(panesEl); }
+  if (!gutterRO && window.ResizeObserver) {
+    gutterRO = new ResizeObserver(() => gut.position());
+    gutterRO.observe(panesEl);
+  }
 
-  engineBus.on('logon', () => panes.forEach((p) => { if (broker.isConnected(p.broker)) p.resolve(); }));
+  engineBus.on('logon', () =>
+    panes.forEach((p) => {
+      if (broker.isConnected(p.broker)) p.resolve();
+    }),
+  );
   // When a broker drops, clear its panes' subscription handle so the idempotent resolve() (which
   // skips reloading while a live subscription exists) will re-request on reconnect.
-  engineBus.on('connections:changed', () => panes.forEach((p) => { if (p.reqId && !broker.isConnected(p.broker)) p.reqId = 0; }));
+  engineBus.on('connections:changed', () =>
+    panes.forEach((p) => {
+      if (p.reqId && !broker.isConnected(p.broker)) p.reqId = 0;
+    }),
+  );
   // Study board hard off-switch: the anchored chart's liveness (from study-board-sync). Alive -> the
   // board panes run; closed -> they blank (a board only exists to study its anchored chart).
-  bus.on('board:anchor', (alive) => panes.forEach((p) => { if (p.board) { if (alive) p.unblank(); else p.blank(); } }));
+  bus.on('board:anchor', (alive) =>
+    panes.forEach((p) => {
+      if (p.board) {
+        if (alive) p.unblank();
+        else p.blank();
+      }
+    }),
+  );
   // Study board pane controls (from the study legend, routed by StudyHost): reorder / collapse / max,
   // mirroring the main chart's sub-pane study controls.
   bus.on('board:move', ({ pane, dir }) => moveBoardPane(pane, dir));
@@ -242,7 +277,13 @@ export function initLayout(ws) {
   // setTimeWindow is silent (it does not re-emit pane:range), so there is no feedback loop.
   bus.on('pane:range', (source) => {
     if (sync.syncRange && source && source.range) {
-      panes.forEach((p) => { if (p !== source) { try { p.chart.timeAxis().setTimeWindow(source.range); } catch (_) {} } });
+      panes.forEach((p) => {
+        if (p !== source) {
+          try {
+            p.chart.timeAxis().setTimeWindow(source.range);
+          } catch (_) {}
+        }
+      });
     }
     persist();
   });
@@ -252,7 +293,12 @@ export function initLayout(ws) {
   bus.on('pane:maximize', (p) => toggleMax(p));
 
   // hide/show all drawings or indicators (the eye toggle) across every pane
-  bus.on('view:visibility', () => panes.forEach((p) => { if (p.drawings) p.drawings.requestUpdate(); if (p.studies) p.studies.applyVisibility(); }));
+  bus.on('view:visibility', () =>
+    panes.forEach((p) => {
+      if (p.drawings) p.drawings.requestUpdate();
+      if (p.studies) p.studies.applyVisibility();
+    }),
+  );
 
   // a user indicator was edited/reloaded — apply the new code to live instances
   bus.on('studies:reloaded', () => panes.forEach((p) => p.studies.relink()));
@@ -260,7 +306,9 @@ export function initLayout(ws) {
   // mirror the hovered pane's crosshair onto the others (by time)
   bus.on('crosshair', ({ source, time, price }) => {
     if (!sync.syncCrosshair) return;
-    panes.forEach((p) => { if (p !== source) p.setCrosshair(time, price); });
+    panes.forEach((p) => {
+      if (p !== source) p.setCrosshair(time, price);
+    });
   });
 
   bus.on('tf:selected', (id) => {
@@ -272,7 +320,12 @@ export function initLayout(ws) {
   });
 
   bus.on('tf:deleted', (id) => {
-    panes.forEach((p) => { if (p.tfId === id) { p.tfId = firstTf(); if (p.contractId) p.requestBars(); } });
+    panes.forEach((p) => {
+      if (p.tfId === id) {
+        p.tfId = firstTf();
+        if (p.contractId) p.requestBars();
+      }
+    });
     if (activePane) bus.emit('tf:active', activePane.tfId);
     persist();
   });
@@ -286,7 +339,13 @@ export function initLayout(ws) {
   sb.style.cursor = 'pointer';
   // symbol-search is a dialog layout OPENS on demand; lazy-import it so layout doesn't statically depend on it (it
   // depends on layout for applySymbol/getActivePane) -- keeps the module DAG acyclic. Mirrors the layout-builder open.
-  sb.onmousedown = async (e) => { e.preventDefault(); try { const m = await import('../market/symbol-search.js'); m.openSymbolSearch(); } catch (_) {} };
+  sb.onmousedown = async (e) => {
+    e.preventDefault();
+    try {
+      const m = await import('../market/symbol-search.js');
+      m.openSymbolSearch();
+    } catch (_) {}
+  };
 }
 
 const others = () => panes.filter((p) => p !== activePane);
@@ -303,7 +362,9 @@ export const getLink = () => wsLink;
 /** @param {string} tfId */
 export function setBoardTimeframe(tfId) {
   if (!tfId) return;
-  panes.forEach((p) => { if (p.board && p.tfId !== tfId) p.setTimeframe(tfId); });
+  panes.forEach((p) => {
+    if (p.board && p.tfId !== tfId) p.setTimeframe(tfId);
+  });
 }
 
 // apply a (broker, symbol) chosen in the symbol search to the active pane
@@ -327,14 +388,16 @@ function setMaximized(p) {
   // Render gate: when one pane is maximized the others are display:none -- pause their render pipelines
   // so an expanded chart costs one render, not the whole split (see Pane.setRenderActive). No maximize
   // => every pane visible => every pane active.
-  panes.forEach((x) => { if (x.setRenderActive) x.setRenderActive(!maximized || x === maximized); });
-  gut.position();   // hide gutters while maximized, restore after
-  bus.emit('pane:maxchanged', maximized);   // let the bottom-bar button flip maximize<->restore
+  panes.forEach((x) => {
+    if (x.setRenderActive) x.setRenderActive(!maximized || x === maximized);
+  });
+  gut.position(); // hide gutters while maximized, restore after
+  bus.emit('pane:maxchanged', maximized); // let the bottom-bar button flip maximize<->restore
 }
 /** @param {PaneRef} p */
 function toggleMax(p) {
   setMaximized(maximized === p ? null : p);
-  persist();   // remember which pane is maximized in the workspace (survives tab switch + restart)
+  persist(); // remember which pane is maximized in the workspace (survives tab switch + restart)
 }
 
 // is a pane currently maximized? (for the bottom-bar button's initial icon)
@@ -346,31 +409,40 @@ export function cyclePane(dir = 1) {
   if (panes.length < 2) return;
   const i = Math.max(0, panes.indexOf(activePane));
   const next = panes[(i + dir + panes.length) % panes.length];
-  if (maximized) { setMaximized(next); persist(); }   // the maximize follows the focus; remember it
+  if (maximized) {
+    setMaximized(next);
+    persist();
+  } // the maximize follows the focus; remember it
   setActivePane(next);
 }
 
 // ---- resizable grid (draggable gutters adjust the column/row fractions) ----
 function ensureSizes() {
   const def = curDef();
-  const nc = trackCount(def.cols), nr = trackCount(def.rows);
+  const nc = trackCount(def.cols),
+    nr = trackCount(def.rows);
   if (colSizes.length !== nc) colSizes = Array(nc).fill(1);
   if (rowSizes.length !== nr) rowSizes = Array(nr).fill(1);
 }
 // Study-board pane modes mirror the main chart's sub-pane study controls: collapse -> a thin bar
 // (just the legend), max -> grow and squish the others. 'normal' rows keep their draggable fr.
-const BOARD_COLLAPSED_H = 26, BOARD_SQUISH_H = 48, BOARD_TIMEAXIS_H = 22;
+const BOARD_COLLAPSED_H = 26,
+  BOARD_SQUISH_H = 48,
+  BOARD_TIMEAXIS_H = 22;
 const isBoardLayout = () => panes.length > 0 && panes.every((p) => p.board);
 // row template for a board: pane[k] sits in grid row k (its gridArea = cells[k]). A collapsed pane is a
 // thin bar (legend + controls); if it also carries the time scale (the bottom pane), it gets a little
 // extra so the time labels sit BELOW the legend/controls instead of overlapping them.
 function boardRowTemplate() {
   const hasMax = panes.some((p) => p.boardMode === 'max');
-  return panes.map((p, k) => {
-    if (p.boardMode === 'collapsed') return (BOARD_COLLAPSED_H + (p.settings.timeScale !== false ? BOARD_TIMEAXIS_H : 0)) + 'px';
-    if (hasMax) return p.boardMode === 'max' ? '1fr' : BOARD_SQUISH_H + 'px';
-    return (rowSizes[k] || 1) + 'fr';
-  }).join(' ');
+  return panes
+    .map((p, k) => {
+      if (p.boardMode === 'collapsed')
+        return BOARD_COLLAPSED_H + (p.settings.timeScale !== false ? BOARD_TIMEAXIS_H : 0) + 'px';
+      if (hasMax) return p.boardMode === 'max' ? '1fr' : BOARD_SQUISH_H + 'px';
+      return (rowSizes[k] || 1) + 'fr';
+    })
+    .join(' ');
 }
 function applyPanesGrid() {
   const def = curDef();
@@ -382,23 +454,28 @@ function applyPanesGrid() {
 // up/down in the main chart. Reassign every pane's grid cell from its new array position.
 /** @param {PaneRef} p @param {number} dir */
 function moveBoardPane(p, dir) {
-  const i = panes.indexOf(p), j = i + dir;
+  const i = panes.indexOf(p),
+    j = i + dir;
   if (i < 0 || j < 0 || j >= panes.length) return;
   [panes[i], panes[j]] = [panes[j], panes[i]];
   const def = curDef();
-  panes.forEach((pn, k) => { pn.el.style.gridArea = def.cells[k]; });
-  applyPanesGrid(); gut.position();
+  panes.forEach((pn, k) => {
+    pn.el.style.gridArea = def.cells[k];
+  });
+  applyPanesGrid();
+  gut.position();
   // the new order persists via getWorkspace() (reads panes[] order) on the next flush (tab switch/close)
 }
 // study board: collapse (thin bar) / maximize (grow, squish others) / normal. `mode` is the target.
 /** @param {PaneRef} p @param {string} mode */
 function setBoardPaneMode(p, mode) {
   if (!p) return;
-  p.boardMode = (mode === 'max' || mode === 'collapsed') ? mode : 'normal';
+  p.boardMode = mode === 'max' || mode === 'collapsed' ? mode : 'normal';
   // studies hide their own plot via the library (setPaneMode); a compare/price pane has no study, so
   // the pane hides its candles when collapsed -> a clean strip (status line + controls), not crammed.
   if (p.setBoardCollapsed) p.setBoardCollapsed(p.boardMode === 'collapsed');
-  applyPanesGrid(); gut.position();
+  applyPanesGrid();
+  gut.position();
 }
 /** @param {Workspace} ws */
 function restoreSizes(ws) {
@@ -421,7 +498,9 @@ function buildPanes(saved, maxIdx) {
     const cfg = (Array.isArray(saved) && saved[i]) || {};
     const p = new Pane({
       symbol: cfg.symbol || '',
-      tfId: byId(cfg.tfId) ? (/** @type {import('../workspace/timeframes.js').Interval} */ (byId(cfg.tfId))).id : firstTf(),   // canonicalize (60m -> 1h)
+      tfId: byId(cfg.tfId)
+        ? /** @type {import('../workspace/timeframes.js').Interval} */ (byId(cfg.tfId)).id
+        : firstTf(), // canonicalize (60m -> 1h)
       range: cfg.range || null,
       settings: cfg.settings || {},
       broker: cfg.broker || null,
@@ -447,7 +526,11 @@ function renderLayoutIcon() {
   const icon = document.createElement('div');
   icon.className = 'layout-btn-icon';
   applyGrid(icon, def);
-  def.cells.forEach((area) => { const c = document.createElement('div'); c.style.gridArea = area; icon.appendChild(c); });
+  def.cells.forEach((area) => {
+    const c = document.createElement('div');
+    c.style.gridArea = area;
+    icon.appendChild(c);
+  });
   btn.appendChild(icon);
 }
 
@@ -461,33 +544,43 @@ function setActivePane(p) {
 }
 
 // the live workspace is owned by tabs.js — signal it to capture + persist
-function persist() { bus.emit('workspace:changed'); }
+function persist() {
+  bus.emit('workspace:changed');
+}
 
 // ---- named workspace snapshots (used by tabs.js / saved-layouts.js) ----
 /** @returns {Workspace} */
 export function getWorkspace() {
-  if (surface) return surface.ws();   // a surface tab serializes its own kind + state (no panes)
+  if (surface) return surface.ws(); // a surface tab serializes its own kind + state (no panes)
   const isBoard = panes.length > 0 && panes.every((p) => p.board);
   const last = panes.length - 1;
   /** @type {Workspace} */
   const ws = {
     layout: layoutType,
-    sizes: { cols: colSizes.slice(), rows: rowSizes.slice() },   // resizable pane splits
+    sizes: { cols: colSizes.slice(), rows: rowSizes.slice() }, // resizable pane splits
     // for a study board, DERIVE each pane's time scale from the shared-time-axis flag (single source of
     // truth) so it can't drift out of sync with the checkbox on autosave / reorder -- only the bottom pane
     // (last) shows the time scale when the flag is on. Regular panes keep their own settings verbatim.
     panes: panes.map((p, i) => {
-      const settings = isBoard ? { ...p.settings, timeScale: (wsSharedTimeAxis && i !== last) ? false : true } : p.settings;
+      const settings = isBoard
+        ? { ...p.settings, timeScale: wsSharedTimeAxis && i !== last ? false : true }
+        : p.settings;
       return { symbol: p.symbol, tfId: p.tfId, range: p.range, settings, broker: p.broker };
     }),
     sync: { ...sync },
-    synced: syncStore.snapshotLayout(),   // layout-scoped synced drawings (keyed by symbol)
-    layers: syncStore.snapshotLayers(),   // drawing layers + folder organization, shared per symbol
-    maximizedPane: maximized ? panes.indexOf(maximized) : null,   // which chart is expanded (null = grid)
+    synced: syncStore.snapshotLayout(), // layout-scoped synced drawings (keyed by symbol)
+    layers: syncStore.snapshotLayers(), // drawing layers + folder organization, shared per symbol
+    maximizedPane: maximized ? panes.indexOf(maximized) : null, // which chart is expanded (null = grid)
   };
-  if (layoutType === 'custom' && customDef) ws.grid = customDef;   // the user-built grid spec
+  if (layoutType === 'custom' && customDef) ws.grid = customDef; // the user-built grid spec
   // study board (every pane is chart-less): tag the type + carry the chart link so it round-trips
-  if (isBoard) { ws.type = 'studyboard'; if (wsLinkedTo) ws.linkedTo = wsLinkedTo; if (wsLinkedPane != null) ws.linkedPane = wsLinkedPane; if (wsLink) ws.link = wsLink; ws.sharedTimeAxis = wsSharedTimeAxis; }
+  if (isBoard) {
+    ws.type = 'studyboard';
+    if (wsLinkedTo) ws.linkedTo = wsLinkedTo;
+    if (wsLinkedPane != null) ws.linkedPane = wsLinkedPane;
+    if (wsLink) ws.link = wsLink;
+    ws.sharedTimeAxis = wsSharedTimeAxis;
+  }
   return ws;
 }
 
@@ -504,8 +597,10 @@ export function applyCustomLayout(def) {
   colSizes = (def.colFr || []).slice();
   rowSizes = (def.rowFr || []).slice();
   buildPanes(prev);
-  panes.forEach((p) => { if (broker.isConnected(p.broker)) p.resolve(); });
-  addRecentLayout(def);   // remember this arrangement in the recent-layouts list
+  panes.forEach((p) => {
+    if (broker.isConnected(p.broker)) p.resolve();
+  });
+  addRecentLayout(def); // remember this arrangement in the recent-layouts list
   persist();
 }
 
@@ -517,8 +612,12 @@ export function newWorkspace() {
 /** @param {Workspace} ws */
 export function applyWorkspace(ws) {
   if (!ws) return;
-  teardownContent();                                   // drop whatever was mounted (panes or a surface)
-  if (ws.type === 'surface') { mountSurfaceWs(ws); persist(); return; }
+  teardownContent(); // drop whatever was mounted (panes or a surface)
+  if (ws.type === 'surface') {
+    mountSurfaceWs(ws);
+    persist();
+    return;
+  }
   if (ws.sync) {
     sync.syncSymbol = !!ws.sync.syncSymbol;
     sync.syncInterval = !!ws.sync.syncInterval;
@@ -527,11 +626,13 @@ export function applyWorkspace(ws) {
   }
   setLayoutFromWs(ws);
   panes.forEach((p) => p.destroy());
-  syncStore.loadLayout(ws.synced || {});   // this tab's layout-synced drawings (before panes render)
-  syncStore.loadLayers(ws.layers || {});   // shared-per-symbol drawing layers + folder organization
+  syncStore.loadLayout(ws.synced || {}); // this tab's layout-synced drawings (before panes render)
+  syncStore.loadLayers(ws.layers || {}); // shared-per-symbol drawing layers + folder organization
   restoreSizes(ws);
   buildPanes(ws.panes || [], ws.maximizedPane);
-  panes.forEach((p) => { if (broker.isConnected(p.broker)) p.resolve(); });
+  panes.forEach((p) => {
+    if (broker.isConnected(p.broker)) p.resolve();
+  });
   persist();
 }
 
@@ -540,7 +641,15 @@ function applySync(key) {
   if (!activePane) return;
   // activePane is a module-level `let`, so its non-null narrowing above doesn't carry into the
   // forEach closures below (TS treats it as reassignable); cast to the non-null PaneRef at each use.
-  if (key === 'syncSymbol') others().forEach((p) => p.setSource(/** @type {PaneRef} */ (activePane).broker, /** @type {PaneRef} */ (activePane).symbol));
+  if (key === 'syncSymbol')
+    others().forEach((p) =>
+      p.setSource(/** @type {PaneRef} */ (activePane).broker, /** @type {PaneRef} */ (activePane).symbol),
+    );
   if (key === 'syncInterval') others().forEach((p) => p.setTimeframe(/** @type {PaneRef} */ (activePane).tfId));
-  if (key === 'syncRange' && /** @type {PaneRef} */ (activePane).range) others().forEach((p) => { try { p.chart.timeAxis().setTimeWindow(/** @type {PaneRef} */ (activePane).range); } catch (_) {} });
+  if (key === 'syncRange' && /** @type {PaneRef} */ (activePane).range)
+    others().forEach((p) => {
+      try {
+        p.chart.timeAxis().setTimeWindow(/** @type {PaneRef} */ (activePane).range);
+      } catch (_) {}
+    });
 }

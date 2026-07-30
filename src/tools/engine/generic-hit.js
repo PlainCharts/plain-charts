@@ -25,8 +25,11 @@ import { geom } from './geometry.js';
 function pointInPoly(x, y, poly) {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
-    if (((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)) inside = !inside;
+    const xi = poly[i].x,
+      yi = poly[i].y,
+      xj = poly[j].x,
+      yj = poly[j].y;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
   }
   return inside;
 }
@@ -42,27 +45,43 @@ function pointInPoly(x, y, poly) {
 export function hitTestFromMarks(tool, d, pts, x, y, tol, view) {
   // 1. anchors first — the handles a tool exposes (default: its points), so a click on a
   //    handle reshapes rather than selecting the body. Index maps back to d.points.
-  const hs = typeof tool.handles === 'function' ? (tool.handles(pts, d) || pts) : pts;
+  const hs = typeof tool.handles === 'function' ? tool.handles(pts, d) || pts : pts;
   for (let i = 0; i < hs.length; i++)
     if (hs[i] && geom.dist(x, y, hs[i].x, hs[i].y) <= tol + 3) return { part: 'point', index: i };
 
   // 2. body — resolve the marks this tool draws and test the click against their geometry.
   const scope = { timeToX: view.timeToX, priceToY: view.priceToY, width: view.width, height: view.height };
-  let marks; try { marks = tool.marks(d, view, false) || []; } catch (_) { marks = []; }
+  let marks;
+  try {
+    marks = tool.marks(d, view, false) || [];
+  } catch (_) {
+    marks = [];
+  }
   for (const m of marks) {
     if (!m || !m.path || m.path.length < 1) continue;
     const poly = [];
     let ok = true;
-    for (const v of m.path) { const q = resolveVertex(v, scope); if (!q) { ok = false; break; } poly.push(q); }
+    for (const v of m.path) {
+      const q = resolveVertex(v, scope);
+      if (!q) {
+        ok = false;
+        break;
+      }
+      poly.push(q);
+    }
     if (!ok || !poly.length) continue;
     // filled closed shape: inside counts as body
     if (m.closed && m.fill && poly.length >= 3 && pointInPoly(x, y, poly)) return { part: 'body' };
     // near any edge (covers open strokes and the outline of closed shapes)
     const w = (m.width || 1) / 2;
     for (let i = 1; i < poly.length; i++)
-      if (geom.distToSegment(x, y, poly[i - 1].x, poly[i - 1].y, poly[i].x, poly[i].y) <= tol + w) return { part: 'body' };
-    if (m.closed && poly.length >= 2 &&
-        geom.distToSegment(x, y, poly[poly.length - 1].x, poly[poly.length - 1].y, poly[0].x, poly[0].y) <= tol + w)
+      if (geom.distToSegment(x, y, poly[i - 1].x, poly[i - 1].y, poly[i].x, poly[i].y) <= tol + w)
+        return { part: 'body' };
+    if (
+      m.closed &&
+      poly.length >= 2 &&
+      geom.distToSegment(x, y, poly[poly.length - 1].x, poly[poly.length - 1].y, poly[0].x, poly[0].y) <= tol + w
+    )
       return { part: 'body' };
   }
   return null;

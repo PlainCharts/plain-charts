@@ -15,17 +15,21 @@ export function themeIcon(src, size) {
   const s = document.createElement('span');
   s.className = 'app-icon';
   s.dataset.appIcon = /** @type {any} */ (src);
-  s.style.backgroundImage = 'url("' + src + '")';   // shown when unmasked (real colours)
-  if (size) { s.style.width = size + 'px'; s.style.height = size + 'px'; }
+  s.style.backgroundImage = 'url("' + src + '")'; // shown when unmasked (real colours)
+  if (size) {
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+  }
   paint(s);
   return s;
 }
 
 /** @param {HTMLElement} s @returns {void} */
 function paint(s) {
-  const src = s.dataset.appIcon; if (!src) return;
+  const src = s.dataset.appIcon;
+  if (!src) return;
   if (getSetting('maskIcons')) {
-    s.classList.add('masked');   // CSS fills it with var(--icon)
+    s.classList.add('masked'); // CSS fills it with var(--icon)
     s.style.webkitMaskImage = s.style.maskImage = 'url("' + src + '")';
   } else {
     s.classList.remove('masked');
@@ -52,11 +56,12 @@ export function applyIconMode() {
 // is preserved, and applyIconMode() then handles them on every later toggle.
 /** @param {Document|HTMLElement} [root] @returns {void} */
 export function upgradeIcons(root = document) {
-  applyMaskFlag();   // set the icons-masked flag on first load
+  applyMaskFlag(); // set the icons-masked flag on first load
   root.querySelectorAll('img.strip-ico').forEach((img) => {
-    const src = img.getAttribute('src'); if (!src) return;
+    const src = img.getAttribute('src');
+    if (!src) return;
     const span = themeIcon(src);
-    span.classList.add('strip-ico');   // keep its 15px box + layout
+    span.classList.add('strip-ico'); // keep its 15px box + layout
     img.replaceWith(span);
   });
 }

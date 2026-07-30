@@ -29,4 +29,6 @@ export function saveStudyDefaults(id, params, style) {
 
 // forget the saved default (fall back to the study's built-in defaults on the next add)
 /** @param {string} id */
-export function clearStudyDefaults(id) { store.set(id, undefined); }
+export function clearStudyDefaults(id) {
+  store.set(id, undefined);
+}

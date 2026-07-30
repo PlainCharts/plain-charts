@@ -26,32 +26,50 @@ export const round1 = (/** @type {number} */ n) => Math.round(Number(n) * 10) / 
  * @returns {{ row: HTMLElement, dist: HTMLInputElement, recompute: () => void }}
  */
 export function attachDist(priceInput, opts) {
-  const row = document.createElement('div'); row.className = 'ot-mod-row'; row.style.justifyContent = 'flex-end'; row.style.gap = '6px';
-  const lbl = document.createElement('label'); lbl.className = 'ot-mod-label'; lbl.style.flex = '0 0 auto'; lbl.textContent = t('Dist:');
-  const group = document.createElement('div'); group.style.cssText = 'flex:0 0 120px;display:flex;align-items:center;gap:6px;min-width:0;';
-  const dist = /** @type {HTMLInputElement} */ (document.createElement('input')); dist.type = 'number'; dist.className = 'ot-mod-dist'; dist.step = '1'; dist.min = '0'; dist.style.flex = '1 1 auto'; dist.style.minWidth = '0';
-  const unitEl = document.createElement('span'); unitEl.className = 'ot-mod-unit';
+  const row = document.createElement('div');
+  row.className = 'ot-mod-row';
+  row.style.justifyContent = 'flex-end';
+  row.style.gap = '6px';
+  const lbl = document.createElement('label');
+  lbl.className = 'ot-mod-label';
+  lbl.style.flex = '0 0 auto';
+  lbl.textContent = t('Dist:');
+  const group = document.createElement('div');
+  group.style.cssText = 'flex:0 0 120px;display:flex;align-items:center;gap:6px;min-width:0;';
+  const dist = /** @type {HTMLInputElement} */ (document.createElement('input'));
+  dist.type = 'number';
+  dist.className = 'ot-mod-dist';
+  dist.step = '1';
+  dist.min = '0';
+  dist.style.flex = '1 1 auto';
+  dist.style.minWidth = '0';
+  const unitEl = document.createElement('span');
+  unitEl.className = 'ot-mod-unit';
   group.append(dist, unitEl);
   row.append(lbl, group);
   let guard = false;
   const recompute = () => {
-    if (guard || dist === document.activeElement) return;   // never overwrite the Dist box while the user is typing in it
-    const u = unitInfo(opts.getDec()); unitEl.textContent = u.label;
-    const ref = Number(opts.getRef()) || 0, price = Number(priceInput.value) || 0;
-    dist.value = (price > 0 && ref > 0) ? String(round1(Math.abs(ref - price) / u.size)) : '0';
+    if (guard || dist === document.activeElement) return; // never overwrite the Dist box while the user is typing in it
+    const u = unitInfo(opts.getDec());
+    unitEl.textContent = u.label;
+    const ref = Number(opts.getRef()) || 0,
+      price = Number(priceInput.value) || 0;
+    dist.value = price > 0 && ref > 0 ? String(round1(Math.abs(ref - price) / u.size)) : '0';
   };
   dist.oninput = () => {
-    const dec = opts.getDec(), u = unitInfo(dec);
-    const ref = Number(opts.getRef()) || 0, dv = Number(dist.value) || 0;
-    if (!(ref > 0)) return;   // no reference yet -> can't place a price from a distance
+    const dec = opts.getDec(),
+      u = unitInfo(dec);
+    const ref = Number(opts.getRef()) || 0,
+      dv = Number(dist.value) || 0;
+    if (!(ref > 0)) return; // no reference yet -> can't place a price from a distance
     const cur = Number(priceInput.value) || 0;
-    const below = cur > 0 ? cur <= ref : opts.kind === 'sl';   // keep the side the price is on; unset -> Stop below / Target above
+    const below = cur > 0 ? cur <= ref : opts.kind === 'sl'; // keep the side the price is on; unset -> Stop below / Target above
     const p = below ? ref - dv * u.size : ref + dv * u.size;
     guard = true;
-    priceInput.value = p > 0 ? p.toFixed(dec) : '0';   // keep the instrument's decimals (1.15300, not 1.153)
+    priceInput.value = p > 0 ? p.toFixed(dec) : '0'; // keep the instrument's decimals (1.15300, not 1.153)
     guard = false;
     if (opts.onPriceSet) opts.onPriceSet(Number(priceInput.value) || 0);
   };
-  priceInput.addEventListener('input', recompute);   // typing in the price box refreshes the distance (in addition to the box's own oninput)
+  priceInput.addEventListener('input', recompute); // typing in the price box refreshes the distance (in addition to the box's own oninput)
   return { row, dist, recompute };
 }

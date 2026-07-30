@@ -11,14 +11,16 @@ import { createStore } from '../store.js';
 /** @typedef {{ hh: number, mm: number }} OpenRule */
 /** @typedef {{ openRule: OpenRule, sessionLen?: number, learnedAt: number }} CachedHours */
 
-const STALE_MS = 10 * 86400000;   // re-learn at most ~once every 10 days per symbol
+const STALE_MS = 10 * 86400000; // re-learn at most ~once every 10 days per symbol
 const store = createStore('/api/market-hours', {});
 let loaded = false;
 
 // Load the file once at startup (call from app boot). Safe to call repeatedly.
 export async function loadMarketHoursStore() {
   if (loaded) return;
-  try { await store.load(); } catch (_) {}
+  try {
+    await store.load();
+  } catch (_) {}
   loaded = true;
 }
 

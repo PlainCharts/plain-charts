@@ -7,22 +7,30 @@
 import { t } from '../i18n/i18n.js';
 
 /** @param {string} tag @param {string} [cls] @param {string} [txt] @returns {HTMLElement} */
-const el = (tag, cls, txt) => { const d = document.createElement(tag); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
+const el = (tag, cls, txt) => {
+  const d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (txt != null) d.textContent = txt;
+  return d;
+};
 const uniq = (/** @type {any[]} */ arr) => Array.from(new Set(arr.filter(Boolean)));
 
 export function createSymTfFilter() {
   // two ways to set each axis, mutually exclusive: "current" (track the active chart) OR an explicit pick
-  let curSym = false, bySym = '';   // symbol axis: active-chart symbol, or a chosen symbol ('' = any)
-  let curTf = false, byTf = '';     // interval axis: active-chart tf, or a chosen tf ('' = any)
-  let expandSym = false, expandTf = false;   // whether the By-symbol / By-interval picker is open
+  let curSym = false,
+    bySym = ''; // symbol axis: active-chart symbol, or a chosen symbol ('' = any)
+  let curTf = false,
+    byTf = ''; // interval axis: active-chart tf, or a chosen tf ('' = any)
+  let expandSym = false,
+    expandTf = false; // whether the By-symbol / By-interval picker is open
 
   return {
     /** resolve the filter against the active chart -> the wanted symbol/tf (null = any)
      * @param {any} active the active pane @returns {{ sym: string|null, tf: string|null }} */
     wanted(active) {
       return {
-        sym: curSym ? (active && active.symbol) : (bySym || null),
-        tf: curTf ? (active && active.tfId) : (byTf || null),
+        sym: curSym ? active && active.symbol : bySym || null,
+        tf: curTf ? active && active.tfId : byTf || null,
       };
     },
     /**
@@ -36,28 +44,78 @@ export function createSymTfFilter() {
      */
     section(m, rows, src, ui) {
       const { check, combo, opt } = rows;
-      check(curSym, 'Current symbol', () => { curSym = !curSym; if (curSym) bySym = ''; });
-      combo('By symbol', bySym, expandSym, () => { expandSym = !expandSym; if (expandSym) expandTf = false; ui.rebuild(); });
+      check(curSym, 'Current symbol', () => {
+        curSym = !curSym;
+        if (curSym) bySym = '';
+      });
+      combo('By symbol', bySym, expandSym, () => {
+        expandSym = !expandSym;
+        if (expandSym) expandTf = false;
+        ui.rebuild();
+      });
       if (expandSym) {
-        const inp = /** @type {HTMLInputElement} */ (el('input', 'dwg-inp')); inp.placeholder = t('Search symbol…');
+        const inp = /** @type {HTMLInputElement} */ (el('input', 'dwg-inp'));
+        inp.placeholder = t('Search symbol…');
         inp.onclick = (e) => e.stopPropagation();
         const box = el('div', 'dwg-optbox');
         const renderSyms = () => {
           box.innerHTML = '';
           const q = inp.value.trim().toLowerCase();
-          opt(t('Any symbol'), !bySym, () => { bySym = ''; ui.onChange(); ui.rebuild(); }, box);
-          uniq(src.symbols()).filter((/** @type {string} */ s) => !q || s.toLowerCase().includes(q)).sort()
-            .forEach((/** @type {string} */ s) => opt(s, s === bySym, () => { bySym = s; curSym = false; ui.onChange(); ui.rebuild(); }, box));
+          opt(
+            t('Any symbol'),
+            !bySym,
+            () => {
+              bySym = '';
+              ui.onChange();
+              ui.rebuild();
+            },
+            box,
+          );
+          uniq(src.symbols())
+            .filter((/** @type {string} */ s) => !q || s.toLowerCase().includes(q))
+            .sort()
+            .forEach((/** @type {string} */ s) =>
+              opt(
+                s,
+                s === bySym,
+                () => {
+                  bySym = s;
+                  curSym = false;
+                  ui.onChange();
+                  ui.rebuild();
+                },
+                box,
+              ),
+            );
         };
         inp.oninput = renderSyms;
-        m.append(inp, box); renderSyms();
+        m.append(inp, box);
+        renderSyms();
         setTimeout(() => inp.focus(), 0);
       }
-      check(curTf, 'Current time interval', () => { curTf = !curTf; if (curTf) byTf = ''; });
-      combo('By interval', byTf, expandTf, () => { expandTf = !expandTf; if (expandTf) expandSym = false; ui.rebuild(); });
+      check(curTf, 'Current time interval', () => {
+        curTf = !curTf;
+        if (curTf) byTf = '';
+      });
+      combo('By interval', byTf, expandTf, () => {
+        expandTf = !expandTf;
+        if (expandTf) expandSym = false;
+        ui.rebuild();
+      });
       if (expandTf) {
-        opt(t('Any interval'), !byTf, () => { byTf = ''; ui.onChange(); ui.rebuild(); });
-        uniq(src.tfs()).forEach((/** @type {string} */ tf) => opt(tf, tf === byTf, () => { byTf = tf; curTf = false; ui.onChange(); ui.rebuild(); }));
+        opt(t('Any interval'), !byTf, () => {
+          byTf = '';
+          ui.onChange();
+          ui.rebuild();
+        });
+        uniq(src.tfs()).forEach((/** @type {string} */ tf) =>
+          opt(tf, tf === byTf, () => {
+            byTf = tf;
+            curTf = false;
+            ui.onChange();
+            ui.rebuild();
+          }),
+        );
       }
     },
   };

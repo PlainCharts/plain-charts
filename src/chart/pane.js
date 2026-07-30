@@ -21,12 +21,29 @@ import { mountChart, Candles, CursorMode } from '../../lib/kapelka/index.js';
 // Pure formatters + appearance defaults live in sibling modules (lifted out of this file). Import the
 // ones the Pane uses internally; re-export the public names so external import paths stay unchanged.
 import { DATE_FMT_DEFAULT } from './pane-format.js';
-import { candleOptions,
-         CANDLES_DEFAULT, CANVAS_DEFAULT, STATUS_DEFAULT, INDICATORS_DEFAULT, TRADES_DEFAULT,
-         LINE_DEFAULTS, LINE_STYLE_DEFAULT } from './pane-defaults.js';
+import {
+  candleOptions,
+  CANDLES_DEFAULT,
+  CANVAS_DEFAULT,
+  STATUS_DEFAULT,
+  INDICATORS_DEFAULT,
+  TRADES_DEFAULT,
+  LINE_DEFAULTS,
+  LINE_STYLE_DEFAULT,
+} from './pane-defaults.js';
 export { DATE_FMT_DEFAULT, DATE_FMT_EXAMPLES } from './pane-format.js';
-export { CANDLES_DEFAULT, LINE_STYLE_DEFAULT, PRICE_SOURCE_OPTIONS, CANVAS_DEFAULT, STATUS_DEFAULT,
-         INDICATORS_DEFAULT, TRADES_DEFAULT, LINE_DEFAULTS, LINE_KEYS, SCALE_FONT_DEFAULT } from './pane-defaults.js';
+export {
+  CANDLES_DEFAULT,
+  LINE_STYLE_DEFAULT,
+  PRICE_SOURCE_OPTIONS,
+  CANVAS_DEFAULT,
+  STATUS_DEFAULT,
+  INDICATORS_DEFAULT,
+  TRADES_DEFAULT,
+  LINE_DEFAULTS,
+  LINE_KEYS,
+  SCALE_FONT_DEFAULT,
+} from './pane-defaults.js';
 // Feature subsystems split out into ./pane/*.js as prototype mixins -- each is a plain object of
 // methods that run with `this` bound to the Pane instance. Object.assign puts them on the prototype,
 // so `this` and every cross-method call behave exactly as when they were inline.
@@ -129,14 +146,15 @@ export class Pane {
    * @param {{ symbol?: string, tfId?: string|null, range?: { from: number, to: number }|null,
    *           settings?: Partial<PaneSettings>, broker?: any }} [opts]
    */
-  constructor({ symbol = '', tfId = null, range = null, settings = {}, broker: brokerId = null } = {}) {   // no symbol until a broker is connected and one is picked (blank slate has none)
+  constructor({ symbol = '', tfId = null, range = null, settings = {}, broker: brokerId = null } = {}) {
+    // no symbol until a broker is connected and one is picked (blank slate has none)
     /** @type {string} */
     this.symbol = symbol;
     /** @type {string|null} */
     this.tfId = tfId;
-    this.broker = brokerId;      // which broker this pane's data comes from (null = active)
+    this.broker = brokerId; // which broker this pane's data comes from (null = active)
     /** @type {{ from: number, to: number }|null} */
-    this.range = range;          // saved pan/zoom (visible time range)
+    this.range = range; // saved pan/zoom (visible time range)
     // the nested groups + chartType are populated on the lines below, so cast the partial seed to the
     // fully-populated shape here (its required members are all filled in before the constructor returns).
     /** @type {PaneSettings} */
@@ -152,11 +170,11 @@ export class Pane {
     this.settings.statusLine = { ...STATUS_DEFAULT, ...(settings.statusLine || {}) };
     this.settings.indicators = { ...INDICATORS_DEFAULT, ...(settings.indicators || {}) };
     this.settings.trades = { ...TRADES_DEFAULT, ...(settings.trades || {}) };
-    this._trades = [];        // fills for this.symbol (from the broker), drawn as arrow markers
+    this._trades = []; // fills for this.symbol (from the broker), drawn as arrow markers
     /** @type {{ refresh: () => void, destroy: () => void }|null} */
-    this.orderView = null;    // per-pane order-book overlay (position + exits, drawn from the platform book)
-    this._tradeCb = null;     // live-fill subscription callback (unsubscribed on hide/destroy)
-    this._tradeSym = null;    // symbol the current fills were fetched for
+    this.orderView = null; // per-pane order-book overlay (position + exits, drawn from the platform book)
+    this._tradeCb = null; // live-fill subscription callback (unsubscribed on hide/destroy)
+    this._tradeSym = null; // symbol the current fills were fetched for
     // chart type: 'candles' (OHLC) | 'line'. Line draws a price-source value per bar.
     this.settings.chartType = settings.chartType === 'line' ? 'line' : 'candles';
     this.settings.line = { ...LINE_STYLE_DEFAULT, ...(settings.line || {}) };
@@ -166,21 +184,21 @@ export class Pane {
     /** @type {any} */
     this.contractId = null;
     /** @type {any} shared per-instrument trading-session model (set on resolve); engine/session boundary */
-    this.marketHours = null;   // feeds the status dot + corrector
+    this.marketHours = null; // feeds the status dot + corrector
     /** @type {(() => void)|null} */
-    this._mhUnsub = null;      // unsubscribe from the shared model's onUpdate (it outlives the pane -> must detach)
+    this._mhUnsub = null; // unsubscribe from the shared model's onUpdate (it outlives the pane -> must detach)
     this.priceDecimals = 2;
     /** @type {number|null} */
-    this.tickSize = null;   // instrument min price increment (e.g. 0.25 for ES); drawings snap price to it
+    this.tickSize = null; // instrument min price increment (e.g. 0.25 for ES); drawings snap price to it
     this.reqId = 0;
-    this.olderReqId = 0;         // in-flight lazy-history fetch (dropped on destroy)
+    this.olderReqId = 0; // in-flight lazy-history fetch (dropped on destroy)
     /** @type {number|null} */
-    this.olderCursorMs = null;   // backward cursor for lazy history (skips empty gaps)
-    this.gapHops = 0;            // consecutive empty older-windows skipped
-    this.cached = false;         // is this (broker, symbol) in the persistent cache library?
-    this.lastStored = 0;         // newest bar time written to the cache (avoids re-POSTing)
-    this.destroyed = false;      // guards async bar callbacks after teardown
-    this.blanked = false;        // board pane: anchored chart closed -> blanked (no data/subscription)
+    this.olderCursorMs = null; // backward cursor for lazy history (skips empty gaps)
+    this.gapHops = 0; // consecutive empty older-windows skipped
+    this.cached = false; // is this (broker, symbol) in the persistent cache library?
+    this.lastStored = 0; // newest bar time written to the cache (avoids re-POSTing)
+    this.destroyed = false; // guards async bar callbacks after teardown
+    this.blanked = false; // board pane: anchored chart closed -> blanked (no data/subscription)
     /** @type {Map<number, Bar>} */
     this.bars = new Map();
     /** @type {Bar[]} */
@@ -188,19 +206,19 @@ export class Pane {
     /** @type {number[]} */
     this.barTimes = [];
     this.seeded = false;
-    this._openPending = false;   // opening-fill hold (set in requestBars for uncached, non-board panes)
+    this._openPending = false; // opening-fill hold (set in requestBars for uncached, non-board panes)
     /** @type {number|null} */
-    this._boardWantFrom = null;  // board pane: deepest anchor-pushed left edge (secs) history must cover
+    this._boardWantFrom = null; // board pane: deepest anchor-pushed left edge (secs) history must cover
     /** @type {number|null} */
-    this.earliest = null;        // oldest loaded DISPLAY bar time (for lazy history)
+    this.earliest = null; // oldest loaded DISPLAY bar time (for lazy history)
     // ---- clock-anchored aggregation (session-anchored feeds like RTH futures) ----
-    this._aggregate = false;     // this feed is off the clock grid -> derive display bars from a base TF
+    this._aggregate = false; // this feed is off the clock grid -> derive display bars from a base TF
     /** @type {string|null} */
-    this._baseTf = null;         // the base TF we fetch/cache/subscribe when aggregating (else display TF)
+    this._baseTf = null; // the base TF we fetch/cache/subscribe when aggregating (else display TF)
     /** @type {Map<number, Bar>} */
-    this._base = new Map();      // base-TF bars (source of truth), keyed by time; display bars are derived
+    this._base = new Map(); // base-TF bars (source of truth), keyed by time; display bars are derived
     /** @type {number|null} */
-    this._baseEarliest = null;   // oldest base-bar time (the older-history cursor in aggregate mode)
+    this._baseEarliest = null; // oldest base-bar time (the older-history cursor in aggregate mode)
     this.loadingOlder = false;
     this.exhausted = false;
     this.barCount = 0;
@@ -213,7 +231,7 @@ export class Pane {
     /** @type {number|null} */
     this.askSize = null;
     /** @type {number|null} */
-    this.lastSize = null;   // top-of-book / last-trade size, when the feed carries it
+    this.lastSize = null; // top-of-book / last-trade size, when the feed carries it
     /** @type {any} */
     this.bidLineObj = null;
     /** @type {any} */
@@ -231,9 +249,9 @@ export class Pane {
     /** @type {HTMLElement|null} */
     this.compareEl = null;
     /** @type {string|null} */
-    this.compareHlMode = null;   // quick High/Low DISPLAY override for the compare overlay (mirrors hlMode)
+    this.compareHlMode = null; // quick High/Low DISPLAY override for the compare overlay (mirrors hlMode)
     /** @type {Surface[]} */
-    this.surfaces = [];      // drawable surfaces (main pane + sub-panes), top→bottom
+    this.surfaces = []; // drawable surfaces (main pane + sub-panes), top→bottom
 
     // ---- late-bound fields (assigned by prototype-mixin methods / addControls). Declared as bare typed
     // statements so the strict checker sees them on the instance: a bare `this.x;` is a no-op property
@@ -364,11 +382,14 @@ export class Pane {
     // COMPARE/price board pane (settings.pricePane) DOES get candles -- it's a mini price chart of its
     // symbol, stacked in the board and synced to the anchor like the "+ compare" feature.
     /** @type {any} the candlestick plot handle, or null on a study board pane (engine boundary) */
-    this._series = (this.board && !this.settings.pricePane) ? null : this.chart.addPlot(Candles, {
-      ...candleOptions(/** @type {any} */ (this.settings.candles)),
-      showPriceLine: this.settings.priceLine,
-      showLastValue: this.settings.lastPriceLabel,
-    });
+    this._series =
+      this.board && !this.settings.pricePane
+        ? null
+        : this.chart.addPlot(Candles, {
+            ...candleOptions(/** @type {any} */ (this.settings.candles)),
+            showPriceLine: this.settings.priceLine,
+            showLastValue: this.settings.lastPriceLabel,
+          });
     /** @type {any} Line-chart overlay (created on demand by applyChartType) */
     this.lineSeries = null;
     if ((!this.board || this.settings.pricePane) && this.settings.chartType === 'line') this.applyChartType();
@@ -383,11 +404,17 @@ export class Pane {
     this.el.addEventListener('pointermove', (e) => {
       if (!e.target || /** @type {HTMLElement} */ (e.target).tagName !== 'CANVAS') return;
       const r = this.el.getBoundingClientRect();
-      const x = e.clientX - r.left, y = e.clientY - r.top;
-      let pw = 0, th = 0;
-      try { pw = this.chart.priceAxis('right').width(); th = this.chart.timeAxis().height(); } catch (_) {}
-      const cur = y > r.height - th ? 'ew-resize' : (x > r.width - pw ? 'ns-resize' : '');
-      if (/** @type {HTMLElement} */ (e.target).style.cursor !== cur) /** @type {HTMLElement} */ (e.target).style.cursor = cur;
+      const x = e.clientX - r.left,
+        y = e.clientY - r.top;
+      let pw = 0,
+        th = 0;
+      try {
+        pw = this.chart.priceAxis('right').width();
+        th = this.chart.timeAxis().height();
+      } catch (_) {}
+      const cur = y > r.height - th ? 'ew-resize' : x > r.width - pw ? 'ns-resize' : '';
+      if (/** @type {HTMLElement} */ (e.target).style.cursor !== cur)
+        /** @type {HTMLElement} */ (e.target).style.cursor = cur;
     });
 
     // Broadcast only real user hovers; programmatic moves have no sourceEvent
@@ -396,18 +423,19 @@ export class Pane {
       // status-line OHLC values: hovered bar, or latest when not over data
       this.hovering = param.time != null;
       if (this.settings.statusLine.chartValues) {
-        const d = (this.hovering && param.seriesData) ? param.seriesData.get(this.series) : null;
+        const d = this.hovering && param.seriesData ? param.seriesData.get(this.series) : null;
         this.updateValues(d);
       }
       // onCrosshair is a no-op stub (StudyHost) whose typed signature takes no args; the ignored
       // `param` is passed at runtime, so cast the receiver to keep the exact (harmless) call form
       // (also keeps the original always-present guard from being flagged as always-true).
-      if (this.studies && /** @type {any} */ (this.studies).onCrosshair) /** @type {any} */ (this.studies).onCrosshair(param);   // sub-pane legend values
-      this._hoverTrade(param);   // execution-tick tooltip
+      if (this.studies && /** @type {any} */ (this.studies).onCrosshair)
+        /** @type {any} */ (this.studies).onCrosshair(param); // sub-pane legend values
+      this._hoverTrade(param); // execution-tick tooltip
       if (param.sourceEvent === undefined) return;
       // free price under the cursor (not snapped to a candle), so the mirrored
       // crosshair floats at the same price/time rather than locking to a bar
-      const price = (param.point && this.series) ? this.series.yToPrice(param.point.y) : null;
+      const price = param.point && this.series ? this.series.yToPrice(param.point.y) : null;
       bus.emit('crosshair', { source: this, time: param.time, price });
     });
 
@@ -416,18 +444,30 @@ export class Pane {
     this.chart.timeAxis().onTimeWindow((/** @type {{ from: number, to: number }|null} */ r) => {
       if (!this.seeded || !r) return;
       this.range = { from: r.from, to: r.to };
-      bus.emit('pane:range', this);   // pass the source pane so the layout can time-sync the others
+      bus.emit('pane:range', this); // pass the source pane so the layout can time-sync the others
       // feed the visible window to viewport-reactive studies (throttled to one recompute per frame)
       this._vrPending = { from: r.from, to: r.to };
-      if (!this._vrRaf) this._vrRaf = requestAnimationFrame(() => { this._vrRaf = 0; if (this.studies && this.studies.setVisibleRange) this.studies.setVisibleRange(this._vrPending); });
+      if (!this._vrRaf)
+        this._vrRaf = requestAnimationFrame(() => {
+          this._vrRaf = 0;
+          if (this.studies && this.studies.setVisibleRange) this.studies.setVisibleRange(this._vrPending);
+        });
     });
 
     // mark a REAL user pan/zoom on this pane (wheel = zoom, drag = pan). The study-board sync uses this so
     // only genuine scrolls push to the anchored chart -- programmatic range shifts (data-feed prepend that
     // keeps the newest bar pinned, seed auto-fit, adopt) must NOT move the linked chart.
-    const markUserRange = () => { this._userRangeAt = Date.now(); };
+    const markUserRange = () => {
+      this._userRangeAt = Date.now();
+    };
     this.el.addEventListener('wheel', markUserRange, { capture: true, passive: true });
-    this.el.addEventListener('pointermove', (e) => { if (e.buttons) markUserRange(); }, { capture: true, passive: true });
+    this.el.addEventListener(
+      'pointermove',
+      (e) => {
+        if (e.buttons) markUserRange();
+      },
+      { capture: true, passive: true },
+    );
 
     // lazy-load older history near the left edge; toggle the forward button
     this.chart.timeAxis().onBarWindow((/** @type {{ from: number, to: number }|null} */ lr) => {
@@ -457,25 +497,44 @@ export class Pane {
     /** @type {any} */ (this.studies).setThrottle(Math.max(0, Number(getSetting('optStudyRecomputeMs')) || 0));
     // kapelka/skin: adopt the library's sub-pane legend (first piece of the chrome migration).
     // openSettings is pointed at the app's richer settings window, not the library's config.
-    this.skin = createSkin(this.studies, { chart: this.chart, container: this.el, pieces: ['legend', 'controls', 'overlay'], overlayTop: 32 });
+    this.skin = createSkin(this.studies, {
+      chart: this.chart,
+      container: this.el,
+      pieces: ['legend', 'controls', 'overlay'],
+      overlayTop: 32,
+    });
     // openSettings is an app-added hook on the skin (not part of createSkin's returned shape) -> cast.
-    /** @type {any} */ (this.skin).openSettings = (/** @type {any} */ a) => { const i = this.studies.attached.indexOf(a); if (i >= 0) openStudySettings(this, i); };
-    this.applyIndicators();   // push saved legend display options (title/values/bg) to the skin
+    /** @type {any} */ (this.skin).openSettings = (/** @type {any} */ a) => {
+      const i = this.studies.attached.indexOf(a);
+      if (i >= 0) openStudySettings(this, i);
+    };
+    this.applyIndicators(); // push saved legend display options (title/values/bg) to the skin
     this.studies.restore();
-    this._scheduleApplyOrder();   // arrange restored oscillator panes to the saved order
+    this._scheduleApplyOrder(); // arrange restored oscillator panes to the saved order
     this.drawings = new DrawingEngine(this);
     this.drawings.restore();
     this.plus = new PlusButton(this);
-    this.plus.setEnabled(this.settings.plusButton && !this.board);   // no price-scale "+" (alert) on board panes
+    this.plus.setEnabled(this.settings.plusButton && !this.board); // no price-scale "+" (alert) on board panes
     // Alert markers: the alert engine's OWN on-chart layer (NOT a drawing). It renders every price-level alert
     // for this symbol that has no chart object -- quick "Add alert at <price>" and Value alerts from the manager --
     // as a dashed line + bell badge + price tag. Drawing-anchored alerts are marked by the badge on their drawing.
-    this.alertLayer = this._series ? createAlertPrimitive(this) : null;   // chart panes only (board panes have no candle series)
-    if (this.alertLayer) { try { this.series.addLayer(this.alertLayer); } catch (_) {} }
+    this.alertLayer = this._series ? createAlertPrimitive(this) : null; // chart panes only (board panes have no candle series)
+    if (this.alertLayer) {
+      try {
+        this.series.addLayer(this.alertLayer);
+      } catch (_) {}
+    }
     // the main pane is surface 0 (top of the chart); sub-panes register below it.
     // top() = routing boundary; yOffset() = how much to subtract from a global y to get
     // this surface's local (price-scale) y.
-    this.surfaces = [{ engine: this.drawings, top: () => this.paneTopOf(this.series), yOffset: () => this.paneTopOf(this.series), bars: () => this.bars }];
+    this.surfaces = [
+      {
+        engine: this.drawings,
+        top: () => this.paneTopOf(this.series),
+        yOffset: () => this.paneTopOf(this.series),
+        bars: () => this.bars,
+      },
+    ];
     // ORDER-BOOK overlay: draws this pane's position + exits straight from the platform book (app-owned, not the
     // addon). Chart panes only -- board/oscillator panes have no price context for it.
     if (!this.board) this.orderView = createOrderOverlay(this);
@@ -530,12 +589,14 @@ export class Pane {
 
   refreshMd() {
     const s = this.settings;
-    const want = s.bidLine || s.askLine || s.bidLabel || s.askLabel || s.spreadMeter;   // line/label/spread needs quotes
+    const want = s.bidLine || s.askLine || s.bidLabel || s.askLabel || s.spreadMeter; // line/label/spread needs quotes
     if (want && this.contractId) this.ensureMd();
     else this.teardownMd();
   }
   /** @returns {any} this pane's broker adapter (or active) -- the broker/adapter boundary is untyped here */
-  api() { return broker.for(this.broker); }
+  api() {
+    return broker.for(this.broker);
+  }
   ensureMd() {
     if (!this.mdSubscribed) {
       this.mdSubscribed = true;
@@ -545,8 +606,12 @@ export class Pane {
     this.updateLines();
   }
   teardownMd() {
-    if (this.mdSubscribed) { this.api() && this.api().unsubscribeQuotes(this.contractId, this.mdCb); this.mdSubscribed = false; }
-    this.removeLine('bidLineObj'); this.removeLine('askLineObj');
+    if (this.mdSubscribed) {
+      this.api() && this.api().unsubscribeQuotes(this.contractId, this.mdCb);
+      this.mdSubscribed = false;
+    }
+    this.removeLine('bidLineObj');
+    this.removeLine('askLineObj');
     this.bid = this.ask = null;
     this.bidSize = this.askSize = this.lastSize = null;
   }
@@ -584,12 +649,16 @@ export class Pane {
     ts.setBarWindow({ from: lr.from + bars, to: lr.to + bars });
   }
 
-  tf() { return byId(this.tfId); }
+  tf() {
+    return byId(this.tfId);
+  }
 
   // auto-fit recent data to the screen: re-enable price auto-scale (respecting
   // the top/bottom margins) and reset to a default zoom at the latest bar
   resetView() {
-    try { this.series.priceAxis().configure({ autoScale: true }); } catch (_) {}
+    try {
+      this.series.priceAxis().configure({ autoScale: true });
+    } catch (_) {}
     const ts = this.chart.timeAxis();
     ts.configure({ barSpacing: 6 });
     ts.scrollToNow();
@@ -600,26 +669,37 @@ export class Pane {
     parent.appendChild(this.el);
     // apply scale/countdown after the chart is in the DOM and sized — doing it
     // during construction hits null internals in the engine (autoSize not ready yet)
-    requestAnimationFrame(() => { this.applyScale(); this.applyCanvas(); this.applyTz(); this.applyCountdown(); this.applySpread(); });
+    requestAnimationFrame(() => {
+      this.applyScale();
+      this.applyCanvas();
+      this.applyTz();
+      this.applyCountdown();
+      this.applySpread();
+    });
   }
 
   // crosshair sync ----------------------------------------------------------
   /** @param {number|null} time @param {number|null} price @param {any} [series] */
   setCrosshair(time, price, series) {
-    if (time == null || price == null) { this.chart.clearCursor(); return; }
+    if (time == null || price == null) {
+      this.chart.clearCursor();
+      return;
+    }
     // the series decides which pane's price scale the horizontal line sits on
     this.chart.setCursor(price, time, series || this.series);
   }
-  clearCrosshair() { this.chart.clearCursor(); }
+  clearCrosshair() {
+    this.chart.clearCursor();
+  }
 
   /** @param {string} sym */
   setSymbol(sym) {
-    this.teardownMd();        // drop quotes for the old contract
+    this.teardownMd(); // drop quotes for the old contract
     this.symbol = sym;
     this.contractId = null;
     this.applyStatus();
-    if (this.drawings) this.drawings.requestUpdate();   // render synced drawings for the new symbol
-    if (this.orderView) this.orderView.refresh();       // re-project the book for the new symbol
+    if (this.drawings) this.drawings.requestUpdate(); // render synced drawings for the new symbol
+    if (this.orderView) this.orderView.refresh(); // re-project the book for the new symbol
     if (broker.isConnected(this.broker)) this.resolve();
   }
 
@@ -630,22 +710,25 @@ export class Pane {
     this.broker = brokerId || null;
     this.symbol = sym;
     this.contractId = null;
-    if (this.reqId) { this.api() && this.api().drop(this.reqId); this.reqId = 0; }
+    if (this.reqId) {
+      this.api() && this.api().drop(this.reqId);
+      this.reqId = 0;
+    }
     this.applyStatus();
     if (this.drawings) this.drawings.requestUpdate();
-    if (this.orderView) this.orderView.refresh();       // re-project the book for the new source
+    if (this.orderView) this.orderView.refresh(); // re-project the book for the new source
     if (broker.isConnected(this.broker)) this.resolve();
   }
 
   /** @param {string} id */
   setTimeframe(id) {
     this.tfId = id;
-    this.range = null;   // new bar size -> refit (old time window wouldn't fit)
+    this.range = null; // new bar size -> refit (old time window wouldn't fit)
     this.applyStatus();
-    if (this.drawings) this.drawings.requestUpdate();   // re-evaluate per-tf drawing visibility
-    this.applyTrades();                                 // re-evaluate per-tf trade-mark visibility
+    if (this.drawings) this.drawings.requestUpdate(); // re-evaluate per-tf drawing visibility
+    this.applyTrades(); // re-evaluate per-tf trade-mark visibility
     if (this.contractId) this.requestBars();
-    if (this.compare) this._compareRequest();           // comparison follows the same timeframe
+    if (this.compare) this._compareRequest(); // comparison follows the same timeframe
   }
 
   // ---- Study-board hard off-switch. A board pane exists only to study its anchored chart; when that
@@ -655,19 +738,27 @@ export class Pane {
   blank() {
     if (!this.board || this.blanked) return;
     this.blanked = true;
-    clearTimeout(this._openSettle); clearTimeout(this._openMax); this._openPending = false; this._boardWantFrom = null;   // cancel any in-flight opening fill / board follow
-    if (this.reqId) { this.api() && this.api().drop(this.reqId); this.reqId = 0; }
+    clearTimeout(this._openSettle);
+    clearTimeout(this._openMax);
+    this._openPending = false;
+    this._boardWantFrom = null; // cancel any in-flight opening fill / board follow
+    if (this.reqId) {
+      this.api() && this.api().drop(this.reqId);
+      this.reqId = 0;
+    }
     this.bars = new Map();
     this.seeded = false;
-    if (this._series) this._series.feed([]);   // compare/price board pane: clear its candles too
-    try { if (this.studies) this.studies.update([]); } catch (_) {}   // empty input -> studies render blank
+    if (this._series) this._series.feed([]); // compare/price board pane: clear its candles too
+    try {
+      if (this.studies) this.studies.update([]);
+    } catch (_) {} // empty input -> studies render blank
     this._blankOverlay(true);
   }
   unblank() {
     if (!this.blanked) return;
     this.blanked = false;
     this._blankOverlay(false);
-    if (broker.isConnected(this.broker)) this.resolve();   // re-subscribe and reload
+    if (broker.isConnected(this.broker)) this.resolve(); // re-subscribe and reload
   }
   /** @param {boolean} show */
   _blankOverlay(show) {
@@ -685,8 +776,8 @@ export class Pane {
   }
 
   resolve() {
-    if (this.blanked) return;   // a board pane whose anchored chart is closed stays blank (no subscribe)
-    this._restoreCompare();   // bring back a persisted comparison once connected
+    if (this.blanked) return; // a board pane whose anchored chart is closed stays blank (no subscribe)
+    this._restoreCompare(); // bring back a persisted comparison once connected
     if (!this.symbol || !this.api()) return;
     this.api().resolveSymbol(this.symbol, (/** @type {any} */ inst, /** @type {any} */ err) => {
       if (!inst) {
@@ -711,11 +802,14 @@ export class Pane {
       // historical-request limit (boards otherwise only lazy-cache). Study sub-panes (no _series) also skip.
       const wantMH = this._series && !this.board;
       if (wantMH && (!this.marketHours || this.marketHours.contractId !== inst.id)) {
-        if (this._mhUnsub) { this._mhUnsub(); this._mhUnsub = null; }   // detach from the previous symbol's shared model
+        if (this._mhUnsub) {
+          this._mhUnsub();
+          this._mhUnsub = null;
+        } // detach from the previous symbol's shared model
         this.marketHours = sharedMarketHours(this.api(), inst.id, this.broker, this.symbol);
         this._mhUnsub = this.marketHours.onUpdate(() => {
-          this.updateMarketDot();   // repaint the dot when the hours arrive
-          const t = this.tf();      // ...and re-anchor daily+ bars now that we know the real session opens
+          this.updateMarketDot(); // repaint the dot when the hours arrive
+          const t = this.tf(); // ...and re-anchor daily+ bars now that we know the real session opens
           if (t && (t.unit === 'D' || t.unit === 'W' || t.unit === 'M')) this.redraw(true);
         });
       }
@@ -724,11 +818,14 @@ export class Pane {
         this.marketHours.ensure(now - 7 * 86400000, now + 7 * 86400000);
       }
       this.priceDecimals = inst.priceDecimals;
-      this.tickSize = inst.tickSize || null;   // kept so drawings can snap their price to the tick grid
-      if (this._series) this._series.configure({ priceFormat: { type: 'price', precision: inst.priceDecimals, minMove: inst.tickSize } });
+      this.tickSize = inst.tickSize || null; // kept so drawings can snap their price to the tick grid
+      if (this._series)
+        this._series.configure({
+          priceFormat: { type: 'price', precision: inst.priceDecimals, minMove: inst.tickSize },
+        });
       if (!alreadyLive) this.requestBars();
-      this.refreshMd();       // (re)start quotes if bid/ask lines are on
-      this.applyTrades();     // (re)fetch this symbol's fills once connected, if trades are shown
+      this.refreshMd(); // (re)start quotes if bid/ask lines are on
+      this.applyTrades(); // (re)fetch this symbol's fills once connected, if trades are shown
     });
   }
 
@@ -740,9 +837,9 @@ export class Pane {
   static GAP_HOPS = 6;
 
   // Opening fill (see requestBars / redraw).
-  static FILL_MIN = 160;        // bars needed to fill the initial ~150-slot window before the first paint
-  static OPEN_SETTLE_MS = 600;  // frame the view this long after deep history stops arriving (stream settled)
-  static OPEN_MAX_MS = 6000;    // hard cap: never hold a blank opening longer than this
+  static FILL_MIN = 160; // bars needed to fill the initial ~150-slot window before the first paint
+  static OPEN_SETTLE_MS = 600; // frame the view this long after deep history stops arriving (stream settled)
+  static OPEN_MAX_MS = 6000; // hard cap: never hold a blank opening longer than this
 
   // Re-stamp daily+ bars to the true session open (from the market-hours model). Native OHLCV kept;
   // only `time` moves off the broker's raw anchor onto the real open, so drawings/labels sit on the day
@@ -750,10 +847,15 @@ export class Pane {
   /** @param {Bar[]} bars @returns {Bar[]} */
   _anchorDaily(bars) {
     const mh = this.marketHours;
-    const out = bars.map((b) => { const o = mh.openForBarSec(b.time); return o != null ? { ...b, time: Math.round(o / 1000) } : b; });
+    const out = bars.map((b) => {
+      const o = mh.openForBarSec(b.time);
+      return o != null ? { ...b, time: Math.round(o / 1000) } : b;
+    });
     out.sort((a, b) => a.time - b.time);
     /** @type {Map<number, Bar>} */
-    const m = new Map(); for (const b of out) m.set(b.time, b); return [...m.values()];   // dedup by re-anchored time (defensive)
+    const m = new Map();
+    for (const b of out) m.set(b.time, b);
+    return [...m.values()]; // dedup by re-anchored time (defensive)
   }
 
   // Future whitespace: hand the engine session-following time slots past the last bar, so its index axis
@@ -765,7 +867,10 @@ export class Pane {
     if (!this.chart || !this.chart.setFutureWhitespace) return;
     const mh = this.marketHours;
     if (!mh || !mh.openRule || !arr.length || !dtf) {
-      if (this._fwKey !== 'none') { this._fwKey = 'none'; this.chart.setFutureWhitespace([]); }
+      if (this._fwKey !== 'none') {
+        this._fwKey = 'none';
+        this.chart.setFutureWhitespace([]);
+      }
       return;
     }
     const tfSec = Math.round(barMs(dtf) / 1000);
@@ -776,7 +881,7 @@ export class Pane {
     const key = lastSec + '/' + tfSec + '/' + mh.openRule.hh + ':' + mh.openRule.mm;
     if (key === this._fwKey) return;
     this._fwKey = key;
-    const HORIZON_DAYS = 21;   // margin past day-marker's 1-2 future weeks (closing boundary can be ~14d out)
+    const HORIZON_DAYS = 21; // margin past day-marker's 1-2 future weeks (closing boundary can be ~14d out)
     const count = Math.min(1500, Math.ceil((HORIZON_DAYS * 86400) / tfSec));
     this.chart.setFutureWhitespace(mh.projectFutureBars(lastSec, tfSec, count));
   }
@@ -789,26 +894,33 @@ export class Pane {
     // the whole loaded history (thousands of bars after a cache seed) on every tick. Only when the
     // display bars ARE the native bars: intraday (no daily session re-anchor) and non-aggregate
     // (_ingest pins 'full' there). Any structural change falls through to the full rebuild below.
-    const ops = this._fastOps; this._fastOps = null; this._fastLastTime = null;
+    const ops = this._fastOps;
+    this._fastOps = null;
+    this._fastLastTime = null;
     const ftf = this.tf();
     const anchored = ftf && (ftf.unit === 'D' || ftf.unit === 'W' || ftf.unit === 'M');
-    if (Array.isArray(ops) && this.seeded && !this._openPending && !anchored
-        && this.barArr && this.barArr.length) { this._redrawFast(ops, ftf); return; }
-    const raw = [...this.bars.values()].sort((a, b) => a.time - b.time);   // NATIVE broker times (cache + paging identity)
+    if (Array.isArray(ops) && this.seeded && !this._openPending && !anchored && this.barArr && this.barArr.length) {
+      this._redrawFast(ops, ftf);
+      return;
+    }
+    const raw = [...this.bars.values()].sort((a, b) => a.time - b.time); // NATIVE broker times (cache + paging identity)
     // Daily+ anchor correction: re-stamp display bars to the TRUE session open from the market-hours
     // model (the broker stamps a daily bar at its own anchor -- e.g. 17:30, in the maintenance gap --
     // not the 18:00 open). Only the DISPLAY array changes; this.bars/earliest stay native.
     let arr = raw;
     const dtf = this.tf();
     if (dtf && (dtf.unit === 'D' || dtf.unit === 'W' || dtf.unit === 'M') && this.marketHours && raw.length) {
-      this.marketHours.ensure(raw[0].time * 1000, raw[raw.length - 1].time * 1000);   // cover the loaded range
+      this.marketHours.ensure(raw[0].time * 1000, raw[raw.length - 1].time * 1000); // cover the loaded range
       if (this.marketHours.hasData()) arr = this._anchorDaily(raw);
     }
-    this.barArr = arr;                          // sorted bars (for ray-stop / level tools)
-    this.barTimes = arr.map((b) => b.time);    // sorted bar times for drawing interpolation
+    this.barArr = arr; // sorted bars (for ray-stop / level tools)
+    this.barTimes = arr.map((b) => b.time); // sorted bar times for drawing interpolation
     this.barCount = arr.length;
     this.lastBar = arr.length ? arr[arr.length - 1] : null;
-    if (raw.length) { this.earliest = raw[0].time; this.lastClose = raw[raw.length - 1].close; }   // paging uses native times
+    if (raw.length) {
+      this.earliest = raw[0].time;
+      this.lastClose = raw[raw.length - 1].close;
+    } // paging uses native times
     // Opening fill (uncached): hold the first paint while we pull deep history, so the view opens on a
     // full window instead of the live subscription's thin recent sliver. On the first complete batch we
     // kick loadOlder once; _armOpenSettle then finishes as soon as the window is full (or the deep pull
@@ -817,7 +929,7 @@ export class Pane {
     if (this._openPending) {
       if (complete && !this._openFillKicked && !this.exhausted && this.barCount > 0 && this.barCount < Pane.FILL_MIN) {
         this._openFillKicked = true;
-        this.loadOlder();   // deep history via getBars (subscribe only returned the recent session)
+        this.loadOlder(); // deep history via getBars (subscribe only returned the recent session)
       }
       this._armOpenSettle();
       return;
@@ -832,13 +944,16 @@ export class Pane {
     // Render-gated: this pane is hidden behind a maximized sibling. The data bookkeeping above stays
     // current (this.lastBar/barArr/earliest feed tools + paging), but skip the visual work -- no series
     // feed, no study-worker recompute, no paint. setRenderActive(true) replays one redraw on un-hide.
-    if (this._renderPaused) { this._pendingRedraw = true; return; }
-    if (this.compare) this._compareFollow();   // extend the compare history to match the main's
-    if (this._series) this._series.feed(arr);   // board pane has no candle series; the study is fed below
-    this._feedFutureWhitespace(arr, dtf);       // session-following future slots -> gapless axis past the last bar
-    if (this.lineSeries) this._feedLine();          // keep the line chart in sync with the bars
-    if (this.studies) this.studies.update(arr);   // recompute attached indicators
-    if (!this.hovering) this.updateValues();   // keep values on the latest bar
+    if (this._renderPaused) {
+      this._pendingRedraw = true;
+      return;
+    }
+    if (this.compare) this._compareFollow(); // extend the compare history to match the main's
+    if (this._series) this._series.feed(arr); // board pane has no candle series; the study is fed below
+    this._feedFutureWhitespace(arr, dtf); // session-following future slots -> gapless axis past the last bar
+    if (this.lineSeries) this._feedLine(); // keep the line chart in sync with the bars
+    if (this.studies) this.studies.update(arr); // recompute attached indicators
+    if (!this.hovering) this.updateValues(); // keep values on the latest bar
     // Fit only once the full history batch has arrived. Some brokers stream history
     // newest-to-oldest over several reports; fitting on the first partial chunk
     // would zoom into just the latest few bars.
@@ -849,13 +964,15 @@ export class Pane {
       // backward "jump". scrollToNow is timing-independent, so the view is the same regardless of
       // whether the cache or the live batch seeded first. (Restores the 2c96b49 fix that commit
       // 8226374 reverted; per-session pan/zoom is intentionally not restored on startup.)
-      try { this.chart.timeAxis().scrollToNow(); } catch (_) {}
+      try {
+        this.chart.timeAxis().scrollToNow();
+      } catch (_) {}
       this.seeded = true;
     }
     // bars (and barTimes) just changed → re-render drawings so synced ones, which
     // need barTimes for cross-timeframe interpolation, appear once data is loaded.
     if (this.drawings) this.drawings.requestUpdate();
-    this._positionBoardCtrls();   // price labels widen the scale once data loads → keep controls clear of it
+    this._positionBoardCtrls(); // price labels widen the scale once data loads → keep controls clear of it
   }
 
   // Live-tick redraw: apply the classified last-bar ops in place and run the same follow-ups as the
@@ -864,19 +981,26 @@ export class Pane {
   // passed array against the previously passed one by reference.
   /** @param {Bar[]} ops @param {any} dtf */
   _redrawFast(ops, dtf) {
-    const arr = this.barArr, times = this.barTimes;
+    const arr = this.barArr,
+      times = this.barTimes;
     for (const b of ops) {
       const n = arr.length;
       if (n && b.time === arr[n - 1].time) arr[n - 1] = b;
-      else if (!n || b.time > arr[n - 1].time) { arr.push(b); times.push(b.time); }
+      else if (!n || b.time > arr[n - 1].time) {
+        arr.push(b);
+        times.push(b.time);
+      }
     }
     this.barCount = arr.length;
     this.lastBar = arr[arr.length - 1];
-    this.lastClose = this.lastBar.close;   // earliest is untouched: ops never reach older bars
-    if (this._renderPaused) { this._pendingRedraw = true; return; }   // bookkeeping done; replay on un-hide
+    this.lastClose = this.lastBar.close; // earliest is untouched: ops never reach older bars
+    if (this._renderPaused) {
+      this._pendingRedraw = true;
+      return;
+    } // bookkeeping done; replay on un-hide
     if (this.compare) this._compareFollow();
     if (this._series) for (const b of ops) this._series.feedBar(b);
-    this._feedFutureWhitespace(arr, dtf);   // keyed: regenerates only when a NEW bar arrived
+    this._feedFutureWhitespace(arr, dtf); // keyed: regenerates only when a NEW bar arrived
     if (this.lineSeries) {
       const src = this._priceSource();
       for (const b of ops) this.lineSeries.feedBar({ time: b.time, value: src(b) });
@@ -903,31 +1027,42 @@ export class Pane {
   setRenderActive(visible) {
     if (this.destroyed || !this.chart) return;
     const paused = !visible;
-    if (paused === !!this._renderPaused) return;   // no-op if already in the target state
+    if (paused === !!this._renderPaused) return; // no-op if already in the target state
     this._renderPaused = paused;
-    try { this.chart.setPaused(paused); } catch (_) {}   // gate every paint source (bars, quotes, trade beads)
+    try {
+      this.chart.setPaused(paused);
+    } catch (_) {} // gate every paint source (bars, quotes, trade beads)
     if (visible) {
-      try { this.chart.resize(); } catch (_) {}          // re-measure: the container was 0-sized while hidden
-      if (this._pendingRedraw) { this._pendingRedraw = false; this.redraw(true); }   // replay latest data / seed
+      try {
+        this.chart.resize();
+      } catch (_) {} // re-measure: the container was 0-sized while hidden
+      if (this._pendingRedraw) {
+        this._pendingRedraw = false;
+        this.redraw(true);
+      } // replay latest data / seed
     }
   }
 
   destroy() {
-    this.destroyed = true;   // stop any late bar/history reply from touching the removed chart
+    this.destroyed = true; // stop any late bar/history reply from touching the removed chart
     if (this.skin) this.skin.destroy();
     if (this.studies) this.studies.destroy();
     if (this.drawings) this.drawings.destroy();
     if (this.orderView) this.orderView.destroy();
     this.removeCompare();
     this.teardownMd();
-    this._stopTradeFeed();   // drop the live-fills subscription
+    this._stopTradeFeed(); // drop the live-fills subscription
     if (this.cdTimer) clearInterval(this.cdTimer);
     if (this._mktTimer) clearInterval(this._mktTimer);
-    if (this._mhUnsub) { this._mhUnsub(); this._mhUnsub = null; }   // detach from the shared market-hours model (it outlives us)
+    if (this._mhUnsub) {
+      this._mhUnsub();
+      this._mhUnsub = null;
+    } // detach from the shared market-hours model (it outlives us)
     this._hideMarketPopup();
-    clearTimeout(this._openSettle); clearTimeout(this._openMax);   // opening-fill timers
+    clearTimeout(this._openSettle);
+    clearTimeout(this._openMax); // opening-fill timers
     if (this.reqId) this.api() && this.api().drop(this.reqId);
-    if (this.olderReqId) this.api() && this.api().drop(this.olderReqId);   // cancel in-flight lazy history
+    if (this.olderReqId) this.api() && this.api().drop(this.olderReqId); // cancel in-flight lazy history
     this.chart.destroy();
     this.el.remove();
   }
@@ -935,4 +1070,15 @@ export class Pane {
 
 // Attach the split-out feature subsystems (see ./pane/*.js) onto the prototype. `this` and every
 // cross-method call behave exactly as when these were inline methods of the class.
-Object.assign(Pane.prototype, compareMethods, tradesMethods, dataMethods, chartTypeMethods, priceLineMethods, controlMethods, surfaceMethods, marketDotMethods, appearanceMethods);
+Object.assign(
+  Pane.prototype,
+  compareMethods,
+  tradesMethods,
+  dataMethods,
+  chartTypeMethods,
+  priceLineMethods,
+  controlMethods,
+  surfaceMethods,
+  marketDotMethods,
+  appearanceMethods,
+);

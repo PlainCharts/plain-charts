@@ -23,21 +23,36 @@ const WIN = Q.get('win') || 'solo';
 // page label from the entry file: index.html (charts) is '/', the hosts carry their own names
 const PAGE = (location.pathname.split('/').pop() || 'index.html').replace('.html', '').replace('index', 'chart');
 const PROC = /** @type {any} */ (globalThis).process;
-const PID = (PROC && typeof PROC.pid === 'number') ? PROC.pid : null;
+const PID = PROC && typeof PROC.pid === 'number' ? PROC.pid : null;
 
 // ---- paint counter: PASSES, not layer clears. One redraw clears several layer canvases in the same
 // synchronous batch; a microtask boundary groups them so the metric speaks the same units as the
 // Optimization "Paint rate" knob (paints per second). Raw clears ride along for layer-cost analysis.
-let paints = 0, clears = 0, inPass = false;
+let paints = 0,
+  clears = 0,
+  inPass = false;
 try {
   const proto = CanvasRenderingContext2D.prototype;
   const orig = proto.clearRect;
-  proto.clearRect = function (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ w, /** @type {number} */ h) {
+  proto.clearRect = function (
+    /** @type {number} */ x,
+    /** @type {number} */ y,
+    /** @type {number} */ w,
+    /** @type {number} */ h,
+  ) {
     clears++;
-    if (!inPass) { paints++; inPass = true; queueMicrotask(() => { inPass = false; }); }
+    if (!inPass) {
+      paints++;
+      inPass = true;
+      queueMicrotask(() => {
+        inPass = false;
+      });
+    }
     return orig.call(this, x, y, w, h);
   };
-} catch (_) { /* no canvas in this context */ }
+} catch (_) {
+  /* no canvas in this context */
+}
 
 // ---- event-loop lag: a 100ms heartbeat; any drift beyond the interval is main-thread stall ----
 let loopLagMs = 0;
@@ -50,13 +65,19 @@ setInterval(() => {
 }, 100);
 
 // ---- long tasks (main-thread blocks >50ms) ----
-let longTasks = 0, longMaxMs = 0;
+let longTasks = 0,
+  longMaxMs = 0;
 try {
   const po = new PerformanceObserver((list) => {
-    for (const e of list.getEntries()) { longTasks++; if (e.duration > longMaxMs) longMaxMs = e.duration; }
+    for (const e of list.getEntries()) {
+      longTasks++;
+      if (e.duration > longMaxMs) longMaxMs = e.duration;
+    }
   });
   po.observe({ entryTypes: ['longtask'] });
-} catch (_) { /* longtask not supported */ }
+} catch (_) {
+  /* longtask not supported */
+}
 
 // ---- publish 1 Hz ----
 const t0 = Date.now();
@@ -64,20 +85,31 @@ function publish() {
   /** @type {any} */
   const mem = /** @type {any} */ (performance).memory;
   const sample = {
-    win: WIN, page: PAGE, pid: PID,
+    win: WIN,
+    page: PAGE,
+    pid: PID,
     heapMb: mem ? Math.round(mem.usedJSHeapSize / 1048576) : null,
     loopLagMs: Math.round(loopLagMs),
-    longTasks, longMaxMs: Math.round(longMaxMs),
-    paints, clears,
+    longTasks,
+    longMaxMs: Math.round(longMaxMs),
+    paints,
+    clears,
     domNodes: document.querySelectorAll('*').length,
     book: {
-      orders: platform.orders.size(), fills: platform.fills.size(), positions: platform.positions.size(),
-      lots: platform.positionLots.size(), accounts: platform.accounts.size(),
+      orders: platform.orders.size(),
+      fills: platform.fills.size(),
+      positions: platform.positions.size(),
+      lots: platform.positionLots.size(),
+      accounts: platform.accounts.size(),
     },
     upSec: Math.round((Date.now() - t0) / 1000),
     ts: Date.now(),
   };
-  paints = 0; clears = 0; loopLagMs = 0; longTasks = 0; longMaxMs = 0;   // window resets each second
+  paints = 0;
+  clears = 0;
+  loopLagMs = 0;
+  longTasks = 0;
+  longMaxMs = 0; // window resets each second
   platform.perf.set(WIN, sample);
 }
 setInterval(publish, 1000);

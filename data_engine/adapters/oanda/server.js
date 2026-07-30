@@ -31,7 +31,9 @@ module.exports = (api) => {
     // connectivity check — does the token resolve any account?
     if (p === '/api/oanda/status') {
       if (!token) return sendJson(res, 200, { authorized: false });
-      const r = await httpsRequest('GET', oandaHost(env) + '/v3/accounts', { headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' } });
+      const r = await httpsRequest('GET', oandaHost(env) + '/v3/accounts', {
+        headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+      });
       return sendJson(res, 200, { authorized: r.status === 200 });
     }
 
@@ -50,9 +52,20 @@ module.exports = (api) => {
     if (p.startsWith('/api/oanda/tx/')) {
       if (!token) return sendJson(res, 401, { error: 'no token' });
       const target = oandaHost(env) + '/' + p.slice('/api/oanda/tx/'.length) + (u.search || '');
-      const body = await new Promise((resolve) => { let raw = ''; req.on('data', (/** @type {any} */ c) => { raw += c; }); req.on('end', () => resolve(raw)); });
+      const body = await new Promise((resolve) => {
+        let raw = '';
+        req.on('data', (/** @type {any} */ c) => {
+          raw += c;
+        });
+        req.on('end', () => resolve(raw));
+      });
       const r = await httpsRequest(req.method, target, {
-        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json', 'Accept-Datetime-Format': 'UNIX' },
+        headers: {
+          Authorization: 'Bearer ' + token,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'Accept-Datetime-Format': 'UNIX',
+        },
         body: body || null,
       });
       res.writeHead(r.status, { 'Content-Type': 'application/json; charset=utf-8' });

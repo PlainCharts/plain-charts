@@ -24,5 +24,8 @@ export function saveToolTemplate(toolId, name, preset) {
 
 /** @param {string} toolId @param {string} name */
 export function deleteToolTemplate(toolId, name) {
-  store.set(toolId, listToolTemplates(toolId).filter((t) => t.name !== name));
+  store.set(
+    toolId,
+    listToolTemplates(toolId).filter((t) => t.name !== name),
+  );
 }

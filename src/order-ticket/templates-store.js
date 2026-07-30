@@ -28,7 +28,12 @@ const data = { templates: [], activeId: null };
 /** @param {any} b @returns {ButtonDef|null} */
 function normBtn(b) {
   if (!b || typeof b.script !== 'string' || !b.script) return null;
-  return { id: b.id || newId('b'), label: b.label || b.script, script: b.script, hotkey: typeof b.hotkey === 'string' ? b.hotkey : '' };
+  return {
+    id: b.id || newId('b'),
+    label: b.label || b.script,
+    script: b.script,
+    hotkey: typeof b.hotkey === 'string' ? b.hotkey : '',
+  };
 }
 /** @param {any} tpl @returns {ButtonTemplate} */
 const normTpl = (tpl) => ({
@@ -40,11 +45,21 @@ const normTpl = (tpl) => ({
 /** @returns {Promise<TemplatesData>} */
 export async function loadTemplates() {
   const d = await store.load();
-  data.templates = Array.isArray(d.templates) ? d.templates.filter((/** @type {any} */ t) => t && (t.id || t.name)).map(normTpl) : [];
-  data.activeId = (d.activeId && data.templates.some((t) => t.id === d.activeId)) ? d.activeId : (data.templates[0] ? data.templates[0].id : null);
+  data.templates = Array.isArray(d.templates)
+    ? d.templates.filter((/** @type {any} */ t) => t && (t.id || t.name)).map(normTpl)
+    : [];
+  data.activeId =
+    d.activeId && data.templates.some((t) => t.id === d.activeId)
+      ? d.activeId
+      : data.templates[0]
+        ? data.templates[0].id
+        : null;
   return data;
 }
-const save = () => { store.set('templates', data.templates); store.set('activeId', data.activeId); };
+const save = () => {
+  store.set('templates', data.templates);
+  store.set('activeId', data.activeId);
+};
 
 /** @returns {ButtonTemplate[]} */
 export const templateList = () => data.templates;
@@ -53,18 +68,34 @@ export const activeTemplateId = () => data.activeId;
 /** @param {string|null} id @returns {ButtonTemplate|null} */
 export const getTemplate = (id) => data.templates.find((t) => t.id === id) || null;
 /** @param {string|null} id @returns {ButtonDef[]} */
-export const templateButtons = (id) => { const t = getTemplate(id); return t ? t.buttons : []; };
+export const templateButtons = (id) => {
+  const t = getTemplate(id);
+  return t ? t.buttons : [];
+};
 /** @param {string|null} id */
-export function setActiveTemplate(id) { if (getTemplate(id)) { data.activeId = id; save(); } }
+export function setActiveTemplate(id) {
+  if (getTemplate(id)) {
+    data.activeId = id;
+    save();
+  }
+}
 
 /** @param {string} [name] @returns {ButtonTemplate} */
 export function createTemplate(name) {
-  const tpl = { id: newId('tpl'), name: name || ('Template ' + (data.templates.length + 1)), buttons: [] };
-  data.templates.push(tpl); data.activeId = tpl.id; save();
+  const tpl = { id: newId('tpl'), name: name || 'Template ' + (data.templates.length + 1), buttons: [] };
+  data.templates.push(tpl);
+  data.activeId = tpl.id;
+  save();
   return tpl;
 }
 /** @param {string} id @param {string} name */
-export function renameTemplate(id, name) { const t = getTemplate(id); if (t && name) { t.name = name; save(); } }
+export function renameTemplate(id, name) {
+  const t = getTemplate(id);
+  if (t && name) {
+    t.name = name;
+    save();
+  }
+}
 /** @param {string} id */
 export function removeTemplate(id) {
   data.templates = data.templates.filter((t) => t.id !== id);
@@ -72,4 +103,10 @@ export function removeTemplate(id) {
   save();
 }
 /** Replace a template's buttons (the editor commit). @param {string} id @param {ButtonDef[]} buttons */
-export function setTemplateButtons(id, buttons) { const t = getTemplate(id); if (t) { t.buttons = buttons.map((b) => ({ ...b })); save(); } }
+export function setTemplateButtons(id, buttons) {
+  const t = getTemplate(id);
+  if (t) {
+    t.buttons = buttons.map((b) => ({ ...b }));
+    save();
+  }
+}

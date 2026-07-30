@@ -13,12 +13,17 @@
 /** @type {Map<string, ToolDef>} */
 const reg = new Map();
 /** @type {((id: string, t: ToolDef) => void) | null} */
-let onRegister = null;   // loader hook (Phase 3: user-authored tools)
+let onRegister = null; // loader hook (Phase 3: user-authored tools)
 
 /** @param {((id: string, t: ToolDef) => void) | null} fn */
-export const setRegisterHook = (fn) => { onRegister = fn; };
+export const setRegisterHook = (fn) => {
+  onRegister = fn;
+};
 /** @param {ToolDef} t */
-export const registerTool = (t) => { reg.set(t.id, t); if (onRegister) onRegister(t.id, t); };
+export const registerTool = (t) => {
+  reg.set(t.id, t);
+  if (onRegister) onRegister(t.id, t);
+};
 /** @param {string} id */
 export const unregisterTool = (id) => reg.delete(id);
 /** @param {string} id @returns {ToolDef | undefined} */

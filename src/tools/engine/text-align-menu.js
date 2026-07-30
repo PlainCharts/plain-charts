@@ -20,8 +20,14 @@ let menu = null;
 let away = null;
 
 export function closeTextAlignMenu() {
-  if (away) { document.removeEventListener('pointerdown', away, true); away = null; }
-  if (menu) { menu.remove(); menu = null; }
+  if (away) {
+    document.removeEventListener('pointerdown', away, true);
+    away = null;
+  }
+  if (menu) {
+    menu.remove();
+    menu = null;
+  }
 }
 
 /**
@@ -32,13 +38,22 @@ export function closeTextAlignMenu() {
  */
 export function openTextAlignMenu(engine, id, clientX, clientY) {
   closeTextAlignMenu();
-  const d = /** @type {Drawing | undefined} */ (engine.get(id)); if (!d) return;
+  const d = /** @type {Drawing | undefined} */ (engine.get(id));
+  if (!d) return;
   // tool carries open, author-defined extras (textEnabled, settings.text, …) beyond the shared ToolDef
-  const tool = /** @type {any} */ (getTool(d.tool)); const cfg = tool && tool.settings && tool.settings.text;
+  const tool = /** @type {any} */ (getTool(d.tool));
+  const cfg = tool && tool.settings && tool.settings.text;
   if (!cfg || (tool.textEnabled && !tool.textEnabled(d))) return;
   if (!d.textStyle) {
     const def = cfg.defaults || {};
-    d.textStyle = { color: '#787b86', size: 14, bold: false, italic: false, vAlign: def.vAlign || 'middle', hAlign: def.hAlign || 'center' };
+    d.textStyle = {
+      color: '#787b86',
+      size: 14,
+      bold: false,
+      italic: false,
+      vAlign: def.vAlign || 'middle',
+      hAlign: def.hAlign || 'center',
+    };
   }
   const ts = d.textStyle;
   /** @type {string[]} */
@@ -46,35 +61,52 @@ export function openTextAlignMenu(engine, id, clientX, clientY) {
   /** @type {string[]} */
   const hKeys = (cfg.hAlign || []).map((/** @type {{ key: string }} */ o) => o.key);
 
-  const m = document.createElement('div'); m.className = 'align-pop'; menu = m;
-  const grid = document.createElement('div'); grid.className = 'set-align-grid';
+  const m = document.createElement('div');
+  m.className = 'align-pop';
+  menu = m;
+  const grid = document.createElement('div');
+  grid.className = 'set-align-grid';
   const render = () => {
     grid.innerHTML = '';
-    ['top', 'middle', 'bottom'].forEach((v) => ['left', 'center', 'right'].forEach((h) => {
-      const cell = document.createElement('button'); cell.className = 'set-align-cell'; cell.type = 'button';
-      cell.style.justifyContent = FLEX_H[h]; cell.style.alignItems = FLEX_V[v];
-      const bar = document.createElement('span'); bar.className = 'set-align-bar'; cell.appendChild(bar);
-      if (!vKeys.includes(v) || !hKeys.includes(h)) { cell.classList.add('off'); cell.disabled = true; }
-      else {
-        if (ts.vAlign === v && ts.hAlign === h) cell.classList.add('on');
-        cell.onclick = (e) => {
-          e.stopPropagation();
-          ts.vAlign = v; ts.hAlign = h;
-          render();
-          engine.persist(); engine.liveUpdate(d);
-          closeTextAlignMenu();
-        };
-      }
-      grid.appendChild(cell);
-    }));
+    ['top', 'middle', 'bottom'].forEach((v) =>
+      ['left', 'center', 'right'].forEach((h) => {
+        const cell = document.createElement('button');
+        cell.className = 'set-align-cell';
+        cell.type = 'button';
+        cell.style.justifyContent = FLEX_H[h];
+        cell.style.alignItems = FLEX_V[v];
+        const bar = document.createElement('span');
+        bar.className = 'set-align-bar';
+        cell.appendChild(bar);
+        if (!vKeys.includes(v) || !hKeys.includes(h)) {
+          cell.classList.add('off');
+          cell.disabled = true;
+        } else {
+          if (ts.vAlign === v && ts.hAlign === h) cell.classList.add('on');
+          cell.onclick = (e) => {
+            e.stopPropagation();
+            ts.vAlign = v;
+            ts.hAlign = h;
+            render();
+            engine.persist();
+            engine.liveUpdate(d);
+            closeTextAlignMenu();
+          };
+        }
+        grid.appendChild(cell);
+      }),
+    );
   };
   render();
   m.appendChild(grid);
   document.body.appendChild(m);
 
-  const mw = m.offsetWidth, mh = m.offsetHeight;
+  const mw = m.offsetWidth,
+    mh = m.offsetHeight;
   m.style.left = Math.min(clientX, window.innerWidth - mw - 8) + 'px';
   m.style.top = Math.min(clientY, window.innerHeight - mh - 8) + 'px';
-  away = (e) => { if (menu && !menu.contains(/** @type {Node | null} */ (e.target))) closeTextAlignMenu(); };
+  away = (e) => {
+    if (menu && !menu.contains(/** @type {Node | null} */ (e.target))) closeTextAlignMenu();
+  };
   setTimeout(() => document.addEventListener('pointerdown', /** @type {(e: PointerEvent) => void} */ (away), true), 0);
 }

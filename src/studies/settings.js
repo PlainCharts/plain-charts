@@ -12,7 +12,7 @@ import { SOURCES } from './util.js';
 import { makeDraggable } from '../ui/draggable.js';
 import { strokeSwatch, colorSwatch, textSwatch, closeColorPicker } from '../ui/colorpicker.js';
 import { saveStudyDefaults } from './defaults-store.js';
-import { t as tr } from '../i18n/i18n.js';   // vocabulary lookup (aliased -- `t` is a tab name here; study/input names fall back to English)
+import { t as tr } from '../i18n/i18n.js'; // vocabulary lookup (aliased -- `t` is a tab name here; study/input names fall back to English)
 
 /**
  * The owning pane (host object): `pane.studies` is the app StudyHost, `pane.tickSize` etc. Opaque here.
@@ -28,7 +28,11 @@ let overlay = null;
 
 export function closeStudySettings() {
   closeColorPicker();
-  if (overlay) { if (overlay._onKey) document.removeEventListener('keydown', overlay._onKey); overlay.remove(); overlay = null; }
+  if (overlay) {
+    if (overlay._onKey) document.removeEventListener('keydown', overlay._onKey);
+    overlay.remove();
+    overlay = null;
+  }
 }
 
 /** @param {Pane} pane @param {number} index */
@@ -59,7 +63,7 @@ export function openStudySettings(pane, index) {
   title.textContent = tr(a.study.name);
   head.appendChild(title);
   dlg.appendChild(head);
-  makeDraggable(dlg, head);   // drag the dialog by its header
+  makeDraggable(dlg, head); // drag the dialog by its header
 
   const body = document.createElement('div');
   body.className = 'set-body';
@@ -82,7 +86,9 @@ export function openStudySettings(pane, index) {
 
   overlay.appendChild(dlg);
   document.body.appendChild(overlay);
-  overlay._onKey = (e) => { if (e.key === 'Escape') closeStudySettings(); };   // outside-click no longer closes
+  overlay._onKey = (e) => {
+    if (e.key === 'Escape') closeStudySettings();
+  }; // outside-click no longer closes
   document.addEventListener('keydown', overlay._onKey);
   rerender();
 }
@@ -97,22 +103,39 @@ function renderInputs(pane, index, body) {
   // escape hatch: a study may render a fully custom settings body (full JS/HTML/CSS control) and still
   // get the dialog shell (header, Defaults, Close). Everything below is the declarative path.
   if (a && a.study && typeof a.study.settingsView === 'function') {
-    a.study.settingsView({ pane, index, container: body, params: () => pane.studies.studyAt(index).params,
-      setParam: (/** @type {string} */ k, /** @type {any} */ v) => pane.studies.setParam(index, k, v), rerender: () => renderInputs(pane, index, body) });
+    a.study.settingsView({
+      pane,
+      index,
+      container: body,
+      params: () => pane.studies.studyAt(index).params,
+      setParam: (/** @type {string} */ k, /** @type {any} */ v) => pane.studies.setParam(index, k, v),
+      rerender: () => renderInputs(pane, index, body),
+    });
     return;
   }
   /** @type {StudyInput[]} */
   const inputs = (a && a.study.inputs) || [];
-  if (!inputs.length) { body.appendChild(note(tr('This indicator has no other settings.'))); return; }
+  if (!inputs.length) {
+    body.appendChild(note(tr('This indicator has no other settings.')));
+    return;
+  }
 
-  const visible = inputs.filter((i) => !i.hidden);   // siblings (hidden) still resolved against `inputs`
-  if (!visible.some((i) => i.tab)) { const c = document.createElement('div'); body.appendChild(c); renderRows(pane, index, c, visible, inputs); return; }
+  const visible = inputs.filter((i) => !i.hidden); // siblings (hidden) still resolved against `inputs`
+  if (!visible.some((i) => i.tab)) {
+    const c = document.createElement('div');
+    body.appendChild(c);
+    renderRows(pane, index, c, visible, inputs);
+    return;
+  }
 
   /** @param {StudyInput} i */
   const tabOf = (i) => i.tab || 'Inputs';
   /** @type {string[]} */
   const order = [];
-  visible.forEach((/** @type {StudyInput} */ i) => { const t = tabOf(i); if (!order.includes(t)) order.push(t); });
+  visible.forEach((/** @type {StudyInput} */ i) => {
+    const t = tabOf(i);
+    if (!order.includes(t)) order.push(t);
+  });
 
   const bar = document.createElement('div');
   bar.className = 'set-tabs';
@@ -123,7 +146,13 @@ function renderInputs(pane, index, body) {
   const show = (t) => {
     body._activeTab = t;
     order.forEach((n) => tabEls[n].classList.toggle('active', n === t));
-    renderRows(pane, index, content, visible.filter((i) => tabOf(i) === t), inputs);
+    renderRows(
+      pane,
+      index,
+      content,
+      visible.filter((i) => tabOf(i) === t),
+      inputs,
+    );
   };
   order.forEach((t) => {
     const el = document.createElement('div');
@@ -134,7 +163,7 @@ function renderInputs(pane, index, body) {
     bar.appendChild(el);
   });
   body.append(bar, content);
-  show(order.includes(/** @type {string} */ (body._activeTab)) ? /** @type {string} */ (body._activeTab) : order[0]);   // keep the tab across rerenders
+  show(order.includes(/** @type {string} */ (body._activeTab)) ? /** @type {string} */ (body._activeTab) : order[0]); // keep the tab across rerenders
 }
 
 // Render a list of input rows into `container`. Layout capabilities (all opt-in, per input):
@@ -151,9 +180,12 @@ function renderInputs(pane, index, body) {
 function renderRows(pane, index, container, rows, all) {
   container.innerHTML = '';
   /** @type {{ el: HTMLElement, showWhen: any, enableWhen: any }[]} */
-  const registry = [];   // { el, showWhen, enableWhen } re-evaluated by refresh() -- row OR inline cell
+  const registry = []; // { el, showWhen, enableWhen } re-evaluated by refresh() -- row OR inline cell
   /** @param {HTMLElement | null | undefined} el @param {StudyInput} ip */
-  const register = (el, ip) => { if (el && ip && (ip.showWhen || ip.enableWhen)) registry.push({ el, showWhen: ip.showWhen, enableWhen: ip.enableWhen }); };
+  const register = (el, ip) => {
+    if (el && ip && (ip.showWhen || ip.enableWhen))
+      registry.push({ el, showWhen: ip.showWhen, enableWhen: ip.enableWhen });
+  };
   const refresh = () => {
     const P = pane.studies.studyAt(index).params;
     for (const r of registry) {
@@ -168,12 +200,27 @@ function renderRows(pane, index, container, rows, all) {
   const done = new Set();
   rows.forEach((inp) => {
     if (done.has(inp.key)) return;
-    if (inp.group && inp.group !== group) { group = inp.group; const h = document.createElement('div'); h.className = 'std-group'; h.textContent = inp.group; container.appendChild(h); }
+    if (inp.group && inp.group !== group) {
+      group = inp.group;
+      const h = document.createElement('div');
+      h.className = 'std-group';
+      h.textContent = inp.group;
+      container.appendChild(h);
+    }
 
     let el;
-    if (inp.type === 'level') { el = buildLevelRow(pane, index, inp, refresh); register(el, inp); }
-    else if (inp.inline) { const members = rows.filter((x) => x.inline === inp.inline); members.forEach((m) => done.add(m.key)); el = buildInlineRow(pane, index, members, refresh, register); }   // registers each cell
-    else { el = buildRow(pane, index, inp, all, refresh); register(el, inp); }
+    if (inp.type === 'level') {
+      el = buildLevelRow(pane, index, inp, refresh);
+      register(el, inp);
+    } else if (inp.inline) {
+      const members = rows.filter((x) => x.inline === inp.inline);
+      members.forEach((m) => done.add(m.key));
+      el = buildInlineRow(pane, index, members, refresh, register);
+    } // registers each cell
+    else {
+      el = buildRow(pane, index, inp, all, refresh);
+      register(el, inp);
+    }
 
     container.appendChild(el);
   });
@@ -186,21 +233,33 @@ function buildRow(pane, index, inp, all, refresh) {
   const a = pane.studies.studyAt(index);
   const row = document.createElement('div');
   row.className = 'set-row std-in';
-  const left = document.createElement('div'); left.className = 'set-row-left';
+  const left = document.createElement('div');
+  left.className = 'set-row-left';
   const field = buildField(pane, index, inp, a.params[inp.key], refresh);
   if (inp.width && field && field.style) field.style.width = sizePx(inp.width);
   if (inp.type === 'bool') {
-    const sp = document.createElement('span'); sp.textContent = tr(nameOf(inp, a.params));
-    left.append(field, sp); row.appendChild(left);
-    const rights = inp.right == null ? [] : (Array.isArray(inp.right) ? inp.right : [inp.right]);
+    const sp = document.createElement('span');
+    sp.textContent = tr(nameOf(inp, a.params));
+    left.append(field, sp);
+    row.appendChild(left);
+    const rights = inp.right == null ? [] : Array.isArray(inp.right) ? inp.right : [inp.right];
     if (rights.length) {
-      const ctr = document.createElement('div'); ctr.className = 'set-controls';
-      rights.forEach((k) => { const sib = all.find((x) => x.key === k); if (sib) { const f = buildField(pane, index, sib, a.params[sib.key], refresh); if (sib.width && f && f.style) f.style.width = sizePx(sib.width); withBadge(ctr, f, sib, pane); } });
+      const ctr = document.createElement('div');
+      ctr.className = 'set-controls';
+      rights.forEach((k) => {
+        const sib = all.find((x) => x.key === k);
+        if (sib) {
+          const f = buildField(pane, index, sib, a.params[sib.key], refresh);
+          if (sib.width && f && f.style) f.style.width = sizePx(sib.width);
+          withBadge(ctr, f, sib, pane);
+        }
+      });
       row.appendChild(ctr);
     }
   } else {
     left.textContent = tr(nameOf(inp, a.params));
-    const ctr = document.createElement('div'); ctr.className = 'set-controls';
+    const ctr = document.createElement('div');
+    ctr.className = 'set-controls';
     withBadge(ctr, field, inp, pane);
     row.append(left, ctr);
   }
@@ -215,15 +274,19 @@ function buildInlineRow(pane, index, members, refresh, register) {
   const row = document.createElement('div');
   row.className = 'set-row std-in set-inline';
   members.forEach((inp) => {
-    const cell = document.createElement('div'); cell.className = 'set-inline-cell';
+    const cell = document.createElement('div');
+    cell.className = 'set-inline-cell';
     const field = buildField(pane, index, inp, a.params[inp.key], refresh);
     if (inp.width && field && field.style) field.style.width = sizePx(inp.width);
     const labelText = inp.label != null ? inp.label : nameOf(inp, a.params);
     if (!inp.noLabel && labelText) {
-      const lbl = document.createElement('span'); lbl.className = 'lbl'; lbl.textContent = labelText;
-      if (inp.type === 'bool') cell.append(field, lbl); else cell.append(lbl, field);
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = labelText;
+      if (inp.type === 'bool') cell.append(field, lbl);
+      else cell.append(lbl, field);
     } else cell.appendChild(field);
-    if (register) register(cell, inp);   // per-cell showWhen/enableWhen
+    if (register) register(cell, inp); // per-cell showWhen/enableWhen
     row.appendChild(cell);
   });
   return row;
@@ -247,7 +310,8 @@ const sizePx = (w) => (typeof w === 'number' ? w + 'px' : w);
 // Session toggle that reads "Session 1: New York". Resolved fresh each time the tab/panel renders.
 // `name` is declared as a string on StudyInput, but a study may pass a fn(params)->string for a live label.
 /** @param {StudyInput} inp @param {Record<string, any>} params @returns {string} */
-const nameOf = (inp, params) => (typeof inp.name === 'function' ? /** @type {any} */ (inp.name)(params) : /** @type {string} */ (inp.name));
+const nameOf = (inp, params) =>
+  typeof inp.name === 'function' ? /** @type {any} */ (inp.name)(params) : /** @type {string} */ (inp.name);
 
 // one guide-line row (the `level` control)
 /** @param {Pane} pane @param {number} index @param {StudyInput} inp @param {() => void} refresh @returns {HTMLElement} */
@@ -256,7 +320,10 @@ function buildLevelRow(pane, index, inp, refresh) {
   /** @returns {Record<string, any>} */
   const cur = () => params[inp.key] || inp.default || {};
   /** @param {Record<string, any>} patch */
-  const set = (patch) => { pane.studies.setParam(index, inp.key, { ...cur(), ...patch }); if (refresh) refresh(); };
+  const set = (patch) => {
+    pane.studies.setParam(index, inp.key, { ...cur(), ...patch });
+    if (refresh) refresh();
+  };
 
   const row = document.createElement('div');
   row.className = 'set-row std-in';
@@ -279,7 +346,10 @@ function buildLevelRow(pane, index, inp, refresh) {
   if (inp.min != null) val.min = /** @type {any} */ (inp.min);
   if (inp.max != null) val.max = /** @type {any} */ (inp.max);
   if (inp.step != null) val.step = /** @type {any} */ (inp.step);
-  val.oninput = () => { const v = parseFloat(val.value); if (!Number.isNaN(v)) set({ value: v }); };
+  val.oninput = () => {
+    const v = parseFloat(val.value);
+    if (!Number.isNaN(v)) set({ value: v });
+  };
   const sw = strokeSwatch({
     color: { get: () => cur().color, set: (/** @type {any} */ c) => set({ color: c }) },
     width: { get: () => cur().width, set: (/** @type {any} */ w) => set({ width: w }) },
@@ -293,14 +363,23 @@ function buildLevelRow(pane, index, inp, refresh) {
 /** @param {Pane} pane @param {number} index @param {StudyInput} inp @param {any} current @param {() => void} refresh @returns {HTMLElement} */
 function buildField(pane, index, inp, current, refresh) {
   /** @param {any} v */
-  const set = (v) => { pane.studies.setParam(index, inp.key, v); if (refresh) refresh(); };
+  const set = (v) => {
+    pane.studies.setParam(index, inp.key, v);
+    if (refresh) refresh();
+  };
 
   // a color input may carry `stroke: { width, lineStyle }` naming sibling input keys, so
   // colour + thickness + dash render as one stroke swatch (those siblings declare hidden:true).
   if (inp.type === 'color' && inp.stroke) {
     const params = pane.studies.studyAt(index).params;
     /** @param {string} key */
-    const bind = (key) => ({ get: () => params[key], set: (/** @type {any} */ v) => { pane.studies.setParam(index, key, v); if (refresh) refresh(); } });
+    const bind = (key) => ({
+      get: () => params[key],
+      set: (/** @type {any} */ v) => {
+        pane.studies.setParam(index, key, v);
+        if (refresh) refresh();
+      },
+    });
     return strokeSwatch({
       color: bind(inp.key),
       width: inp.stroke.width ? bind(inp.stroke.width) : null,
@@ -313,7 +392,10 @@ function buildField(pane, index, inp, current, refresh) {
     /** @returns {Record<string, any>} */
     const cur = () => params[inp.key] || inp.default || {};
     /** @param {Record<string, any>} patch */
-    const setP = (patch) => { pane.studies.setParam(index, inp.key, { ...cur(), ...patch }); if (refresh) refresh(); };
+    const setP = (patch) => {
+      pane.studies.setParam(index, inp.key, { ...cur(), ...patch });
+      if (refresh) refresh();
+    };
     return strokeSwatch({
       color: { get: () => cur().color, set: (/** @type {any} */ c) => setP({ color: c }) },
       width: { get: () => cur().width, set: (/** @type {any} */ w) => setP({ width: w }) },
@@ -325,7 +407,13 @@ function buildField(pane, index, inp, current, refresh) {
   if (inp.type === 'color' && inp.text) {
     const params = pane.studies.studyAt(index).params;
     /** @param {string} key */
-    const bind = (key) => ({ get: () => params[key], set: (/** @type {any} */ v) => { pane.studies.setParam(index, key, v); if (refresh) refresh(); } });
+    const bind = (key) => ({
+      get: () => params[key],
+      set: (/** @type {any} */ v) => {
+        pane.studies.setParam(index, key, v);
+        if (refresh) refresh();
+      },
+    });
     return textSwatch({
       color: bind(inp.key),
       size: inp.text.size ? bind(inp.text.size) : null,
@@ -345,13 +433,13 @@ function buildField(pane, index, inp, current, refresh) {
     return f;
   }
   if (inp.type === 'select' || inp.type === 'source') {
-    const opts = inp.type === 'source' ? SOURCES : (inp.options || []);
+    const opts = inp.type === 'source' ? SOURCES : inp.options || [];
     return mkSelect(opts, current != null ? current : inp.default, set);
   }
   if (inp.type === 'text') {
     const f = document.createElement('input');
     f.type = 'text';
-    f.value = current != null ? current : (inp.default || '');
+    f.value = current != null ? current : inp.default || '';
     if (inp.placeholder) f.placeholder = inp.placeholder;
     f.oninput = () => set(f.value);
     return f;
@@ -359,18 +447,43 @@ function buildField(pane, index, inp, current, refresh) {
   // tz: a compact UTC-offset stepper (integer hours, -12..14) -- the app's own timezone control
   // instead of a 25-item legacy dropdown. Stores a NUMBER (hours east of UTC; 0 = UTC).
   if (inp.type === 'tz') {
-    const wrap = document.createElement('span'); wrap.className = 'set-tz';
+    const wrap = document.createElement('span');
+    wrap.className = 'set-tz';
     // DOM min/max/step/value are string attributes; assign the numbers as-is (the browser coerces).
-    const num = document.createElement('input'); num.type = 'number'; num.min = /** @type {any} */ (-12); num.max = /** @type {any} */ (14); num.step = /** @type {any} */ (1);
+    const num = document.createElement('input');
+    num.type = 'number';
+    num.min = /** @type {any} */ (-12);
+    num.max = /** @type {any} */ (14);
+    num.step = /** @type {any} */ (1);
     // tolerate a legacy 'UTC-4'/'UTC+2'/'UTC' string (older saved params) -> show its numeric hours
     /** @param {any} v @returns {number|null} */
-    const coerce = (v) => { if (typeof v === 'number') return v; const m = /^UTC([+-]\d+)?$/.exec(String(v || '').trim()); return m ? (m[1] ? parseInt(m[1], 10) : 0) : null; };
-    const cv = coerce(current); num.value = /** @type {any} */ (cv != null ? cv : (inp.default != null ? inp.default : 0));
+    const coerce = (v) => {
+      if (typeof v === 'number') return v;
+      const m = /^UTC([+-]\d+)?$/.exec(String(v || '').trim());
+      return m ? (m[1] ? parseInt(m[1], 10) : 0) : null;
+    };
+    const cv = coerce(current);
+    num.value = /** @type {any} */ (cv != null ? cv : inp.default != null ? inp.default : 0);
     /** @param {number} v */
-    const setH = (v) => { const r = Math.round(v); const c = Number.isNaN(r) ? 0 : Math.max(-12, Math.min(14, r)); num.value = /** @type {any} */ (c); set(c); };
+    const setH = (v) => {
+      const r = Math.round(v);
+      const c = Number.isNaN(r) ? 0 : Math.max(-12, Math.min(14, r));
+      num.value = /** @type {any} */ (c);
+      set(c);
+    };
     /** @param {string} t @param {number} d */
-    const step = (t, d) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'set-tz-step'; b.textContent = t; b.onclick = () => setH((parseInt(num.value, 10) || 0) + d); return b; };
-    num.onchange = () => { const v = parseInt(num.value, 10); if (!Number.isNaN(v)) setH(v); };
+    const step = (t, d) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'set-tz-step';
+      b.textContent = t;
+      b.onclick = () => setH((parseInt(num.value, 10) || 0) + d);
+      return b;
+    };
+    num.onchange = () => {
+      const v = parseInt(num.value, 10);
+      if (!Number.isNaN(v)) setH(v);
+    };
     wrap.append(step('-', -1), num, step('+', 1));
     return wrap;
   }
@@ -381,7 +494,10 @@ function buildField(pane, index, inp, current, refresh) {
     if (inp.min != null) f.min = /** @type {any} */ (inp.min);
     if (inp.max != null) f.max = /** @type {any} */ (inp.max);
     if (inp.step != null) f.step = /** @type {any} */ (inp.step);
-    f.oninput = () => { const v = parseFloat(f.value); if (!Number.isNaN(v)) set(v); };
+    f.oninput = () => {
+      const v = parseFloat(f.value);
+      if (!Number.isNaN(v)) set(v);
+    };
     return f;
   }
   // number (default)
@@ -391,7 +507,10 @@ function buildField(pane, index, inp, current, refresh) {
   if (inp.min != null) f.min = /** @type {any} */ (inp.min);
   if (inp.max != null) f.max = /** @type {any} */ (inp.max);
   if (inp.step != null) f.step = /** @type {any} */ (inp.step);
-  f.oninput = () => { const v = parseFloat(f.value); if (!Number.isNaN(v)) set(v); };
+  f.oninput = () => {
+    const v = parseFloat(f.value);
+    if (!Number.isNaN(v)) set(v);
+  };
   return f;
 }
 
@@ -400,7 +519,7 @@ function buildField(pane, index, inp, current, refresh) {
 /** @param {Pane} pane @param {number} index @param {() => void} rerender @returns {HTMLElement} */
 function buildDefaultsMenu(pane, index, rerender) {
   const wrap = document.createElement('div');
-  wrap.style.marginRight = 'auto';   // push it to the LEFT of the footer, Close stays on the right
+  wrap.style.marginRight = 'auto'; // push it to the LEFT of the footer, Close stays on the right
   wrap.style.position = 'relative';
 
   const btn = document.createElement('button');
@@ -409,26 +528,60 @@ function buildDefaultsMenu(pane, index, rerender) {
   const menu = document.createElement('div');
   menu.className = 'std-defaults-menu';
   Object.assign(menu.style, {
-    position: 'absolute', bottom: '100%', left: '0', marginBottom: '4px', minWidth: '180px',
-    background: 'var(--panel)', border: '1px solid var(--bd)', borderRadius: '6px', padding: '4px',
-    boxShadow: '0 6px 24px rgba(0,0,0,0.3)', display: 'none', zIndex: '5',
+    position: 'absolute',
+    bottom: '100%',
+    left: '0',
+    marginBottom: '4px',
+    minWidth: '180px',
+    background: 'var(--panel)',
+    border: '1px solid var(--bd)',
+    borderRadius: '6px',
+    padding: '4px',
+    boxShadow: '0 6px 24px rgba(0,0,0,0.3)',
+    display: 'none',
+    zIndex: '5',
   });
-  const close = () => { menu.style.display = 'none'; };
+  const close = () => {
+    menu.style.display = 'none';
+  };
 
   /** @param {string} label @param {() => void} fn */
   const item = (label, fn) => {
-    const d = document.createElement('div'); d.className = 'menu-action'; d.textContent = tr(label);
-    d.onclick = () => { close(); fn(); };
+    const d = document.createElement('div');
+    d.className = 'menu-action';
+    d.textContent = tr(label);
+    d.onclick = () => {
+      close();
+      fn();
+    };
     return d;
   };
-  menu.appendChild(item('Reset settings', () => { pane.studies.resetDefaults(index); rerender(); }));
-  menu.appendChild(item('Save as default', () => {
-    const a = pane.studies.studyAt(index);
-    if (a) { saveStudyDefaults(a.study.id, a.params, a.style); btn.textContent = tr('Saved') + ' ✓'; setTimeout(() => { btn.textContent = tr('Defaults') + ' ▾'; }, 1200); }
-  }));
+  menu.appendChild(
+    item('Reset settings', () => {
+      pane.studies.resetDefaults(index);
+      rerender();
+    }),
+  );
+  menu.appendChild(
+    item('Save as default', () => {
+      const a = pane.studies.studyAt(index);
+      if (a) {
+        saveStudyDefaults(a.study.id, a.params, a.style);
+        btn.textContent = tr('Saved') + ' ✓';
+        setTimeout(() => {
+          btn.textContent = tr('Defaults') + ' ▾';
+        }, 1200);
+      }
+    }),
+  );
 
-  btn.onclick = (e) => { e.stopPropagation(); menu.style.display = (menu.style.display === 'block') ? 'none' : 'block'; };
-  document.addEventListener('click', (e) => { if (!wrap.contains(/** @type {Node | null} */ (e.target))) close(); });
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  };
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(/** @type {Node | null} */ (e.target))) close();
+  });
 
   wrap.append(btn, menu);
   return wrap;
@@ -454,9 +607,13 @@ function barsToDuration(count, pane) {
   const sec = currentBarSeconds(pane);
   if (!sec || !count || count < 1) return '';
   let t = Math.round(count * sec);
-  const D = 86400, H = 3600, M = 60;
-  const d = Math.floor(t / D); t -= d * D;
-  const h = Math.floor(t / H); t -= h * H;
+  const D = 86400,
+    H = 3600,
+    M = 60;
+  const d = Math.floor(t / D);
+  t -= d * D;
+  const h = Math.floor(t / H);
+  t -= h * H;
   const m = Math.floor(t / M);
   /** @type {string[]} */
   const parts = [];
@@ -473,7 +630,9 @@ function withBadge(ctr, field, inp, pane) {
   const badge = document.createElement('span');
   badge.className = 'std-tf-badge';
   badge.style.cssText = 'margin-left:8px;font-size:11px;opacity:0.6;white-space:nowrap';
-  const upd = () => { badge.textContent = barsToDuration(parseFloat(field.value), pane); };
+  const upd = () => {
+    badge.textContent = barsToDuration(parseFloat(field.value), pane);
+  };
   field.addEventListener('input', upd);
   upd();
   ctr.appendChild(badge);
@@ -485,7 +644,8 @@ function mkSelect(opts, value, onChange) {
   const f = document.createElement('select');
   opts.forEach((o) => {
     const op = document.createElement('option');
-    op.value = o.key; op.textContent = tr(o.name);
+    op.value = o.key;
+    op.textContent = tr(o.name);
     f.appendChild(op);
   });
   f.value = value;

@@ -15,14 +15,30 @@ export function findNode(list, id) {
   for (let i = 0; i < list.length; i++) {
     const n = list[i];
     if (n.id === id) return { node: n, list, index: i };
-    if (n.type === 'folder') { const r = findNode(n.children || [], id); if (r) return r; }
+    if (n.type === 'folder') {
+      const r = findNode(n.children || [], id);
+      if (r) return r;
+    }
   }
   return null;
 }
 /** @param {TreeNode[]} tree @param {string} id */
-export function removeNode(tree, id) { const r = findNode(tree, id); if (!r) return null; r.list.splice(r.index, 1); return r.node; }
+export function removeNode(tree, id) {
+  const r = findNode(tree, id);
+  if (!r) return null;
+  r.list.splice(r.index, 1);
+  return r.node;
+}
 /** @param {TreeNode} folder @param {string} id */
-export function inSubtree(folder, id) { return !!findNode(folder.children || [], id); }
+export function inSubtree(folder, id) {
+  return !!findNode(folder.children || [], id);
+}
 // all drawing ids inside a folder (recursively)
 /** @param {TreeNode} node @param {string[]=} out @returns {string[]} */
-export function folderDrawingIds(node, out = []) { (node.children || []).forEach((n) => { if (n.type === 'folder') folderDrawingIds(n, out); else out.push(n.id); }); return out; }
+export function folderDrawingIds(node, out = []) {
+  (node.children || []).forEach((n) => {
+    if (n.type === 'folder') folderDrawingIds(n, out);
+    else out.push(n.id);
+  });
+  return out;
+}

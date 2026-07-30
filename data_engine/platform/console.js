@@ -15,30 +15,62 @@ import { channel } from './channel.js';
  * @typedef {{ t?: number, level?: string, cat?: string, src?: string, dir?: ''|'out'|'in', msg?: * }} ConsolePost
  */
 
-const WIN = (() => { try { return new URLSearchParams(location.search).get('win') || 'w'; } catch (_) { return 'w'; } })();
-const now = () => { try { return Date.now(); } catch (_) { return 0; } };
+const WIN = (() => {
+  try {
+    return new URLSearchParams(location.search).get('win') || 'w';
+  } catch (_) {
+    return 'w';
+  }
+})();
+const now = () => {
+  try {
+    return Date.now();
+  } catch (_) {
+    return 0;
+  }
+};
 /** @param {*} m @returns {string} */
-const asText = (m) => (typeof m === 'string' ? m : (() => { try { return JSON.stringify(m); } catch (_) { return String(m); } })());
+const asText = (m) =>
+  typeof m === 'string'
+    ? m
+    : (() => {
+        try {
+          return JSON.stringify(m);
+        } catch (_) {
+          return String(m);
+        }
+      })();
 
 export function makeConsole() {
   /** @type {import('./channel.js').Channel<ConsoleEntry>} */
   const ch = channel('console', { retain: 2000 });
   /** @param {ConsolePost} [e] */
-  const post = (e = {}) => ch.post({ t: e.t || now(), level: e.level || 'info', cat: e.cat || 'journal', src: e.src || WIN, dir: e.dir === 'out' || e.dir === 'in' ? e.dir : '', msg: e.msg == null ? '' : asText(e.msg) });
+  const post = (e = {}) =>
+    ch.post({
+      t: e.t || now(),
+      level: e.level || 'info',
+      cat: e.cat || 'journal',
+      src: e.src || WIN,
+      dir: e.dir === 'out' || e.dir === 'in' ? e.dir : '',
+      msg: e.msg == null ? '' : asText(e.msg),
+    });
 
   // a scoped writer bound to a source + category — e.g. platform.console.scoped('order-ticket', 'addon')
   /** @param {string} src @param {string} [cat] */
   const scoped = (src, cat = 'addon') => {
     /** @param {string} level */
-    const w = (level) => /** @param {...*} m */ (...m) => post({ level, cat, src, msg: m.map(asText).join(' ') });
+    const w =
+      (level) =>
+      /** @param {...*} m */ (...m) =>
+        post({ level, cat, src, msg: m.map(asText).join(' ') });
     return { log: w('info'), info: w('info'), warn: w('warn'), error: w('error') };
   };
 
   return {
-    post,                          // low-level: post({ level, cat, src, msg })
-    scoped,                        // scoped writer for a producer
-    subscribe: ch.subscribe,       // (onMsg, onReset) -> unsubscribe
-    history: ch.history,           // retained entries (this window)
-    clear: ch.clear,               // wipe everywhere
+    post, // low-level: post({ level, cat, src, msg })
+    scoped, // scoped writer for a producer
+    subscribe: ch.subscribe, // (onMsg, onReset) -> unsubscribe
+    history: ch.history, // retained entries (this window)
+    clear: ch.clear, // wipe everywhere
   };
 }

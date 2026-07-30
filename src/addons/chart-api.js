@@ -57,33 +57,69 @@ import { activePrimitiveId } from '../chart/order-primitives-config.js';
 /** @param {((cleanup: () => void) => void)=} registerCleanup */
 export function makeChartApi(registerCleanup) {
   /** @type {Set<LineHandle>} */
-  const lines = new Set();     // price-line handles this addon created (auto-removed on close)
+  const lines = new Set(); // price-line handles this addon created (auto-removed on close)
   /** @type {Set<ThreadHandle>} */
-  const threads = new Set();   // vline+bead handles (auto-removed on close)
+  const threads = new Set(); // vline+bead handles (auto-removed on close)
   /** @type {Set<import('../chart/order-view/primitive-contract.js').OrderViewInstance>} */
-  const views = new Set();     // position-view handles (the standard order/position view; auto-removed on close)
+  const views = new Set(); // position-view handles (the standard order/position view; auto-removed on close)
   /** @type {Array<() => void>} */
-  const subs = [];             // bus unsubscribers
+  const subs = []; // bus unsubscribers
   /** @param {string} type @param {(detail: any) => void} fn */
-  const on = (type, fn) => { subs.push(bus.on(type, fn)); };
+  const on = (type, fn) => {
+    subs.push(bus.on(type, fn));
+  };
   /** @returns {Pane} */
   const pane = () => getActivePane();
 
   const api = {
     // ---- read the active chart ----
-    symbol: () => { const p = pane(); return p ? p.symbol : null; },
+    symbol: () => {
+      const p = pane();
+      return p ? p.symbol : null;
+    },
     // the active chart's broker id (null = the app's default/active broker) — so an addon can route
     // orders to the same place the chart's data comes from
-    broker: () => { const p = pane(); return p ? p.broker : null; },
-    timeframe: () => { const p = pane(); return p ? p.tfId : null; },
-    decimals: () => { const p = pane(); return p ? p.priceDecimals : null; },
+    broker: () => {
+      const p = pane();
+      return p ? p.broker : null;
+    },
+    timeframe: () => {
+      const p = pane();
+      return p ? p.tfId : null;
+    },
+    decimals: () => {
+      const p = pane();
+      return p ? p.priceDecimals : null;
+    },
     // visible time window as { from, to } (epoch seconds), or null if not ready
-    visibleRange: () => { const p = pane(); if (!p) return null; try { return p.chart.timeAxis().timeWindow(); } catch (_) { return null; } },
+    visibleRange: () => {
+      const p = pane();
+      if (!p) return null;
+      try {
+        return p.chart.timeAxis().timeWindow();
+      } catch (_) {
+        return null;
+      }
+    },
     // coordinate <-> value helpers (for custom overlays drawn over the chart)
     /** @param {number} y */
-    priceAt: (y) => { const p = pane(); try { return p ? p.series.yToPrice(y) : null; } catch (_) { return null; } },
+    priceAt: (y) => {
+      const p = pane();
+      try {
+        return p ? p.series.yToPrice(y) : null;
+      } catch (_) {
+        return null;
+      }
+    },
     /** @param {number} x */
-    timeAt: (x) => { const p = pane(); try { return p ? p.chart.timeAxis().xToTime(x) : null; } catch (_) { return null; } },
+    timeAt: (x) => {
+      const p = pane();
+      try {
+        return p ? p.chart.timeAxis().xToTime(x) : null;
+      } catch (_) {
+        return null;
+      }
+    },
     // every open chart in this window (read-only summary)
     panes: () => getAllPanes().map((/** @type {Pane} */ p) => ({ symbol: p.symbol, timeframe: p.tfId })),
 
@@ -98,7 +134,18 @@ export function makeChartApi(registerCleanup) {
     onActiveChange: (cb) => on('pane:active', () => cb({ symbol: api.symbol(), timeframe: api.timeframe() })),
     // fires when the active chart's symbol changes (covers both switching panes and changing a pane's symbol)
     /** @param {(symbol: any) => void} cb */
-    onSymbolChange: (cb) => { let last = api.symbol(); const h = () => { const s = api.symbol(); if (s !== last) { last = s; cb(s); } }; on('pane:changed', h); on('pane:active', h); },
+    onSymbolChange: (cb) => {
+      let last = api.symbol();
+      const h = () => {
+        const s = api.symbol();
+        if (s !== last) {
+          last = s;
+          cb(s);
+        }
+      };
+      on('pane:changed', h);
+      on('pane:active', h);
+    },
 
     // ---- draw on the active chart ----
     // horizontal price line (entry / stop / target / any level). Returns a handle the addon can
@@ -112,7 +159,11 @@ export function makeChartApi(registerCleanup) {
       const h = createPriceLine(pane(), opts);
       if (!h) return null;
       lines.add(h);
-      const orig = h.remove; h.remove = () => { orig(); lines.delete(h); };   // auto-clear bookkeeping on close
+      const orig = h.remove;
+      h.remove = () => {
+        orig();
+        lines.delete(h);
+      }; // auto-clear bookkeeping on close
       return h;
     },
     // ---- a VLINE with BEADS on it (order levels, alerts, …) ----
@@ -130,7 +181,11 @@ export function makeChartApi(registerCleanup) {
       const h = createThread(pane(), opts);
       if (!h) return null;
       threads.add(h);
-      const orig = h.remove; h.remove = () => { orig(); threads.delete(h); };   // auto-clear bookkeeping on close
+      const orig = h.remove;
+      h.remove = () => {
+        orig();
+        threads.delete(h);
+      }; // auto-clear bookkeeping on close
       return h;
     },
     // ---- the STANDARD position/order view (the SAME primitive the app draws) ----
@@ -151,12 +206,20 @@ export function makeChartApi(registerCleanup) {
       const h = prim ? prim.create(pane(), opts) : null;
       if (!h) return null;
       views.add(h);
-      const orig = h.remove; h.remove = () => { orig(); views.delete(h); };   // auto-clear bookkeeping on close
+      const orig = h.remove;
+      h.remove = () => {
+        orig();
+        views.delete(h);
+      }; // auto-clear bookkeeping on close
       return h;
     },
 
     // remove every drawing this addon made
-    clear: () => { [...lines].forEach((h) => h.remove()); [...threads].forEach((h) => h.remove()); [...views].forEach((h) => h.remove()); },
+    clear: () => {
+      [...lines].forEach((h) => h.remove());
+      [...threads].forEach((h) => h.remove());
+      [...views].forEach((h) => h.remove());
+    },
 
     // composite every pane's ON-SCREEN canvases (candles, axes, AND our drawings/alerts/studies)
     // into one HTMLCanvasElement — exactly what's painted. (chart.snapshot() omits the
@@ -173,18 +236,31 @@ export function makeChartApi(registerCleanup) {
       ctx.scale(dpr, dpr);
       const ps = getAllPanes();
       const bg = (ps[0] && ps[0].settings && ps[0].settings.canvas && ps[0].settings.canvas.background) || '#0e0e11';
-      ctx.fillStyle = bg; ctx.fillRect(0, 0, cRect.width, cRect.height);
-      ps.forEach((/** @type {Pane} */ p) => p.el.querySelectorAll('canvas').forEach((/** @type {HTMLCanvasElement} */ cv) => {
-        const r = cv.getBoundingClientRect();
-        if (r.width === 0 || r.height === 0) return;
-        try { ctx.drawImage(cv, r.left - cRect.left, r.top - cRect.top, r.width, r.height); } catch (_) {}
-      }));
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, cRect.width, cRect.height);
+      ps.forEach((/** @type {Pane} */ p) =>
+        p.el.querySelectorAll('canvas').forEach((/** @type {HTMLCanvasElement} */ cv) => {
+          const r = cv.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) return;
+          try {
+            ctx.drawImage(cv, r.left - cRect.left, r.top - cRect.top, r.width, r.height);
+          } catch (_) {}
+        }),
+      );
       return out;
     },
   };
 
   if (typeof registerCleanup === 'function') {
-    registerCleanup(() => { api.clear(); subs.forEach((u) => { try { u(); } catch (_) {} }); subs.length = 0; });
+    registerCleanup(() => {
+      api.clear();
+      subs.forEach((u) => {
+        try {
+          u();
+        } catch (_) {}
+      });
+      subs.length = 0;
+    });
   }
   return api;
 }

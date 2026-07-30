@@ -31,7 +31,11 @@ export function registerCommand(def) {
   if (!def || !def.id) throw new Error('command needs an id');
   if (typeof def.handler !== 'function') throw new Error('command ' + def.id + ' needs a handler');
   reg.set(def.id, def);
-  listeners.forEach((fn) => { try { fn(def.id); } catch (_) {} });
+  listeners.forEach((fn) => {
+    try {
+      fn(def.id);
+    } catch (_) {}
+  });
 }
 
 /** @param {string} id @returns {CommandDef | undefined} */
@@ -42,7 +46,10 @@ export const listCommands = () => [...reg.values()];
 export const hasCommand = (id) => reg.has(id);
 
 /** Subscribe to registrations (fires with the id). Returns an unsubscribe fn. @param {(id: string) => void} fn */
-export function onDidRegister(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+export function onDidRegister(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
 
 /**
  * Run a command by id. Throws on an unknown id (a trigger pointing at a name that

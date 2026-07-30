@@ -20,12 +20,12 @@ import { createStore } from '../../store.js';
 /** @typedef {{ list: Layer[], active: string }} LayerSet */
 
 /** @type {Map<string, Drawing[]>} */
-const layout = new Map();   // symbol -> Drawing[]   (current tab)
+const layout = new Map(); // symbol -> Drawing[]   (current tab)
 /** @type {Map<string, Drawing[]>} */
-const global = new Map();   // symbol -> Drawing[]   (all tabs)
+const global = new Map(); // symbol -> Drawing[]   (all tabs)
 /** @type {Map<string, LayerSet>} */
-const layers = new Map();   // symbol -> { list:[{id,name,hidden,locked,nodes}], active }  (per symbol)
-const globalStore = createStore('/api/synced-drawings', {});   // { symbol: Drawing[] }
+const layers = new Map(); // symbol -> { list:[{id,name,hidden,locked,nodes}], active }  (per symbol)
+const globalStore = createStore('/api/synced-drawings', {}); // { symbol: Drawing[] }
 
 /** @param {string} scope @returns {Map<string, Drawing[]>} */
 const bucket = (scope) => (scope === 'global' ? global : layout);
@@ -58,7 +58,7 @@ export function add(scope, symbol, d) {
   d.sync = scope;
   const m = bucket(scope);
   if (!m.has(symbol)) m.set(symbol, []);
-  (/** @type {Drawing[]} */ (m.get(symbol))).push(d);
+  /** @type {Drawing[]} */ (m.get(symbol)).push(d);
   persist(scope, symbol);
   emit();
 }
@@ -67,14 +67,20 @@ export function add(scope, symbol, d) {
 function detach(id) {
   const f = find(id);
   if (!f) return null;
-  bucket(f.scope).set(f.symbol, (bucket(f.scope).get(f.symbol) || []).filter((x) => x.id !== id));
+  bucket(f.scope).set(
+    f.symbol,
+    (bucket(f.scope).get(f.symbol) || []).filter((x) => x.id !== id),
+  );
   return f;
 }
 
 /** @param {string} id */
 export function remove(id) {
   const f = detach(id);
-  if (f) { persist(f.scope, f.symbol); emit(); }
+  if (f) {
+    persist(f.scope, f.symbol);
+    emit();
+  }
   return f;
 }
 
@@ -83,8 +89,12 @@ export function remove(id) {
 export function move(id, newScope, symbol) {
   const f = detach(id);
   if (!f) return null;
-  if (f.scope !== newScope) persist(f.scope, f.symbol);   // persist the old bucket's removal
-  if (newScope === 'none') { f.d.sync = 'none'; emit(); return f.d; }
+  if (f.scope !== newScope) persist(f.scope, f.symbol); // persist the old bucket's removal
+  if (newScope === 'none') {
+    f.d.sync = 'none';
+    emit();
+    return f.d;
+  }
   add(newScope, symbol, f.d);
   return f.d;
 }
@@ -93,7 +103,7 @@ export function move(id, newScope, symbol) {
 /** @param {string} scope @param {string} symbol */
 function persist(scope, symbol) {
   if (scope === 'global') globalStore.set(symbol, global.get(symbol) || []);
-  else bus.emit('workspace:changed');   // tabs.js captures snapshotLayout()
+  else bus.emit('workspace:changed'); // tabs.js captures snapshotLayout()
 }
 
 // flush the global file for a symbol after an in-place edit (move/restyle) of a
@@ -107,7 +117,9 @@ export async function loadGlobal() {
   /** @type {Record<string, Drawing[]>} */
   const data = await globalStore.load();
   global.clear();
-  Object.keys(data || {}).forEach((sym) => { if (Array.isArray(data[sym])) global.set(sym, data[sym]); });
+  Object.keys(data || {}).forEach((sym) => {
+    if (Array.isArray(data[sym])) global.set(sym, data[sym]);
+  });
   emit();
 }
 
@@ -118,60 +130,100 @@ export async function loadGlobal() {
 // on all same-symbol charts. Persisted with the tab workspace; references drawings by id.
 let lseq = 0;
 /** @param {string} [name] @returns {Layer} */
-const newLayer = (name) => ({ id: 'ly' + Date.now().toString(36) + (lseq++).toString(36), name: name || 'Layer 1', hidden: false, locked: false, nodes: [] });
+const newLayer = (name) => ({
+  id: 'ly' + Date.now().toString(36) + (lseq++).toString(36),
+  name: name || 'Layer 1',
+  hidden: false,
+  locked: false,
+  nodes: [],
+});
 
 /** @param {string} symbol @returns {LayerSet} */
 export function getLayers(symbol) {
   let L = layers.get(symbol);
-  if (!L) { const first = newLayer('Layer 1'); L = { list: [first], active: first.id }; layers.set(symbol, L); }
-  if (!L.list.length) { const first = newLayer('Layer 1'); L.list.push(first); L.active = first.id; }
+  if (!L) {
+    const first = newLayer('Layer 1');
+    L = { list: [first], active: first.id };
+    layers.set(symbol, L);
+  }
+  if (!L.list.length) {
+    const first = newLayer('Layer 1');
+    L.list.push(first);
+    L.active = first.id;
+  }
   if (!L.list.some((x) => x.id === L.active)) L.active = L.list[0].id;
   return L;
 }
 /** @param {string} symbol @returns {Layer} */
-export function activeLayer(symbol) { const L = getLayers(symbol); return L.list.find((x) => x.id === L.active) || L.list[0]; }
+export function activeLayer(symbol) {
+  const L = getLayers(symbol);
+  return L.list.find((x) => x.id === L.active) || L.list[0];
+}
 /** @param {string} symbol @param {string} id */
-export function setActiveLayer(symbol, id) { const L = getLayers(symbol); if (L.list.some((x) => x.id === id)) { L.active = id; bus.emit('workspace:changed'); emit(); } }
+export function setActiveLayer(symbol, id) {
+  const L = getLayers(symbol);
+  if (L.list.some((x) => x.id === id)) {
+    L.active = id;
+    bus.emit('workspace:changed');
+    emit();
+  }
+}
 /** @param {string} symbol @param {string} [name] @returns {Layer} */
 export function addLayer(symbol, name) {
   const L = getLayers(symbol);
-  const ly = newLayer(name || ('Layer ' + (L.list.length + 1)));
-  L.list.push(ly); L.active = ly.id;
-  bus.emit('workspace:changed'); emit();
+  const ly = newLayer(name || 'Layer ' + (L.list.length + 1));
+  L.list.push(ly);
+  L.active = ly.id;
+  bus.emit('workspace:changed');
+  emit();
   return ly;
 }
 // removes only the layer CONTAINER -- the caller removes the drawings inside first (engine.removeLayer).
 /** @param {string} symbol @param {string} id @returns {boolean} */
 export function removeLayer(symbol, id) {
   const L = getLayers(symbol);
-  if (L.list.length <= 1) return false;   // always keep at least one layer
+  if (L.list.length <= 1) return false; // always keep at least one layer
   L.list = L.list.filter((x) => x.id !== id);
   if (!L.list.some((x) => x.id === L.active)) L.active = L.list[0].id;
-  bus.emit('workspace:changed'); emit();
+  bus.emit('workspace:changed');
+  emit();
   return true;
 }
 /** @param {string} symbol @param {string} id @param {string} name */
 export function renameLayer(symbol, id, name) {
   const ly = getLayers(symbol).list.find((x) => x.id === id);
-  if (ly && name) { ly.name = name; bus.emit('workspace:changed'); emit(); }
+  if (ly && name) {
+    ly.name = name;
+    bus.emit('workspace:changed');
+    emit();
+  }
 }
 /** @param {string} symbol @param {string} id @param {string} flag @param {boolean} val */
 export function setLayerFlag(symbol, id, flag, val) {
   if (flag !== 'hidden' && flag !== 'locked') return;
   const ly = getLayers(symbol).list.find((x) => x.id === id);
-  if (ly) { ly[flag] = !!val; bus.emit('workspace:changed'); emit(); }
+  if (ly) {
+    ly[flag] = !!val;
+    bus.emit('workspace:changed');
+    emit();
+  }
 }
 
 // getTree returns the ACTIVE layer's nodes -- so every existing folder/tree operation keeps working
 // on "the tree" unchanged; it is simply the active layer's tree.
 /** @param {string} symbol @returns {TreeNode[]} */
-export function getTree(symbol) { return activeLayer(symbol).nodes; }
+export function getTree(symbol) {
+  return activeLayer(symbol).nodes;
+}
 /** @param {string} symbol @param {TreeNode[]} [tree] */
 export function setTree(symbol, tree) {
   const al = activeLayer(symbol);
-  if (tree && tree !== al.nodes) { al.nodes.length = 0; al.nodes.push(...(tree || [])); }
-  bus.emit('workspace:changed');   // tabs.js captures snapshotLayers()
-  emit();                          // re-render every same-symbol pane
+  if (tree && tree !== al.nodes) {
+    al.nodes.length = 0;
+    al.nodes.push(...(tree || []));
+  }
+  bus.emit('workspace:changed'); // tabs.js captures snapshotLayers()
+  emit(); // re-render every same-symbol pane
 }
 /** @returns {Record<string, LayerSet>} */
 export function snapshotLayers() {
@@ -190,8 +242,15 @@ export function loadLayers(obj) {
   Object.keys(obj).forEach((sym) => {
     const L = obj[sym];
     if (!L || !Array.isArray(L.list) || !L.list.length) return;
-    L.list.forEach((/** @type {Layer} */ ly) => { ly.hidden = !!ly.hidden; ly.locked = !!ly.locked; if (!Array.isArray(ly.nodes)) ly.nodes = []; });
-    layers.set(sym, { list: L.list, active: (L.active && L.list.some((/** @type {Layer} */ x) => x.id === L.active)) ? L.active : L.list[0].id });
+    L.list.forEach((/** @type {Layer} */ ly) => {
+      ly.hidden = !!ly.hidden;
+      ly.locked = !!ly.locked;
+      if (!Array.isArray(ly.nodes)) ly.nodes = [];
+    });
+    layers.set(sym, {
+      list: L.list,
+      active: L.active && L.list.some((/** @type {Layer} */ x) => x.id === L.active) ? L.active : L.list[0].id,
+    });
   });
 }
 // replace ONE symbol's whole layer set (used by the drawing-set file load -- the PSD-style
@@ -199,11 +258,15 @@ export function loadLayers(obj) {
 /** @param {string} symbol @param {LayerSet} L */
 export function setLayers(symbol, L) {
   if (!L || !Array.isArray(L.list) || !L.list.length) return;
-  L.list.forEach((ly) => { ly.hidden = !!ly.hidden; ly.locked = !!ly.locked; if (!Array.isArray(ly.nodes)) ly.nodes = []; });
-  const active = (L.active && L.list.some((x) => x.id === L.active)) ? L.active : L.list[0].id;
+  L.list.forEach((ly) => {
+    ly.hidden = !!ly.hidden;
+    ly.locked = !!ly.locked;
+    if (!Array.isArray(ly.nodes)) ly.nodes = [];
+  });
+  const active = L.active && L.list.some((x) => x.id === L.active) ? L.active : L.list[0].id;
   layers.set(symbol, { list: L.list, active });
-  bus.emit('workspace:changed');   // tabs.js captures snapshotLayers()
-  emit();                          // re-render every same-symbol pane
+  bus.emit('workspace:changed'); // tabs.js captures snapshotLayers()
+  emit(); // re-render every same-symbol pane
 }
 
 // ---- layout scope <-> tab workspace ----
@@ -219,6 +282,8 @@ export function snapshotLayout() {
 export function loadLayout(obj) {
   layout.clear();
   obj = obj || {};
-  Object.keys(obj).forEach((sym) => { if (Array.isArray(obj[sym])) layout.set(sym, obj[sym]); });
+  Object.keys(obj).forEach((sym) => {
+    if (Array.isArray(obj[sym])) layout.set(sym, obj[sym]);
+  });
   emit();
 }

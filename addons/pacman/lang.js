@@ -13,15 +13,31 @@ export async function loadLangs() {
     for (const line of txt.split('\n').slice(1)) {
       const parts = line.split(',');
       if (parts.length < 4) continue;
-      const code = parts[0].trim(), name = parts.slice(1, parts.length - 2).join(',').trim();
+      const code = parts[0].trim(),
+        name = parts
+          .slice(1, parts.length - 2)
+          .join(',')
+          .trim();
       if (code && name) LANG.set(code, name);
     }
-  } catch (_) { /* no csv -> Intl fallback below */ }
+  } catch (_) {
+    /* no csv -> Intl fallback below */
+  }
 }
 // A locale code -> the ISO country code for its flag. A region subtag IS the country (pt-BR -> br); otherwise
 // a few languages whose code isn't their country (en -> us, ...); else the code itself (es -> es, de -> de).
 // Flags live in the addon (flags/<country>.svg), added per language as we go; a missing one just shows blank.
-const LANG_COUNTRY = /** @type {Record<string,string>} */ ({ en: 'us', zh: 'cn', ja: 'jp', ko: 'kr', cs: 'cz', el: 'gr', uk: 'ua', vi: 'vn', ar: 'sa' });
+const LANG_COUNTRY = /** @type {Record<string,string>} */ ({
+  en: 'us',
+  zh: 'cn',
+  ja: 'jp',
+  ko: 'kr',
+  cs: 'cz',
+  el: 'gr',
+  uk: 'ua',
+  vi: 'vn',
+  ar: 'sa',
+});
 /** @param {string} code */
 function langCountry(code) {
   const region = /[-_]([A-Za-z]{2})$/.exec(code);
@@ -33,7 +49,14 @@ function langCountry(code) {
 /** @param {string} code @returns {{name:string, description:string, icon:string}} */
 export function langLabel(code) {
   let name = LANG && (LANG.get(code) || LANG.get(code.replace(/-/g, '_')) || LANG.get(code.replace(/_/g, '-')));
-  if (!name) { try { const n = new Intl.DisplayNames(['en'], { type: 'language' }).of(code); if (n && n !== code) name = n; } catch (_) { /* not a tag */ } }
+  if (!name) {
+    try {
+      const n = new Intl.DisplayNames(['en'], { type: 'language' }).of(code);
+      if (n && n !== code) name = n;
+    } catch (_) {
+      /* not a tag */
+    }
+  }
   name = name || code;
   return { name, description: name + ' vocabulary pack.', icon: '/addons/pacman/flags/' + langCountry(code) + '.svg' };
 }

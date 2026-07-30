@@ -9,7 +9,7 @@ Tools.register({
   glyph: '─',
   kind: 'draw',
   points: 1,
-  priceOnly: true,   // anchor is a price only; the line spans the full pane WIDTH (mirror of vline's timeOnly)
+  priceOnly: true, // anchor is a price only; the line spans the full pane WIDTH (mirror of vline's timeOnly)
   defaultStyle: { color: '#2962ff', width: 2, lineStyle: 'solid', priceLabels: true },
   settings: {
     style: [
@@ -37,7 +37,8 @@ Tools.register({
   marks(d, view) {
     const P = d.points || [];
     if (!P.length) return [];
-    const s = d.style || {}, price = P[0].price;
+    const s = d.style || {},
+      price = P[0].price;
     /** @param {any} a @param {any} b */
     const seg = (a, b) => ({ path: [a, b], stroke: s.color, width: s.width || 2, dash: Tools.dash(s.lineStyle) });
     const band = this.textBand(d, view);
@@ -54,7 +55,10 @@ Tools.register({
   /** @param {ToolDrawing} d @param {ToolView} view @returns {[number, number]|null} */
   textBand(d, view) {
     if (!d.text || (d.textStyle && (d.textStyle.vAlign || 'middle') !== 'middle')) return null;
-    const ts = d.textStyle || {}, size = ts.size || 14, pad = 6, W = view.width;
+    const ts = d.textStyle || {},
+      size = ts.size || 14,
+      pad = 6,
+      W = view.width;
     const ha = ts.hAlign || 'center';
     const lines = String(d.text).split('\n');
     const mc = measureCtx();
@@ -73,30 +77,62 @@ Tools.register({
   /** @param {CanvasRenderingContext2D} c @param {ToolScreenPoint[]} pts @param {ToolDrawing} d @param {ToolView} [view] */
   textGeom(c, pts, d, view) {
     if (!pts.length) return null;
-    const y = pts[0].y, W = view ? view.width : 0;
-    const ts = d.textStyle || {}, size = ts.size || 14, pad = 5;
-    const def = (/** @type {any} */ (this.settings) && /** @type {any} */ (this.settings).text && /** @type {any} */ (this.settings).text.defaults) || {};
-    const ha = ts.hAlign || def.hAlign || 'center', va = ts.vAlign || def.vAlign || 'middle';
-    const lines = String(d.text || '').split('\n'), lh = size * 1.25;
+    const y = pts[0].y,
+      W = view ? view.width : 0;
+    const ts = d.textStyle || {},
+      size = ts.size || 14,
+      pad = 5;
+    const def =
+      /** @type {any} */ (
+        this.settings && /** @type {any} */ (this.settings).text && /** @type {any} */ (this.settings).text.defaults
+      ) || {};
+    const ha = ts.hAlign || def.hAlign || 'center',
+      va = ts.vAlign || def.vAlign || 'middle';
+    const lines = String(d.text || '').split('\n'),
+      lh = size * 1.25;
     c.save();
     c.font = (ts.italic ? 'italic ' : '') + (ts.bold ? 'bold ' : '') + size + 'px sans-serif';
     const w = Math.max(1, ...lines.map((l) => c.measureText(l).width));
     c.restore();
     const totalH = size + (lines.length - 1) * lh;
     let cx, tAlign;
-    if (ha === 'left') { cx = pad; tAlign = 'left'; }
-    else if (ha === 'right') { cx = W - pad; tAlign = 'right'; }
-    else { cx = W / 2; tAlign = 'center'; }
+    if (ha === 'left') {
+      cx = pad;
+      tAlign = 'left';
+    } else if (ha === 'right') {
+      cx = W - pad;
+      tAlign = 'right';
+    } else {
+      cx = W / 2;
+      tAlign = 'center';
+    }
     let cy, baseline;
-    if (va === 'top') { cy = y - pad; baseline = 'bottom'; }
-    else if (va === 'bottom') { cy = y + pad; baseline = 'top'; }
-    else { cy = y; baseline = 'middle'; }
+    if (va === 'top') {
+      cy = y - pad;
+      baseline = 'bottom';
+    } else if (va === 'bottom') {
+      cy = y + pad;
+      baseline = 'top';
+    } else {
+      cy = y;
+      baseline = 'middle';
+    }
     const yTop = baseline === 'top' ? 0 : baseline === 'bottom' ? -totalH : -totalH / 2;
     const lx0 = tAlign === 'left' ? 0 : tAlign === 'right' ? -w : -w / 2;
     return {
-      cx, cy, angle: 0, tAlign, baseline, va, size, w, totalH,
-      lx0: lx0 - pad, lx1: lx0 + w + pad,
-      ly0: yTop - pad, ly1: yTop + totalH + pad,
+      cx,
+      cy,
+      angle: 0,
+      tAlign,
+      baseline,
+      va,
+      size,
+      w,
+      totalH,
+      lx0: lx0 - pad,
+      lx1: lx0 + w + pad,
+      ly0: yTop - pad,
+      ly1: yTop + totalH + pad,
     };
   },
   // label spans the full width; vAlign = above/on/below the line, hAlign across width
@@ -104,16 +140,19 @@ Tools.register({
   drawText(c, pts, d, view) {
     const g = this.textGeom(c, pts, d, view);
     if (!g) return;
-    const ts = d.textStyle || {}, size = g.size, lh = size * 1.25;
+    const ts = d.textStyle || {},
+      size = g.size,
+      lh = size * 1.25;
     const lines = String(d.text).split('\n');
     c.save();
     c.font = (ts.italic ? 'italic ' : '') + (ts.bold ? 'bold ' : '') + size + 'px sans-serif';
     c.fillStyle = ts.color || '#787b86';
-    c.textAlign = /** @type {CanvasTextAlign} */ (g.tAlign); c.textBaseline = /** @type {CanvasTextBaseline} */ (g.baseline);
+    c.textAlign = /** @type {CanvasTextAlign} */ (g.tAlign);
+    c.textBaseline = /** @type {CanvasTextBaseline} */ (g.baseline);
     let y0;
     if (g.va === 'top') y0 = g.cy - (lines.length - 1) * lh;
     else if (g.va === 'bottom') y0 = g.cy;
-    else y0 = g.cy - (lines.length - 1) * lh / 2;
+    else y0 = g.cy - ((lines.length - 1) * lh) / 2;
     lines.forEach((ln, i) => c.fillText(ln, g.cx, y0 + i * lh));
     c.restore();
   },
@@ -123,8 +162,9 @@ Tools.register({
 
 // ---------------------------------------------------------------- drawing helpers
 /** @type {CanvasRenderingContext2D|null} */
-let _mctx = null;   // offscreen ctx so textBand can measure the label without a render ctx
-const measureCtx = () => (_mctx || (_mctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d'))));
+let _mctx = null; // offscreen ctx so textBand can measure the label without a render ctx
+const measureCtx = () =>
+  _mctx || (_mctx = /** @type {CanvasRenderingContext2D} */ (document.createElement('canvas').getContext('2d')));
 
 // Loaded via dynamic import() (an ES module at runtime); the empty export marks it a module for the
 // checker too, giving it its own scope (no clash with sibling globals). No-op.

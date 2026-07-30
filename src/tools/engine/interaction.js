@@ -149,14 +149,14 @@ export class Interaction {
    */
   constructor(pane, engine) {
     this.pane = pane;
-    this._mainEngine = engine;   // default surface engine (the main pane)
+    this._mainEngine = engine; // default surface engine (the main pane)
     /** @type {Surface|null} */
-    this._active = null;         // surface under the cursor, set in _localXY (pinned mid-gesture)
-    this._gy = 0;                // last cursor y in pane-global space (for scale hit-testing)
+    this._active = null; // surface under the cursor, set in _localXY (pinned mid-gesture)
+    this._gy = 0; // last cursor y in pane-global space (for scale hit-testing)
     /** @type {'idle'|'creating'|'moving'|'reshaping'|'marquee'|'measuring'|'measured'|'zooming'|'slicing'} */
-    this.mode = 'idle';     // idle | creating | moving | reshaping | marquee | measuring | measured
+    this.mode = 'idle'; // idle | creating | moving | reshaping | marquee | measuring | measured
     /** @type {{ downX: number, downY: number }|null} */
-    this.measure = null;    // ephemeral Shift measure: {downX,downY} while placing; the ruler lives on engine.draft
+    this.measure = null; // ephemeral Shift measure: {downX,downY} while placing; the ruler lives on engine.draft
     /** @type {Creating|null} */
     this.creating = null;
     // Both reshape ({id,index}) and move ({ids,clickedId,start,orig,moved,…}) states share this one
@@ -169,7 +169,7 @@ export class Interaction {
     /** @type {boolean} */
     this._shiftHeld;
     /** @type {ScreenPoint|null} */
-    this._last = null;      // last cursor pos (so a Ctrl press can re-arm capture in place)
+    this._last = null; // last cursor pos (so a Ctrl press can re-arm capture in place)
     // ---- late-bound members set by the mixin methods (text-edit / slice / nudge); bare type-only
     //      declarations (no assignment) so the constructor's runtime is unchanged from the original ----
     /** @type {{ id: string, ed: HTMLDivElement }|null} */
@@ -186,9 +186,12 @@ export class Interaction {
     // These bare declarations are type-only (the assignment below defines the real methods). ----
     // coords.js:
     /** @type {(e: PointerEvent | MouseEvent) => ScreenPoint} */ this._localXY;
-    /** @type {(e: PointerEvent | MouseEvent, refDataPoint: Anchor | null, tool: Tool | undefined) => ScreenPoint} */ this._constrainXY;
-    /** @type {(e: PointerEvent | MouseEvent, refDataPoint: Anchor | null, tool: Tool | undefined) => ScreenPoint & { price?: number }} */ this._anchorXY;
-    /** @type {(e: PointerEvent | MouseEvent, refDataPoint: Anchor | null, tool: Tool | undefined) => Anchor} */ this._anchorData;
+    /** @type {(e: PointerEvent | MouseEvent, refDataPoint: Anchor | null, tool: Tool | undefined) => ScreenPoint} */ this
+      ._constrainXY;
+    /** @type {(e: PointerEvent | MouseEvent, refDataPoint: Anchor | null, tool: Tool | undefined) => ScreenPoint & { price?: number }} */ this
+      ._anchorXY;
+    /** @type {(e: PointerEvent | MouseEvent, refDataPoint: Anchor | null, tool: Tool | undefined) => Anchor} */ this
+      ._anchorData;
     /** @type {(price: number | null) => number | null} */ this._snapPrice;
     /** @type {(x: number) => number | null} */ this._nearestBarTime;
     // text-edit.js:
@@ -250,7 +253,7 @@ export class Interaction {
 
     pane.el.addEventListener('pointermove', this._onHover);
     pane.el.addEventListener('pointerleave', this._onLeave);
-    pane.el.addEventListener('pointerdown', this._onPaneDown, true);   // capture: deselect on empty click
+    pane.el.addEventListener('pointerdown', this._onPaneDown, true); // capture: deselect on empty click
     this.overlay.addEventListener('pointerdown', this._onDown);
     this.overlay.addEventListener('pointermove', this._onMove);
     this.overlay.addEventListener('pointerup', this._onUp);
@@ -260,21 +263,37 @@ export class Interaction {
     // active -- which SWALLOWS the wheel before it reaches the chart, so Ctrl+wheel zoom (and any
     // wheel) dies whenever Ctrl is down. The overlay has no use for the wheel: forward it to the
     // chart canvas beneath so every wheel gesture (bar-spacing, Ctrl 2D-zoom) works uniformly.
-    this.overlay.addEventListener('wheel', (e) => {
-      e.preventDefault();   // we forward to the chart; never let the browser page-zoom (Ctrl+wheel)
-      const pe = this.overlay.style.pointerEvents;
-      this.overlay.style.pointerEvents = 'none';
-      const below = document.elementFromPoint(e.clientX, e.clientY);
-      this.overlay.style.pointerEvents = pe;
-      if (below && below !== this.overlay) {
-        below.dispatchEvent(new WheelEvent('wheel', {
-          deltaX: e.deltaX, deltaY: e.deltaY, deltaZ: e.deltaZ, deltaMode: e.deltaMode,
-          clientX: e.clientX, clientY: e.clientY, screenX: e.screenX, screenY: e.screenY,
-          ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey,
-          bubbles: true, cancelable: true,
-        }));
-      }
-    }, { passive: false });
+    this.overlay.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault(); // we forward to the chart; never let the browser page-zoom (Ctrl+wheel)
+        const pe = this.overlay.style.pointerEvents;
+        this.overlay.style.pointerEvents = 'none';
+        const below = document.elementFromPoint(e.clientX, e.clientY);
+        this.overlay.style.pointerEvents = pe;
+        if (below && below !== this.overlay) {
+          below.dispatchEvent(
+            new WheelEvent('wheel', {
+              deltaX: e.deltaX,
+              deltaY: e.deltaY,
+              deltaZ: e.deltaZ,
+              deltaMode: e.deltaMode,
+              clientX: e.clientX,
+              clientY: e.clientY,
+              screenX: e.screenX,
+              screenY: e.screenY,
+              ctrlKey: e.ctrlKey,
+              shiftKey: e.shiftKey,
+              altKey: e.altKey,
+              metaKey: e.metaKey,
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+        }
+      },
+      { passive: false },
+    );
     document.addEventListener('keydown', this._onKey);
     document.addEventListener('keydown', this._onMod);
     document.addEventListener('keyup', this._onMod);
@@ -290,7 +309,9 @@ export class Interaction {
   }
 
   // the engine for the surface the cursor is currently over (main pane by default)
-  get engine() { return (this._active && this._active.engine) || this._mainEngine; }
+  get engine() {
+    return (this._active && this._active.engine) || this._mainEngine;
+  }
 
   // The capture/hover policy (_enable/_disable, _activeDrawTool/_activeZoomTool, _overScale, _hover,
   // _overTextBox, _onHover, _onLeave) lives in ./interaction/hover.js as a prototype mixin.
@@ -315,39 +336,58 @@ export class Interaction {
   /** @param {PointerEvent} e */
   _onPaneDown(e) {
     if (this.mode !== 'idle' || this._activeDrawTool()) return;
-    if (e.ctrlKey || e.metaKey) return;   // Ctrl → toggle / marquee owns the selection
+    if (e.ctrlKey || e.metaKey) return; // Ctrl → toggle / marquee owns the selection
     const { x, y } = this._localXY(e);
-    if (this._overTextBox(x, y)) return;    // clicking the text/"+ Add text" keeps the selection
+    if (this._overTextBox(x, y)) return; // clicking the text/"+ Add text" keeps the selection
     if (this.engine.selection.size && !this.engine.hitTest(x, y)) this.engine.select(null);
   }
 
   /** @param {PointerEvent} e */
   _onDown(e) {
-    if (e.button !== undefined && e.button !== 0) return;   // ignore right/middle (right-click → context menu)
-    if (this.mode === 'slicing') { this._commitSlice(e); return; }
+    if (e.button !== undefined && e.button !== 0) return; // ignore right/middle (right-click → context menu)
+    if (this.mode === 'slicing') {
+      this._commitSlice(e);
+      return;
+    }
     const { x, y } = this._localXY(e);
 
     // ephemeral Shift measure: a frozen ruler is dismissed by the next click anywhere; while placing it,
     // this click drops the second anchor and freezes the measurement in place.
-    if (this.mode === 'measured') { this._clearMeasure(); if (e.shiftKey && !e.ctrlKey && !e.metaKey) this._beginMeasure(e); return; }
-    if (this.mode === 'measuring') { this._freezeMeasure(e); return; }
+    if (this.mode === 'measured') {
+      this._clearMeasure();
+      if (e.shiftKey && !e.ctrlKey && !e.metaKey) this._beginMeasure(e);
+      return;
+    }
+    if (this.mode === 'measuring') {
+      this._freezeMeasure(e);
+      return;
+    }
 
     // next click of a multi-point shape → drop the point (poly: keep going; else finish)
     if (this.mode === 'creating') {
-      const cr = /** @type {Creating} */ (this.creating);   // mode==='creating' ⇒ non-null
+      const cr = /** @type {Creating} */ (this.creating); // mode==='creating' ⇒ non-null
       const pts = cr.points;
       const data = this._anchorData(e, pts[pts.length - 2], cr.tool);
       if (data.time != null && data.price != null) {
         pts[pts.length - 1] = data;
-        if (cr.tool.points === 'poly') { pts.push({ ...data }); this.engine.requestUpdate(); }   // new rubber vertex
+        if (cr.tool.points === 'poly') {
+          pts.push({ ...data });
+          this.engine.requestUpdate();
+        } // new rubber vertex
         else this._commitCreate();
       }
       return;
     }
 
-    if (this._activeZoomTool()) { this._beginZoom(x, y, e); return; }   // zoom tool: drag a box, then zoom to it
+    if (this._activeZoomTool()) {
+      this._beginZoom(x, y, e);
+      return;
+    } // zoom tool: drag a box, then zoom to it
     const tool = this._activeDrawTool();
-    if (tool) { this._beginCreate(tool, x, y, e); return; }
+    if (tool) {
+      this._beginCreate(tool, x, y, e);
+      return;
+    }
 
     // cursor mode: select / move / reshape. Interacting with one surface clears the
     // selection on the others, so only one drawing is ever "selected" across the chart.
@@ -357,17 +397,34 @@ export class Interaction {
     // a one-time tool that freezes on the second anchor and is dismissed by the next click; never saved
     // (lives on engine.draft). Shift+drag on an UNLOCKED drawing moves it instead, constrained to one axis
     // (see the 'moving' handler). Ctrl still owns marquee/clone, so this is Shift-only.
-    const willMoveDrawing = !!(hit && (() => { const d = this.engine.get(hit.id); return d && !this.engine.isLocked(hit.id); })());
-    if (e.shiftKey && !e.ctrlKey && !e.metaKey && !willMoveDrawing && getSetting('measureHotkey') !== false) { this._beginMeasure(e); return; }
+    const willMoveDrawing = !!(
+      hit &&
+      (() => {
+        const d = this.engine.get(hit.id);
+        return d && !this.engine.isLocked(hit.id);
+      })()
+    );
+    if (e.shiftKey && !e.ctrlKey && !e.metaKey && !willMoveDrawing && getSetting('measureHotkey') !== false) {
+      this._beginMeasure(e);
+      return;
+    }
     // the label box yields to endpoint handles (so the ends stay grabbable); otherwise
     // clicking the text label / "+ Add text" edits it in place on the canvas
-    if ((!hit || hit.part !== 'point') && this._overTextBox(x, y)) { this._startTextEdit(/** @type {TextBox} */ (this.engine._textBox).id); return; }
+    if ((!hit || hit.part !== 'point') && this._overTextBox(x, y)) {
+      this._startTextEdit(/** @type {TextBox} */ (this.engine._textBox).id);
+      return;
+    }
 
     this._clearOtherSurfaces();
     if (!hit) {
       // Ctrl/Cmd + drag on empty space → rubber-band marquee (adds to the selection)
-      if (e.ctrlKey || e.metaKey) { this._beginMarquee(x, y, e); return; }
-      this.engine.select(null); this._disable(); return;
+      if (e.ctrlKey || e.metaKey) {
+        this._beginMarquee(x, y, e);
+        return;
+      }
+      this.engine.select(null);
+      this._disable();
+      return;
     }
 
     // Ctrl/Cmd over a drawing: a plain click toggles it in the selection, but a DRAG
@@ -375,10 +432,20 @@ export class Interaction {
     // can't be cloned/moved → just toggle.
     if (e.ctrlKey || e.metaKey) {
       const cd = this.engine.get(hit.id);
-      if (!cd || this.engine.isLocked(hit.id)) { this.engine.toggleSelect(hit.id); return; }
+      if (!cd || this.engine.isLocked(hit.id)) {
+        this.engine.toggleSelect(hit.id);
+        return;
+      }
       this.overlay.setPointerCapture(e.pointerId);
       this.mode = 'moving';
-      this.drag = { ids: [hit.id], clickedId: hit.id, start: { x, y }, orig: { [hit.id]: cd.points.map((p) => ({ ...p })) }, moved: false, ctrlClone: true };
+      this.drag = {
+        ids: [hit.id],
+        clickedId: hit.id,
+        start: { x, y },
+        orig: { [hit.id]: cd.points.map((p) => ({ ...p })) },
+        moved: false,
+        ctrlClone: true,
+      };
       return;
     }
 
@@ -397,11 +464,16 @@ export class Interaction {
       // move every selected (unlocked) drawing together; remember the clicked id so
       // a no-drag click can collapse the multi-selection down to just it.
       this.mode = 'moving';
-      const ids = this.engine.selectedIds().filter((id) => { const dd = this.engine.get(id); return dd && !this.engine.isLocked(id); });
+      const ids = this.engine.selectedIds().filter((id) => {
+        const dd = this.engine.get(id);
+        return dd && !this.engine.isLocked(id);
+      });
       /** @type {Record<string, Anchor[]>} */
       const orig = {};
       // ids are pre-filtered to drawings that exist, so get(id) is non-null here.
-      ids.forEach((id) => { orig[id] = /** @type {Drawing} */ (this.engine.get(id)).points.map((p) => ({ ...p })); });
+      ids.forEach((id) => {
+        orig[id] = /** @type {Drawing} */ (this.engine.get(id)).points.map((p) => ({ ...p }));
+      });
       this.drag = { ids, clickedId: hit.id, start: { x, y }, orig, moved: false };
     }
   }
@@ -410,27 +482,33 @@ export class Interaction {
   _onMove(e) {
     const { x, y } = this._localXY(e);
     if (this.mode === 'marquee') {
-      const mq = /** @type {Marquee} */ (this.marquee);   // mode gate ⇒ non-null
-      mq.x1 = x; mq.y1 = y;
+      const mq = /** @type {Marquee} */ (this.marquee); // mode gate ⇒ non-null
+      mq.x1 = x;
+      mq.y1 = y;
       this.engine.marqueeRect = { x0: mq.x0, y0: mq.y0, x1: x, y1: y };
-      this._applyMarquee();   // live: highlight shapes as the box sweeps over them
+      this._applyMarquee(); // live: highlight shapes as the box sweeps over them
       this.engine.requestUpdate();
       return;
     }
-    if (this.mode === 'slicing') { this._updateSliceGuide(e); return; }
+    if (this.mode === 'slicing') {
+      this._updateSliceGuide(e);
+      return;
+    }
     if (this.mode === 'zooming') {
       const mq = /** @type {Marquee} */ (this.marquee);
-      mq.x1 = x; mq.y1 = y;
+      mq.x1 = x;
+      mq.y1 = y;
       this.engine.marqueeRect = { x0: mq.x0, y0: mq.y0, x1: x, y1: y };
       this.engine.requestUpdate();
       return;
     }
     if (this.mode === 'measuring') {
-      const draft = /** @type {Drawing} */ (this.engine.draft);   // the ephemeral ruler
+      const draft = /** @type {Drawing} */ (this.engine.draft); // the ephemeral ruler
       const pts = draft.points;
       const data = this._anchorData(e, pts[0], /** @type {Tool|undefined} */ (getTool('priceTimeRange')));
       if (data.time == null || data.price == null) return;
-      pts[1] = data; draft.points = pts;   // rubber-band the far anchor
+      pts[1] = data;
+      draft.points = pts; // rubber-band the far anchor
       this._syncCrosshair(data.time, data.price);
       this.engine.requestUpdate();
       return;
@@ -440,9 +518,9 @@ export class Interaction {
       const pts = cr.points;
       const data = this._anchorData(e, pts[pts.length - 2], cr.tool);
       if (data.time == null || data.price == null) return;
-      pts[pts.length - 1] = data;   // rubber-band the last anchor
+      pts[pts.length - 1] = data; // rubber-band the last anchor
       /** @type {Drawing} */ (this.engine.draft).points = pts;
-      this._syncCrosshair(data.time, data.price);   // keep the crosshair on the (snapped) anchor + sync alive while drawing
+      this._syncCrosshair(data.time, data.price); // keep the crosshair on the (snapped) anchor + sync alive while drawing
       this.engine.requestUpdate();
       return;
     }
@@ -452,7 +530,7 @@ export class Interaction {
       if (d) {
         const tool = /** @type {Tool} */ (getTool(d.tool));
         const idx = /** @type {number} */ (drag.index);
-        const ref = (!tool.reshape && d.points.length === 2) ? d.points[idx === 0 ? 1 : 0] : null;
+        const ref = !tool.reshape && d.points.length === 2 ? d.points[idx === 0 ? 1 : 0] : null;
         const dp = this._anchorData(e, ref, tool);
         if (tool.reshape) tool.reshape(d, idx, dp);
         else d.points[idx] = dp;
@@ -463,8 +541,11 @@ export class Interaction {
       }
       return;
     }
-    if (this.mode === 'moving') { this._moveSelection(x, y); return; }
-    this._hover(x, y);   // idle hover on the overlay (crosshair handled in _onHover)
+    if (this.mode === 'moving') {
+      this._moveSelection(x, y);
+      return;
+    }
+    this._hover(x, y); // idle hover on the overlay (crosshair handled in _onHover)
   }
 
   // Translate the dragged selection: shift axis-lock, Ctrl clone-on-first-move, then per-point translation
@@ -473,22 +554,30 @@ export class Interaction {
   _moveSelection(x, y) {
     const drag = /** @type {Drag} */ (this.drag);
     const start = /** @type {ScreenPoint} */ (drag.start);
-    let dx = x - start.x, dy = y - start.y;
+    let dx = x - start.x,
+      dy = y - start.y;
     // Shift locks the move to one axis -- a straight-line drag / alignment for ANY drawing (slide a
     // rectangle left/right keeping its price, align an arrow). The axis is fixed from the INITIAL
     // dominant direction and held for the rest of the drag (no switching mid-move, even if you drift).
     // Releasing Shift frees both axes; pressing it again re-establishes from the current direction.
     if (this._shiftHeld) {
-      if (!drag.lockAxis && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) drag.lockAxis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
-      if (drag.lockAxis === 'x') dy = 0; else if (drag.lockAxis === 'y') dx = 0;
+      if (!drag.lockAxis && (Math.abs(dx) > 2 || Math.abs(dy) > 2))
+        drag.lockAxis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+      if (drag.lockAxis === 'x') dy = 0;
+      else if (drag.lockAxis === 'y') dx = 0;
     } else {
       drag.lockAxis = null;
     }
     if (!drag.moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) {
       drag.moved = true;
-      if (drag.ctrlClone) {   // Ctrl+drag → clone in place, then drag the copy
+      if (drag.ctrlClone) {
+        // Ctrl+drag → clone in place, then drag the copy
         const nd = this.engine.clone(/** @type {string} */ (drag.clickedId));
-        if (nd) { drag.ids = [nd.id]; drag.clickedId = nd.id; drag.orig = { [nd.id]: nd.points.map((p) => ({ ...p })) }; }
+        if (nd) {
+          drag.ids = [nd.id];
+          drag.clickedId = nd.id;
+          drag.orig = { [nd.id]: nd.points.map((p) => ({ ...p })) };
+        }
         drag.ctrlClone = false;
       }
     }
@@ -508,17 +597,20 @@ export class Interaction {
         const s = toScreen(this.pane, /** @type {{ time: number, price: number }} */ (p), this.engine.series);
         if (!s) return p;
         const nd = toData(this.pane, s.x + dx, s.y + dy, this.engine.series);
-        nd.price = this._snapPrice(nd.price);   // keep the moved drawing on the instrument's tick grid
+        nd.price = this._snapPrice(nd.price); // keep the moved drawing on the instrument's tick grid
         // ...and snap time to the BAR grid (index space), exactly like create/reshape -- a body-drag
         // must step bar-to-bar, not slide continuously through time. null in whitespace past the data
         // leaves the free time so a drawing can still be dragged into the future / before the first bar.
-        if (snapBar) { const t = this._nearestBarTime(s.x + dx); if (t != null) nd.time = t; }
+        if (snapBar) {
+          const t = this._nearestBarTime(s.x + dx);
+          if (t != null) nd.time = t;
+        }
         return nd;
       };
-      d.points = (single && tool && typeof tool.bodyMove === 'function') ? tool.bodyMove(orig, move) : orig.map(move);
+      d.points = single && tool && typeof tool.bodyMove === 'function' ? tool.bodyMove(orig, move) : orig.map(move);
       this.engine.liveUpdate(d);
     });
-    const cd = toData(this.pane, x, y, this.engine.series);   // keep crosshair on the cursor
+    const cd = toData(this.pane, x, y, this.engine.series); // keep crosshair on the cursor
     this._syncCrosshair(cd.time, cd.price);
   }
 
@@ -527,20 +619,25 @@ export class Interaction {
     if (this.mode === 'marquee') {
       this._applyMarquee();
       this.engine.marqueeRect = null;
-      this.mode = 'idle'; this.marquee = null;
+      this.mode = 'idle';
+      this.marquee = null;
       this.engine.requestUpdate();
-      this._hover(...(/** @type {[number, number]} */ (this._last ? [this._last.x, this._last.y] : [0, 0])));
+      this._hover(.../** @type {[number, number]} */ (this._last ? [this._last.x, this._last.y] : [0, 0]));
       return;
     }
-    if (this.mode === 'zooming') { this._applyZoom(); return; }
-    if (this.mode === 'measuring') {   // a drag-release freezes the ruler; a plain click waits for the 2nd click
+    if (this.mode === 'zooming') {
+      this._applyZoom();
+      return;
+    }
+    if (this.mode === 'measuring') {
+      // a drag-release freezes the ruler; a plain click waits for the 2nd click
       const { x, y } = this._localXY(e);
       if (this.measure && Math.hypot(x - this.measure.downX, y - this.measure.downY) > 4) this._freezeMeasure(e);
       return;
     }
     if (this.mode === 'creating') {
       const cr = /** @type {Creating} */ (this.creating);
-      if (cr.tool.points === 'poly') return;   // poly is click-by-click; finish on dbl-click/Enter
+      if (cr.tool.points === 'poly') return; // poly is click-by-click; finish on dbl-click/Enter
       // a press-drag-release completes the segment; a plain click waits for the
       // second click (handled in _onDown).
       const { x, y } = this._localXY(e);
@@ -560,7 +657,8 @@ export class Interaction {
       else if (drag.ctrlClone) this.engine.toggleSelect(/** @type {string} */ (drag.clickedId));
       // a click (no drag) on one of several selected drawings collapses the
       // selection to just the clicked one.
-      else if (/** @type {string[]} */ (drag.ids).length > 1) this.engine.select(/** @type {string} */ (drag.clickedId));
+      else if (/** @type {string[]} */ (drag.ids).length > 1)
+        this.engine.select(/** @type {string} */ (drag.clickedId));
       this.mode = 'idle';
       this.drag = null;
       return;
@@ -574,15 +672,19 @@ export class Interaction {
 
   /** @param {MouseEvent} e */
   _onDbl(e) {
-    if (this.mode === 'creating') { this._finishPoly(); return; }
+    if (this.mode === 'creating') {
+      this._finishPoly();
+      return;
+    }
     const { x, y } = this._localXY(e);
-    if (this._textEdit || this._overTextBox(x, y)) return;   // text is edited in place, not via the dialog
+    if (this._textEdit || this._overTextBox(x, y)) return; // text is edited in place, not via the dialog
     const hit = this.engine.hitTest(x, y);
     if (!hit) return;
     this.engine.select(hit.id);
     // double-click a drawing that can carry text → jump straight to the Text tab to
     // add/edit it; other shapes open on Style as before.
-    const d = this.engine.get(hit.id); const tool = d && getTool(d.tool);
+    const d = this.engine.get(hit.id);
+    const tool = d && getTool(d.tool);
     const tab = tool && tool.settings && tool.settings.text ? 'Text' : 'Style';
     openSettingsDialog(this.engine, hit.id, tab);
   }
@@ -595,16 +697,19 @@ export class Interaction {
     // right-click on the label underlay → quick 3x3 text-alignment grid for that drawing
     const tb = this.engine._textBox;
     if (tb && this._overTextBox(x, y)) {
-      const d = this.engine.get(tb.id), tool = d && getTool(d.tool);
+      const d = this.engine.get(tb.id),
+        tool = d && getTool(d.tool);
       if (d && tool && tool.settings && tool.settings.text) {
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
         openTextAlignMenu(this.engine, tb.id, e.clientX, e.clientY);
         return;
       }
     }
     const hit = this.engine.hitTest(x, y);
     if (!hit) return;
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
     // keep an existing multi-selection if the right-clicked drawing is part of it,
     // so the menu can act on all of them; otherwise select just this one.
     if (!this.engine.isSelected(hit.id)) this.engine.select(hit.id);
@@ -613,14 +718,18 @@ export class Interaction {
 
   destroy() {
     this._closeTextEdit();
-    closeSettingsDialog(); closeDrawingMenu();
+    closeSettingsDialog();
+    closeDrawingMenu();
     this.pane.el.removeEventListener('pointermove', this._onHover);
     this.pane.el.removeEventListener('pointerleave', this._onLeave);
     this.pane.el.removeEventListener('pointerdown', this._onPaneDown, true);
     document.removeEventListener('keydown', this._onKey);
     document.removeEventListener('keydown', this._onMod);
     document.removeEventListener('keyup', this._onMod);
-    if (this._offTool) { this._offTool(); this._offTool = null; }
+    if (this._offTool) {
+      this._offTool();
+      this._offTool = null;
+    }
     this.overlay.remove();
   }
 }
@@ -628,4 +737,14 @@ export class Interaction {
 // Feature groups split out into ./interaction/*.js as prototype mixins -- each is a plain object of
 // methods that run with `this` bound to the Interaction instance. Object.assign puts them on the
 // prototype, so `this` and every cross-method call behave exactly as when they were inline.
-Object.assign(Interaction.prototype, textEditMethods, sliceMethods, createMethods, marqueeZoomMethods, measureMethods, coordsMethods, keyboardMethods, hoverMethods);
+Object.assign(
+  Interaction.prototype,
+  textEditMethods,
+  sliceMethods,
+  createMethods,
+  marqueeZoomMethods,
+  measureMethods,
+  coordsMethods,
+  keyboardMethods,
+  hoverMethods,
+);

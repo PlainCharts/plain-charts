@@ -22,37 +22,57 @@ const DEFAULT_REPO = 'https://raw.githubusercontent.com/PlainCharts/plain-charts
 // install / uninstall actions + ghUrl.
 
 const cfg = {
-  get repo() { return (localStorage.getItem('pacman.repo') || DEFAULT_REPO).replace(/\/+$/, ''); },
-  set repo(v) { localStorage.setItem('pacman.repo', String(v || '').trim()); },
+  get repo() {
+    return (localStorage.getItem('pacman.repo') || DEFAULT_REPO).replace(/\/+$/, '');
+  },
+  set repo(v) {
+    localStorage.setItem('pacman.repo', String(v || '').trim());
+  },
 };
 
 /** @type {HTMLElement|null} */
 let overlay = null;
-function closeModal() { if (overlay) { overlay.remove(); overlay = null; } }
+function closeModal() {
+  if (overlay) {
+    overlay.remove();
+    overlay = null;
+  }
+}
 
 /** @param {import('../../src/panels/addons.js').AddonApi} api */
 async function openModal(api) {
   const t = api && api.t ? api.t : (/** @type {string} */ s) => s;
-  const [{ loadLangs, langLabel }, { CATEGORIES, LOCAL }, { el, makeDraggable, injectCss }, { ghUrl, createActions }] = await Promise.all([
-    import('/addons/pacman/lang.js'), import('/addons/pacman/classes.js'), import('/addons/pacman/ui.js'), import('/addons/pacman/actions.js'),
-  ]);
+  const [{ loadLangs, langLabel }, { CATEGORIES, LOCAL }, { el, makeDraggable, injectCss }, { ghUrl, createActions }] =
+    await Promise.all([
+      import('/addons/pacman/lang.js'),
+      import('/addons/pacman/classes.js'),
+      import('/addons/pacman/ui.js'),
+      import('/addons/pacman/actions.js'),
+    ]);
   injectCss();
   closeModal();
-  overlay = el('div', 'modal open'); overlay.style.zIndex = '90';
+  overlay = el('div', 'modal open');
+  overlay.style.zIndex = '90';
   const dlg = el('div', 'dialog pac-dialog');
 
   const head = el('div', 'pac-head');
-  const search = /** @type {HTMLInputElement} */ (el('input', 'pac-search')); search.type = 'text'; search.placeholder = t('Search');
-  const x = el('span', 'lib-x', '✕'); x.style.cursor = 'pointer';
+  const search = /** @type {HTMLInputElement} */ (el('input', 'pac-search'));
+  search.type = 'text';
+  search.placeholder = t('Search');
+  const x = el('span', 'lib-x', '✕');
+  x.style.cursor = 'pointer';
   head.append(el('span', 'pac-title', 'Pacman'), search, x);
 
   // Local ⇄ Remote switcher under Search. Local = what's on this system; Remote = the repo catalog.
   const modebar = el('div', 'pac-modebar');
   const countLbl = el('span', 'pac-count', '');
   const sw = el('div', 'pac-switch');
-  const swLocal = el('span'); swLocal.append(el('span', 'pac-ico pac-ico-desktop'), document.createTextNode(t('Local')));
-  const swRemote = el('span'); swRemote.append(el('span', 'pac-ico pac-ico-github'), document.createTextNode(t('Remote')));
-  sw.append(swLocal, swRemote); modebar.append(countLbl, sw);
+  const swLocal = el('span');
+  swLocal.append(el('span', 'pac-ico pac-ico-desktop'), document.createTextNode(t('Local')));
+  const swRemote = el('span');
+  swRemote.append(el('span', 'pac-ico pac-ico-github'), document.createTextNode(t('Remote')));
+  sw.append(swLocal, swRemote);
+  modebar.append(countLbl, sw);
 
   const status = el('div', 'pac-status', '');
   const list = el('div', 'pac-list');
@@ -62,11 +82,21 @@ async function openModal(api) {
   // Controls swap by mode. Local: Settings · Install · Uninstall · Refresh. Remote: Github · Settings
   // (no uninstall — Remote never deletes; no refresh — the catalog is fetched fresh every time Pacman opens).
   const ctrl = el('div', 'pac-ctrl');
-  const githubBtn = el('button', 'pac-btn'); githubBtn.title = t('Open repo folder on GitHub'); githubBtn.appendChild(el('span', 'pac-ico pac-ico-ext'));
-  const installBtn = el('button', 'pac-btn', '⤓'); installBtn.title = t('Install from disk'); installBtn.style.fontSize = '17px';
-  const rmBtn = el('button', 'pac-btn'); rmBtn.title = t('Uninstall'); rmBtn.appendChild(el('span', 'pac-ico pac-ico-min'));
-  const cfgBtn = el('button', 'pac-btn'); cfgBtn.title = t('Settings'); cfgBtn.appendChild(el('span', 'pac-ico pac-ico-set'));
-  const refBtn = el('button', 'pac-btn'); refBtn.title = t('Refresh'); refBtn.appendChild(el('span', 'pac-ico pac-ico-ref'));
+  const githubBtn = el('button', 'pac-btn');
+  githubBtn.title = t('Open repo folder on GitHub');
+  githubBtn.appendChild(el('span', 'pac-ico pac-ico-ext'));
+  const installBtn = el('button', 'pac-btn', '⤓');
+  installBtn.title = t('Install from disk');
+  installBtn.style.fontSize = '17px';
+  const rmBtn = el('button', 'pac-btn');
+  rmBtn.title = t('Uninstall');
+  rmBtn.appendChild(el('span', 'pac-ico pac-ico-min'));
+  const cfgBtn = el('button', 'pac-btn');
+  cfgBtn.title = t('Settings');
+  cfgBtn.appendChild(el('span', 'pac-ico pac-ico-set'));
+  const refBtn = el('button', 'pac-btn');
+  refBtn.title = t('Refresh');
+  refBtn.appendChild(el('span', 'pac-ico pac-ico-ref'));
   function renderCtrl() {
     ctrl.innerHTML = '';
     if (state.mode === 'local') ctrl.append(installBtn, rmBtn, cfgBtn, refBtn);
@@ -74,32 +104,57 @@ async function openModal(api) {
   }
 
   dlg.append(head, modebar, status, list, cfgPane, cats, ctrl);
-  overlay.appendChild(dlg); document.body.appendChild(overlay);
-  makeDraggable(dlg, head);   // drag the dialog by its header
+  overlay.appendChild(dlg);
+  document.body.appendChild(overlay);
+  makeDraggable(dlg, head); // drag the dialog by its header
 
-  const state = { mode: /** @type {'local'|'remote'} */ ('remote'), catalog: /** @type {any[]} */ ([]), installed: new Set(), installedMeta: /** @type {Map<string,any>} */ (new Map()), localCounts: /** @type {Record<string,number>} */ ({}), category: 'studies', sel: /** @type {any} */ (null), q: '' };
-  const setStatus = (/** @type {string} */ m) => { status.textContent = m || ''; };
+  const state = {
+    mode: /** @type {'local'|'remote'} */ ('remote'),
+    catalog: /** @type {any[]} */ ([]),
+    installed: new Set(),
+    installedMeta: /** @type {Map<string,any>} */ (new Map()),
+    localCounts: /** @type {Record<string,number>} */ ({}),
+    category: 'studies',
+    sel: /** @type {any} */ (null),
+    q: '',
+  };
+  const setStatus = (/** @type {string} */ m) => {
+    status.textContent = m || '';
+  };
 
   // Installed count per class, for the Local-mode category badges. Only classes with a local source report.
   async function loadLocalCounts() {
     const counts = /** @type {Record<string,number>} */ ({});
     for (const key of Object.keys(LOCAL)) {
-      try { counts[key] = (await /** @type {any} */ (LOCAL)[key]()).length; } catch (_) { counts[key] = 0; }
+      try {
+        counts[key] = (await /** @type {any} */ (LOCAL)[key]()).length;
+      } catch (_) {
+        counts[key] = 0;
+      }
     }
     state.localCounts = counts;
   }
   // What's installed on this system for the current class (empty for classes without a local endpoint yet).
   async function loadInstalled() {
-    state.installed = new Set(); state.installedMeta = new Map();
+    state.installed = new Set();
+    state.installedMeta = new Map();
     const src = /** @type {any} */ (LOCAL)[state.category];
     if (!src) return;
     try {
-      for (const row of await src()) { state.installed.add(row.id); state.installedMeta.set(row.id, row); }
+      for (const row of await src()) {
+        state.installed.add(row.id);
+        state.installedMeta.set(row.id, row);
+      }
     } catch (_) {}
   }
   // THE reload-and-rerender chain: pull the local truth again, then repaint badges + list. Every mutation
   // (install / uninstall / category switch / refresh) funnels through here.
-  async function refresh() { await loadInstalled(); await loadLocalCounts(); renderCats(); renderList(); }
+  async function refresh() {
+    await loadInstalled();
+    await loadLocalCounts();
+    renderCats();
+    renderList();
+  }
   const { install, uninstall, installFromDisk } = createActions({ t, cfg, state, setStatus, refresh });
 
   // Rows for the active mode. Remote = the repo catalog for this class. Local = what's installed on this
@@ -110,8 +165,14 @@ async function openModal(api) {
       // vocab is code-named with no indexed metadata; Pacman names it from the bundled language DB.
       return state.category === 'vocab' ? rows.map((p) => ({ ...p, ...langLabel(p.id) })) : rows;
     }
-    return [...state.installedMeta.values()]
-      .map((m) => ({ class: state.category, id: m.id, name: m.name || m.id, description: m.description || '', icon: m.icon || '', _local: true }));
+    return [...state.installedMeta.values()].map((m) => ({
+      class: state.category,
+      id: m.id,
+      name: m.name || m.id,
+      description: m.description || '',
+      icon: m.icon || '',
+      _local: true,
+    }));
   }
   const selectedPkg = () => itemsFor().find((p) => p.id === state.sel) || null;
   function renderSwitch() {
@@ -120,9 +181,13 @@ async function openModal(api) {
   }
   async function setMode(/** @type {'local'|'remote'} */ m) {
     if (state.mode === m) return;
-    state.mode = m; state.sel = null;
+    state.mode = m;
+    state.sel = null;
     if (m === 'local') await loadLocalCounts();
-    renderSwitch(); renderCtrl(); renderCats(); renderList();
+    renderSwitch();
+    renderCtrl();
+    renderCats();
+    renderList();
   }
   swLocal.onclick = () => setMode('local');
   swRemote.onclick = () => setMode('remote');
@@ -131,33 +196,49 @@ async function openModal(api) {
     try {
       const r = await fetch(cfg.repo + '/index.json', { cache: 'no-store' }).then((x) => x.json());
       state.catalog = Array.isArray(r.packages) ? r.packages : [];
-      setStatus('');   // the per-view count lives in the modebar; the status line is for messages only
-    } catch (_) { state.catalog = []; setStatus(t('Could not load') + ' ' + cfg.repo + '/index.json'); }
+      setStatus(''); // the per-view count lives in the modebar; the status line is for messages only
+    } catch (_) {
+      state.catalog = [];
+      setStatus(t('Could not load') + ' ' + cfg.repo + '/index.json');
+    }
   }
   function renderCats() {
     cats.innerHTML = '';
     for (const c of CATEGORIES) {
-      const count = state.mode === 'remote' ? state.catalog.filter((p) => p.class === c.key).length : (state.localCounts[c.key] || 0);
-      const b = el('div', 'pac-cat' + (state.category === c.key ? ' sel' : ''), t(c.name) + (count ? ' (' + count + ')' : ''));
-      b.onclick = async () => { state.category = c.key; state.sel = null; await refresh(); };
+      const count =
+        state.mode === 'remote' ? state.catalog.filter((p) => p.class === c.key).length : state.localCounts[c.key] || 0;
+      const b = el(
+        'div',
+        'pac-cat' + (state.category === c.key ? ' sel' : ''),
+        t(c.name) + (count ? ' (' + count + ')' : ''),
+      );
+      b.onclick = async () => {
+        state.category = c.key;
+        state.sel = null;
+        await refresh();
+      };
       cats.appendChild(b);
     }
   }
   // Is this id available in the remote catalog for the active class? A local package that also lives in the
   // repo is marked "From repo" so its origin is legible (vs. one authored or dropped in by hand).
-  function inCatalog(/** @type {string} */ id) { return state.catalog.some((c) => c.class === state.category && c.id === id); }
+  function inCatalog(/** @type {string} */ id) {
+    return state.catalog.some((c) => c.class === state.category && c.id === id);
+  }
   function renderCount(/** @type {number} */ n) {
     countLbl.textContent = state.mode === 'local' ? n + ' ' + t('installed') : n + ' ' + t('available');
   }
   function renderList() {
     list.innerHTML = '';
     const q = state.q.toLowerCase();
-    const items = itemsFor()
-      .filter((p) => !q || (p.name + ' ' + p.id + ' ' + (p.description || '')).toLowerCase().includes(q));
+    const items = itemsFor().filter(
+      (p) => !q || (p.name + ' ' + p.id + ' ' + (p.description || '')).toLowerCase().includes(q),
+    );
     renderCount(items.length);
     if (!items.length) {
-      const msg = q ? t('No matches') : (state.mode === 'local' ? t('Nothing installed yet') : t('The catalog is empty'));
-      list.appendChild(el('div', 'pac-status', msg)); return;
+      const msg = q ? t('No matches') : state.mode === 'local' ? t('Nothing installed yet') : t('The catalog is empty');
+      list.appendChild(el('div', 'pac-status', msg));
+      return;
     }
     for (const p of items) {
       const installed = state.installed.has(p.id);
@@ -165,10 +246,16 @@ async function openModal(api) {
       // A thumbnail only when the package carries an image (tools/addons ship one; studies etc. don't).
       // Local rows already hold a full icon URL; remote rows carry a bare filename in `icon` + the package's
       // `path`, so build repo/path/icon. No image -> no placeholder graphic.
-      const img = p._local ? (p.icon || '')
-        : (p.icon ? (p.icon.startsWith('/') ? p.icon : `${cfg.repo}/${p.path}/${p.icon}`) : '');
+      const img = p._local
+        ? p.icon || ''
+        : p.icon
+          ? p.icon.startsWith('/')
+            ? p.icon
+            : `${cfg.repo}/${p.path}/${p.icon}`
+          : '';
       const body = el('div', 'pac-body');
-      const name = el('div', 'pac-name'); name.append(document.createTextNode(p.name || p.id));
+      const name = el('div', 'pac-name');
+      name.append(document.createTextNode(p.name || p.id));
       if (p.author) name.appendChild(el('span', 'pac-by', ' ' + t('by') + ' ' + p.author));
       body.append(name, el('div', 'pac-id', p.id), el('div', 'pac-desc', p.description || ''));
       if (img) {
@@ -188,53 +275,94 @@ async function openModal(api) {
         const act = el('div', 'pac-act');
         // A package that ships an info.md gets a link to its rendered GitHub page, next to the install action.
         if (p.info && p.path) {
-          const info = el('button', 'pac-btn'); info.title = t('Read more on GitHub');
+          const info = el('button', 'pac-btn');
+          info.title = t('Read more on GitHub');
           info.appendChild(el('span', 'pac-ico pac-ico-info'));
-          info.onclick = (e) => { e.stopPropagation(); window.open(ghUrl(cfg.repo, 'blob', p.path + '/' + p.info), '_blank'); };
+          info.onclick = (e) => {
+            e.stopPropagation();
+            window.open(ghUrl(cfg.repo, 'blob', p.path + '/' + p.info), '_blank');
+          };
           act.appendChild(info);
         }
         const btn = el('button', 'pac-btn' + (installed ? ' on' : ''), installed ? '✓' : '⤓');
         btn.title = installed ? t('In your library — remove it from Local') : t('Download and install');
-        btn.onclick = (e) => { e.stopPropagation(); if (installed) setStatus(t('Already installed — switch to Local to remove it')); else install(p); };
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          if (installed) setStatus(t('Already installed — switch to Local to remove it'));
+          else install(p);
+        };
         act.appendChild(btn);
         row.append(act);
       }
-      row.onclick = () => { state.sel = p.id; renderList(); };
+      row.onclick = () => {
+        state.sel = p.id;
+        renderList();
+      };
       list.appendChild(row);
     }
   }
   function renderConfig() {
     cfgPane.innerHTML = '';
-    const repoL = el('label'); repoL.append(el('span', null, t('Repository (raw base URL)')));
-    const repoI = /** @type {HTMLInputElement} */ (el('input')); repoI.value = cfg.repo; repoL.appendChild(repoI);
+    const repoL = el('label');
+    repoL.append(el('span', null, t('Repository (raw base URL)')));
+    const repoI = /** @type {HTMLInputElement} */ (el('input'));
+    repoI.value = cfg.repo;
+    repoL.appendChild(repoI);
     const save = el('button', 'primary', t('Save'));
-    save.onclick = async () => { cfg.repo = repoI.value; cfgPane.classList.remove('show'); await loadCatalog(); renderCats(); renderList(); };
+    save.onclick = async () => {
+      cfg.repo = repoI.value;
+      cfgPane.classList.remove('show');
+      await loadCatalog();
+      renderCats();
+      renderList();
+    };
     cfgPane.append(repoL, save);
   }
 
   // Open the selected package's folder on GitHub, derived from the repo URL + the package's path.
   githubBtn.onclick = () => {
     const p = selectedPkg();
-    if (!p || !p.path) { setStatus(t('Select a package first')); return; }
+    if (!p || !p.path) {
+      setStatus(t('Select a package first'));
+      return;
+    }
     window.open(ghUrl(cfg.repo, 'tree', p.path), '_blank');
   };
   installBtn.onclick = () => installFromDisk();
   rmBtn.onclick = async () => {
     const p = selectedPkg();
-    if (!p || !state.installed.has(p.id)) { setStatus(t('Select an installed package')); return; }
+    if (!p || !state.installed.has(p.id)) {
+      setStatus(t('Select an installed package'));
+      return;
+    }
     const msg = t('Remove') + ' "' + (p.name || p.id) + '" ' + t('from your library? This removes it permanently.');
     let ok;
-    try { const m = await import('/src/ui/confirm.js'); ok = await m.confirmDialog({ title: t('Uninstall'), message: msg, yes: t('Uninstall'), no: t('Cancel') }); }
-    catch (_) { ok = window.confirm(msg); }
+    try {
+      const m = await import('/src/ui/confirm.js');
+      ok = await m.confirmDialog({ title: t('Uninstall'), message: msg, yes: t('Uninstall'), no: t('Cancel') });
+    } catch (_) {
+      ok = window.confirm(msg);
+    }
     if (ok) uninstall(p);
   };
-  cfgBtn.onclick = () => { renderConfig(); cfgPane.classList.toggle('show'); };
-  refBtn.onclick = async () => { await loadCatalog(); await refresh(); };
-  search.oninput = () => { state.q = search.value; renderList(); };
+  cfgBtn.onclick = () => {
+    renderConfig();
+    cfgPane.classList.toggle('show');
+  };
+  refBtn.onclick = async () => {
+    await loadCatalog();
+    await refresh();
+  };
+  search.oninput = () => {
+    state.q = search.value;
+    renderList();
+  };
   x.onclick = closeModal;
-  overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeModal();
+  };
 
-  await loadLangs();   // language DB for vocab naming (local + remote), before any discovery runs
+  await loadLangs(); // language DB for vocab naming (local + remote), before any discovery runs
   await loadCatalog();
   await loadInstalled();
   await loadLocalCounts();
@@ -245,7 +373,7 @@ async function openModal(api) {
 }
 
 module.exports = {
-  popup: true,   // rail icon -> we immediately open the full dialog and dismiss the popup
+  popup: true, // rail icon -> we immediately open the full dialog and dismiss the popup
 
   /** @param {HTMLElement} root @param {import('../../src/panels/addons.js').AddonApi} api */
   ui(root, api) {
@@ -260,6 +388,12 @@ module.exports = {
   },
 
   /** @param {any} ctx */
-  start(ctx) { try { ctx.log('pacman addon ready'); } catch (_) {} },
-  stop() { closeModal(); },
+  start(ctx) {
+    try {
+      ctx.log('pacman addon ready');
+    } catch (_) {}
+  },
+  stop() {
+    closeModal();
+  },
 };

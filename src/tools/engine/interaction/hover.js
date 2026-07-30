@@ -17,22 +17,37 @@ import { toData } from '../geometry.js';
 
 export const hoverMethods = {
   /** @this {Ix} @param {string} [cursor] */
-  _enable(cursor) { this.overlay.style.pointerEvents = 'auto'; this.overlay.style.cursor = cursor || 'crosshair'; },
+  _enable(cursor) {
+    this.overlay.style.pointerEvents = 'auto';
+    this.overlay.style.cursor = cursor || 'crosshair';
+  },
   /** @this {Ix} */
-  _disable() { this.overlay.style.pointerEvents = 'none'; },
+  _disable() {
+    this.overlay.style.pointerEvents = 'none';
+  },
   /** @this {Ix} @returns {Tool|null} */
-  _activeDrawTool() { const t = /** @type {Tool|undefined} */ (getTool(getActiveTool())); return t && t.kind === 'draw' ? t : null; },
+  _activeDrawTool() {
+    const t = /** @type {Tool|undefined} */ (getTool(getActiveTool()));
+    return t && t.kind === 'draw' ? t : null;
+  },
   /** @this {Ix} @returns {Tool|null} */
-  _activeZoomTool() { const t = /** @type {Tool|undefined} */ (getTool(getActiveTool())); return t && t.kind === 'zoom' ? t : null; },
+  _activeZoomTool() {
+    const t = /** @type {Tool|undefined} */ (getTool(getActiveTool()));
+    return t && t.kind === 'zoom' ? t : null;
+  },
 
   // over the right price scale or bottom time scale? → let the chart handle it
   // (rescale/scroll), never capture a drawing sitting underneath.
   /** @this {Ix} @param {number} x @param {number} y */
   _overScale(x, y) {
     const r = this.overlay.getBoundingClientRect();
-    let pw = 0, th = 0;
-    try { pw = this.pane.chart.priceAxis('right').width(); th = this.pane.chart.timeAxis().height(); } catch (_) {}
-    const gy = this._gy != null ? this._gy : y;   // time axis is at the chart bottom (global y)
+    let pw = 0,
+      th = 0;
+    try {
+      pw = this.pane.chart.priceAxis('right').width();
+      th = this.pane.chart.timeAxis().height();
+    } catch (_) {}
+    const gy = this._gy != null ? this._gy : y; // time axis is at the chart bottom (global y)
     return x > r.width - pw || gy > r.height - th;
   },
 
@@ -40,21 +55,48 @@ export const hoverMethods = {
   /** @this {Ix} @param {number} x @param {number} y */
   _hover(x, y) {
     if (this.mode !== 'idle') return;
-    if (this._overScale(x, y)) { this._disable(); return; }   // price/time scale → chart owns it
-    if (this._activeDrawTool()) { this._enable('crosshair'); return; }
-    if (this._activeZoomTool()) { this._enable('crosshair'); return; }   // zoom tool → arm the drag-to-zoom box
+    if (this._overScale(x, y)) {
+      this._disable();
+      return;
+    } // price/time scale → chart owns it
+    if (this._activeDrawTool()) {
+      this._enable('crosshair');
+      return;
+    }
+    if (this._activeZoomTool()) {
+      this._enable('crosshair');
+      return;
+    } // zoom tool → arm the drag-to-zoom box
     const locked = drawingsLocked();
-    const hit = locked ? null : this.engine.hitTest(x, y);   // an unlocked drawing under the cursor? (locked ones can't move)
+    const hit = locked ? null : this.engine.hitTest(x, y); // an unlocked drawing under the cursor? (locked ones can't move)
     // Shift arms the quick-measure drag -- EXCEPT over an unlocked drawing, where Shift constrains the
     // MOVE instead (fall through to the move-capture below).
-    if (this._shiftHeld && !hit && getSetting('measureHotkey') !== false) { this._enable('crosshair'); return; }
-    if (locked) { this._disable(); return; }   // locked → don't capture; chart pans through
+    if (this._shiftHeld && !hit && getSetting('measureHotkey') !== false) {
+      this._enable('crosshair');
+      return;
+    }
+    if (locked) {
+      this._disable();
+      return;
+    } // locked → don't capture; chart pans through
     // a reshape handle (endpoint) wins over the label box, so the ends stay grabbable;
     // otherwise the selected label's underlay shows the text cursor and edits on click
-    if (hit && hit.part === 'point') { this._enable('default'); return; }
-    if (this._overTextBox(x, y)) { this._enable('text'); return; }
-    if (hit) { this._enable('pointer'); return; }   // finger pointer over a drawing's body
-    if (this._ctrlHeld) { this._enable('crosshair'); return; }   // Ctrl → arm marquee from empty space
+    if (hit && hit.part === 'point') {
+      this._enable('default');
+      return;
+    }
+    if (this._overTextBox(x, y)) {
+      this._enable('text');
+      return;
+    }
+    if (hit) {
+      this._enable('pointer');
+      return;
+    } // finger pointer over a drawing's body
+    if (this._ctrlHeld) {
+      this._enable('crosshair');
+      return;
+    } // Ctrl → arm marquee from empty space
     this._disable();
   },
 
@@ -68,7 +110,7 @@ export const hoverMethods = {
     // Inset the EDIT region by a margin so the box's outer ring selects/moves the object instead of
     // editing it -- i.e. the grabbable underlay is a bit larger than the text-input box. Skip the inset
     // for a small box (e.g. the empty "+ Add text" placeholder) so it stays easy to click.
-    const m = (g.x1 - g.x0 > 28 && g.y1 - g.y0 > 22) ? 6 : 0;
+    const m = g.x1 - g.x0 > 28 && g.y1 - g.y0 > 22 ? 6 : 0;
     return x >= g.x0 + m && x <= g.x1 - m && y >= g.y0 + m && y <= g.y1 - m;
   },
 
@@ -98,7 +140,7 @@ export const hoverMethods = {
   _onLeave() {
     if (this._activeDrawTool() || this.mode === 'creating') {
       this.pane.clearCrosshair();
-      bus.emit('crosshair', { source: this.pane, time: null, price: null });   // broadcast the clear to synced panes/windows
+      bus.emit('crosshair', { source: this.pane, time: null, price: null }); // broadcast the clear to synced panes/windows
     }
   },
 };

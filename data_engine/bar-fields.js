@@ -13,10 +13,10 @@
 /** @typedef {'sum'|'last'|'first'|'max'|'min'} AggRule */
 /** @type {Record<string, AggRule>} */
 export const EXTRA_AGG = {
-  openInterest: 'last',   // futures OI -- a daily point-in-time reading (settlement); last in the group
-  tickVolume: 'sum',      // trade count per bar -- additive like volume
-  settlement: 'last',     // official daily settlement price
-  exchangeClose: 'last',  // official exchange close price
+  openInterest: 'last', // futures OI -- a daily point-in-time reading (settlement); last in the group
+  tickVolume: 'sum', // trade count per bar -- additive like volume
+  settlement: 'last', // official daily settlement price
+  exchangeClose: 'last', // official exchange close price
 };
 
 // the OHLCV core -- everything else on a bar is an "extra"
@@ -35,9 +35,10 @@ export function foldExtras(group, bar) {
     if (v == null) continue;
     const rule = EXTRA_AGG[k] || 'last';
     if (rule === 'sum') group[k] = (group[k] || 0) + v;
-    else if (rule === 'first') { if (group[k] == null) group[k] = v; }
-    else if (rule === 'max') group[k] = group[k] == null ? v : Math.max(group[k], v);
+    else if (rule === 'first') {
+      if (group[k] == null) group[k] = v;
+    } else if (rule === 'max') group[k] = group[k] == null ? v : Math.max(group[k], v);
     else if (rule === 'min') group[k] = group[k] == null ? v : Math.min(group[k], v);
-    else group[k] = v;   // 'last' (default): overwrite, since we fold in ascending time
+    else group[k] = v; // 'last' (default): overwrite, since we fold in ascending time
   }
 }

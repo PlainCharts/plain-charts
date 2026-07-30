@@ -5,17 +5,21 @@
 import { IPC } from '../ipc-contract.js';
 
 /** @type {any} */
-const chan = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel(IPC.ASSISTANT_CMD) : null;
+const chan = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(IPC.ASSISTANT_CMD) : null;
 const TIMEOUT_MS = 8000;
 let seq = 0;
 /** @type {Map<number, (result: any) => void>} */
 const pending = new Map();
 
-if (chan) chan.onmessage = (/** @type {MessageEvent} */ e) => {
-  const m = e.data; if (!m || m.type !== 'reply') return;
-  const done = pending.get(m.id); if (!done) return;
-  pending.delete(m.id); done(m.result);
-};
+if (chan)
+  chan.onmessage = (/** @type {MessageEvent} */ e) => {
+    const m = e.data;
+    if (!m || m.type !== 'reply') return;
+    const done = pending.get(m.id);
+    if (!done) return;
+    pending.delete(m.id);
+    done(m.result);
+  };
 
 // Run a command in the UI and resolve with its result (rejects on {error} or if no window handled it).
 /** @param {string} op @param {any} args @returns {Promise<any>} */
@@ -25,8 +29,11 @@ export function runCommand(op, args) {
   return new Promise((resolve, reject) => {
     let done = false;
     const finish = (/** @type {any} */ result) => {
-      if (done) return; done = true; pending.delete(id);
-      if (result && result.error) reject(new Error(String(result.error))); else resolve(result || { ok: true });
+      if (done) return;
+      done = true;
+      pending.delete(id);
+      if (result && result.error) reject(new Error(String(result.error)));
+      else resolve(result || { ok: true });
     };
     pending.set(id, finish);
     chan.postMessage({ type: 'cmd', id, op, args });

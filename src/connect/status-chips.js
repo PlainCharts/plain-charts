@@ -7,14 +7,20 @@ import { $ } from '../dom.js';
 
 export function initConnStatusChips() {
   const renderTopStatus = () => {
-    const c = $('conn'); if (!c) return;
+    const c = $('conn');
+    if (!c) return;
     c.innerHTML = '';
-    broker.connections().filter((x) => x.connected).forEach((x) => {
-      const chip = document.createElement('span'); chip.className = 'conn-chip';
-      const dot = document.createElement('span'); dot.className = 'conn-chip-dot';
-      chip.append(dot, document.createTextNode(x.name));
-      c.appendChild(chip);
-    });
+    broker
+      .connections()
+      .filter((x) => x.connected)
+      .forEach((x) => {
+        const chip = document.createElement('span');
+        chip.className = 'conn-chip';
+        const dot = document.createElement('span');
+        dot.className = 'conn-chip-dot';
+        chip.append(dot, document.createTextNode(x.name));
+        c.appendChild(chip);
+      });
   };
   bus.on('connections:changed', renderTopStatus);
   renderTopStatus();

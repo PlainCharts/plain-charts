@@ -6,21 +6,33 @@
 import { getPrimitive } from './primitive-registry.js';
 
 /** @type {Promise<void> | undefined} */
-let done;   // memoized: one discovery + load per window, shared by every pane's overlay
+let done; // memoized: one discovery + load per window, shared by every pane's overlay
 
 /** Discover and import every loadable order primitive. Resolves once all are loaded (or skipped). @returns {Promise<void>} */
 export function loadPrimitiveModules() {
   if (done) return done;
   done = fetch('/api/user-order-primitives')
     .then((r) => r.json())
-    .then((d) => Promise.all((d.primitives || []).map(
-      async (/** @type {{ id: string, url: string, name?: string, description?: string }} */ p) => {
-        try { await import(p.url); } catch (e) { console.error('[order-primitive] load failed:', p.id, e); return; }
-        // name/description come ONLY from the package's meta.json (carried on the discovery list) -- never the code.
-        const reg = /** @type {any} */ (getPrimitive(p.id));
-        if (reg) { reg.name = p.name || ''; reg.description = p.description || ''; }
-      },
-    )))
+    .then((d) =>
+      Promise.all(
+        (d.primitives || []).map(
+          async (/** @type {{ id: string, url: string, name?: string, description?: string }} */ p) => {
+            try {
+              await import(p.url);
+            } catch (e) {
+              console.error('[order-primitive] load failed:', p.id, e);
+              return;
+            }
+            // name/description come ONLY from the package's meta.json (carried on the discovery list) -- never the code.
+            const reg = /** @type {any} */ (getPrimitive(p.id));
+            if (reg) {
+              reg.name = p.name || '';
+              reg.description = p.description || '';
+            }
+          },
+        ),
+      ),
+    )
     .then(() => {})
     .catch(() => {});
   return done;

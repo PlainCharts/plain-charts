@@ -8,10 +8,14 @@
 
 /** the PRODUCER that drives this alert: 'price' (a condition on a bar feed, the default/legacy shape) or
  * 'time' (a schedule). The one field the arming branch keys off. @param {any} a @returns {'price'|'time'} */
-export function sourceOf(a) { return (a && a.source === 'time') ? 'time' : 'price'; }
+export function sourceOf(a) {
+  return a && a.source === 'time' ? 'time' : 'price';
+}
 
 /** a time alert's schedule (null for price alerts). @param {any} a */
-export function scheduleOf(a) { return (a && a.schedule) || null; }
+export function scheduleOf(a) {
+  return (a && a.schedule) || null;
+}
 
 /** does this alert's condition depend on a TIMEFRAME? Only the "Moving" family does -- it measures price over
  * bars/time, so the interval matters. Level conditions (cross/gt/lt) are pure price levels, TF-independent; a
@@ -36,7 +40,8 @@ export function alertType(a) {
  * @param {any} a @returns {{ kind:'symbol', symbol:string } | { kind:'watchlist', listId:string, name:string }} */
 export function applyOf(a) {
   const ap = a && a.apply;
-  if (ap && ap.kind === 'watchlist' && ap.listId) return { kind: 'watchlist', listId: ap.listId, name: ap.name || 'Watchlist' };
+  if (ap && ap.kind === 'watchlist' && ap.listId)
+    return { kind: 'watchlist', listId: ap.listId, name: ap.name || 'Watchlist' };
   return { kind: 'symbol', symbol: (a && a.symbol) || '' };
 }
 
@@ -45,9 +50,9 @@ export function applyOf(a) {
  * `items` array mixes section headers and symbols -- we keep only symbols. @param {any} doc @param {string} listId
  * @returns {{ broker:(string|null), symbol:string }[]} */
 export function listSymbols(doc, listId) {
-  const lists = (doc && Array.isArray(doc.lists)) ? doc.lists : [];
+  const lists = doc && Array.isArray(doc.lists) ? doc.lists : [];
   const L = lists.find((/** @type {any} */ l) => l && l.id === listId);
-  const items = (L && Array.isArray(L.items)) ? L.items : [];
+  const items = L && Array.isArray(L.items) ? L.items : [];
   /** @type {{ broker:(string|null), symbol:string }[]} */
   const out = [];
   const seen = new Set();
@@ -65,7 +70,10 @@ export function listSymbols(doc, listId) {
  * latches another; a single-symbol alert keeps the flat `rt`. Returns {} when nothing has fired yet -- the shape
  * the eval core (cadenceAllows/markFired) expects. @param {any} a @param {string} symbol @returns {any} */
 export function rtFor(a, symbol) {
-  if (applyOf(a).kind === 'watchlist') { const m = (a && a.rt) || {}; return m[symbol] || {}; }
+  if (applyOf(a).kind === 'watchlist') {
+    const m = (a && a.rt) || {};
+    return m[symbol] || {};
+  }
   return (a && a.rt) || {};
 }
 
@@ -80,42 +88,51 @@ export function withRt(a, symbol, rt) {
 /** the eval price level of an alert: the first compiled term carrying a finite numeric level. @param {any} a @returns {number|null} */
 export function levelOf(a) {
   const terms = a && a.compiled && a.compiled.terms;
-  if (Array.isArray(terms)) { for (const tm of terms) { const l = tm && Number(tm.level); if (Number.isFinite(l)) return l; } }
+  if (Array.isArray(terms)) {
+    for (const tm of terms) {
+      const l = tm && Number(tm.level);
+      if (Number.isFinite(l)) return l;
+    }
+  }
   return null;
 }
 
 /** the first condition operator label (e.g. "Crossing"), for the hover pill / display. @param {any} a @returns {string} */
 export function opOf(a) {
   const rows = a && a.conditions && a.conditions.conditions;
-  return (Array.isArray(rows) && rows[0] && rows[0].op) ? rows[0].op : 'Crossing';
+  return Array.isArray(rows) && rows[0] && rows[0].op ? rows[0].op : 'Crossing';
 }
 
 /** the human condition lines from the UI form, e.g. "Price Crossing Trend line" or, for a Moving % row (which
  * carries a percent + a bar count instead of a right-hand object), "Price Moving Up 0.1% in 1 bar".
  * @param {any} a @returns {string[]} */
 export function condLines(a) {
-  const rows = (a && a.conditions && Array.isArray(a.conditions.conditions)) ? a.conditions.conditions : [];
-  return rows.map((/** @type {any} */ r) => {
-    if (/Moving/i.test(String(r.op || ''))) {
-      const isPct = /%\s*$/.test(String(r.op));
-      const base = String(r.op).replace(/\s*%\s*$/, '');   // "Moving Up %" -> "Moving Up"
-      const mag = isPct ? (r.percent != null ? r.percent + '%' : '') : (r.amount != null ? String(r.amount) : '');
-      const n = Number(r.lookback);
-      const bars = Number.isFinite(n) ? 'in ' + n + ' ' + (n === 1 ? 'bar' : 'bars') : '';
-      return [r.left, base, mag, bars].filter(Boolean).join(' ');
-    }
-    return [r.left, r.op, r.right].filter(Boolean).join(' ');
-  }).filter(Boolean);
+  const rows = a && a.conditions && Array.isArray(a.conditions.conditions) ? a.conditions.conditions : [];
+  return rows
+    .map((/** @type {any} */ r) => {
+      if (/Moving/i.test(String(r.op || ''))) {
+        const isPct = /%\s*$/.test(String(r.op));
+        const base = String(r.op).replace(/\s*%\s*$/, ''); // "Moving Up %" -> "Moving Up"
+        const mag = isPct ? (r.percent != null ? r.percent + '%' : '') : r.amount != null ? String(r.amount) : '';
+        const n = Number(r.lookback);
+        const bars = Number.isFinite(n) ? 'in ' + n + ' ' + (n === 1 ? 'bar' : 'bars') : '';
+        return [r.left, base, mag, bars].filter(Boolean).join(' ');
+      }
+      return [r.left, r.op, r.right].filter(Boolean).join(' ');
+    })
+    .filter(Boolean);
 }
 
 /** does this alert use an ANY (vs ALL) match? @param {any} a @returns {boolean} */
-export function isAny(a) { return !!(a && a.conditions && /any/i.test(a.conditions.match || 'all')); }
+export function isAny(a) {
+  return !!(a && a.conditions && /any/i.test(a.conditions.match || 'all'));
+}
 
 /** the alert's lifecycle status as a stable KEY (the panel maps it to a translated label). @param {any} a @returns {'active'|'triggered'|'stopped'} */
 export function statusOf(a) {
   if (a && a.enabled) return 'active';
-  if (a && a.rt && a.rt.fired) return 'triggered';   // fired then auto-stopped (Once only)
-  return 'stopped';                                    // manually paused
+  if (a && a.rt && a.rt.fired) return 'triggered'; // fired then auto-stopped (Once only)
+  return 'stopped'; // manually paused
 }
 
 // The update PATCH to MOVE an alert to a new price level -- the one home for the "set level + re-arm" mutation that was
@@ -125,14 +142,23 @@ export function statusOf(a) {
 // carries no Value; its anchor is rebuilt by the caller that owns the drawing geometry (spread this patch, add anchor).
 /** @param {any} a @param {number} lvl @returns {{ compiled: any, rt: {}, conditions?: any }} */
 export function withLevel(a, lvl) {
-  const compiled = (a && a.compiled)
-    ? { ...a.compiled, terms: (a.compiled.terms || []).map((/** @type {any} */ tm) => (tm && tm.level != null) ? { ...tm, level: lvl } : tm) }
-    : (a && a.compiled);
+  const compiled =
+    a && a.compiled
+      ? {
+          ...a.compiled,
+          terms: (a.compiled.terms || []).map((/** @type {any} */ tm) =>
+            tm && tm.level != null ? { ...tm, level: lvl } : tm,
+          ),
+        }
+      : a && a.compiled;
   const rows = (a && a.conditions && a.conditions.conditions) || [];
   /** @type {{ compiled: any, rt: {}, conditions?: any }} */
   const patch = { compiled, rt: {} };
   if (rows.some((/** @type {any} */ r) => r && r.value != null)) {
-    patch.conditions = { ...a.conditions, conditions: rows.map((/** @type {any} */ r) => (r && r.value != null) ? { ...r, value: lvl } : r) };
+    patch.conditions = {
+      ...a.conditions,
+      conditions: rows.map((/** @type {any} */ r) => (r && r.value != null ? { ...r, value: lvl } : r)),
+    };
   }
   return patch;
 }
@@ -140,7 +166,9 @@ export function withLevel(a, lvl) {
 /** the update PATCH to RESTART a stopped/triggered alert: re-enable it AND clear the fired latch (rt) so a spent
  * "Once only" (or any recurring) alert re-arms fresh -- the same reset-to-rearm rule withLevel applies on a move.
  * The rt-schema knowledge lives HERE, not in the view. @returns {{ enabled: true, rt: {} }} */
-export function restartPatch() { return { enabled: true, rt: {} }; }
+export function restartPatch() {
+  return { enabled: true, rt: {} };
+}
 
 /** Price decimals for a record's Value fields: the alert's OWN precision (stamped on the record at creation);
  * a legacy record (no priceDecimals) falls back to the max precision of its stored condition values -- so
@@ -149,7 +177,11 @@ export function restartPatch() { return { enabled: true, rt: {} }; }
 export function priceDecimalsOf(a) {
   if (a && a.priceDecimals != null) return a.priceDecimals;
   /** @param {any} v @returns {number} */
-  const decimalsOf = (v) => { if (v == null) return 0; const i = String(v).indexOf('.'); return i < 0 ? 0 : String(v).length - i - 1; };
+  const decimalsOf = (v) => {
+    if (v == null) return 0;
+    const i = String(v).indexOf('.');
+    return i < 0 ? 0 : String(v).length - i - 1;
+  };
   const rows = (a && a.conditions && a.conditions.conditions) || [];
   return rows.length ? Math.max(0, ...rows.map((/** @type {any} */ r) => decimalsOf(r.value))) : 0;
 }

@@ -19,12 +19,21 @@ export function classifyTicks(bars, lastT, batch) {
   for (const b of batch) {
     if (lastT == null) return { ops: 'full', lastT: null };
     const prev = bars.get(b.time);
-    const same = prev && prev.open === b.open && prev.high === b.high && prev.low === b.low
-      && prev.close === b.close && prev.volume === b.volume;
-    if (same) continue;                                    // identical re-send -> no-op
-    if (b.time === lastT) ops.push(b);                     // forming-bar replace
-    else if (b.time > lastT) { ops.push(b); lastT = b.time; }   // append (multi-append stays in order)
-    else return { ops: 'full', lastT: null };              // older bar changed -> rebuild
+    const same =
+      prev &&
+      prev.open === b.open &&
+      prev.high === b.high &&
+      prev.low === b.low &&
+      prev.close === b.close &&
+      prev.volume === b.volume;
+    if (same) continue; // identical re-send -> no-op
+    if (b.time === lastT)
+      ops.push(b); // forming-bar replace
+    else if (b.time > lastT) {
+      ops.push(b);
+      lastT = b.time;
+    } // append (multi-append stays in order)
+    else return { ops: 'full', lastT: null }; // older bar changed -> rebuild
   }
   return { ops, lastT };
 }

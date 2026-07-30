@@ -17,7 +17,7 @@
 /** @param {number} v @param {number} step @returns {number} */
 function floorToStep(v, step) {
   const n = Math.floor(v / step + 1e-9);
-  const dec = (String(step).split('.')[1] || '').length;   // step's decimal places
+  const dec = (String(step).split('.')[1] || '').length; // step's decimal places
   return Number((n * step).toFixed(dec));
 }
 
@@ -39,8 +39,10 @@ export function sizeFromStake(p) {
   const min = p.minVolume && p.minVolume > 0 ? p.minVolume : step;
   const max = p.maxVolume && p.maxVolume > 0 ? p.maxVolume : Infinity;
   if (!(p.risk > 0)) return { qty: 0, riskPerUnit: null, reason: 'no risk amount' };
-  if (!(p.tickSize > 0) || !(p.tickValue > 0)) return { qty: 0, riskPerUnit: null, reason: 'instrument has no tick value' };
-  if (!(p.entryPrice > 0) || !(p.stopPrice > 0)) return { qty: 0, riskPerUnit: null, reason: 'need an entry and a stop' };
+  if (!(p.tickSize > 0) || !(p.tickValue > 0))
+    return { qty: 0, riskPerUnit: null, reason: 'instrument has no tick value' };
+  if (!(p.entryPrice > 0) || !(p.stopPrice > 0))
+    return { qty: 0, riskPerUnit: null, reason: 'need an entry and a stop' };
   const stopDist = Math.abs(p.entryPrice - p.stopPrice);
   if (stopDist < p.tickSize / 2) return { qty: 0, riskPerUnit: null, reason: 'stop is at the entry' };
   const riskPerUnit = (stopDist / p.tickSize) * p.tickValue;

@@ -9,15 +9,23 @@ import { bus } from '../bus.js';
 const KEY = 'lastSeenLogAt';
 
 /** epoch ms of the last Log visit (0 = never opened, so every entry counts as unseen). @returns {number} */
-export function lastSeenLogAt() { const v = Number(getSetting(KEY)); return Number.isFinite(v) ? v : 0; }
+export function lastSeenLogAt() {
+  const v = Number(getSetting(KEY));
+  return Number.isFinite(v) ? v : 0;
+}
 
 /** stamp the Log as seen (default = now) and broadcast 'alerts:log-seen' so an open badge re-derives to 0.
  * @param {number} [ms] */
-export function markLogSeen(ms) { setSetting(KEY, ms == null ? Date.now() : ms); bus.emit('alerts:log-seen'); }
+export function markLogSeen(ms) {
+  setSetting(KEY, ms == null ? Date.now() : ms);
+  bus.emit('alerts:log-seen');
+}
 
 /** PURE: how many log entries fired strictly after `since`. @param {{at?:number}[]} entries @param {number} since @returns {number} */
 export function unseenCount(entries, since) {
   let n = 0;
-  for (const e of (entries || [])) { if (Number(e && e.at) > since) n++; }
+  for (const e of entries || []) {
+    if (Number(e && e.at) > since) n++;
+  }
   return n;
 }

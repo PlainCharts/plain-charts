@@ -9,13 +9,18 @@ let activeId = 'cursor';
 
 export const getActiveTool = () => activeId;
 /** @param {string} id */
-export function setActiveTool(id) { activeId = id; bus.emit('tool:active', id); }
+export function setActiveTool(id) {
+  activeId = id;
+  bus.emit('tool:active', id);
+}
 
 export function initToolController() {
   bus.on('pane:click', ({ pane, time, price, x, y }) => {
     const tool = getTool(activeId);
     if (!tool || tool.kind === 'cursor' || typeof tool.onClick !== 'function') return;
     const ctx = { pane, add: (/** @type {any} */ params) => pane.drawings.add(activeId, params) };
-    try { tool.onClick({ time, price, x, y, pane }, ctx); } catch (_) {}
+    try {
+      tool.onClick({ time, price, x, y, pane }, ctx);
+    } catch (_) {}
   });
 }

@@ -25,24 +25,49 @@ Tools.register({
     const P = d.points || [];
     if (!P.length) return [];
     const s = d.style || {};
-    const size = s.size || 28, a = { t: P[0].time, p: P[0].price };
+    const size = s.size || 28,
+      a = { t: P[0].time, p: P[0].price };
     /** @type {ToolMark[]} */
-    const out = [{ text: renderGlyph(s.glyph), at: a, align: 'center', baseline: 'middle', color: s.color || '#e8e8e8', size, font: FONT }];
+    const out = [
+      {
+        text: renderGlyph(s.glyph),
+        at: a,
+        align: 'center',
+        baseline: 'middle',
+        color: s.color || '#e8e8e8',
+        size,
+        font: FONT,
+      },
+    ];
     if (sel) {
-      const hw = glyphWidth(s.glyph, size) / 2 + 4, hh = size / 2 + 4;
-      out.push({ closed: true, stroke: '#2962ff', width: 1, dash: [4, 3], path: [
-        { ...a, dx: -hw, dy: -hh }, { ...a, dx: hw, dy: -hh }, { ...a, dx: hw, dy: hh }, { ...a, dx: -hw, dy: hh },
-      ] });
+      const hw = glyphWidth(s.glyph, size) / 2 + 4,
+        hh = size / 2 + 4;
+      out.push({
+        closed: true,
+        stroke: '#2962ff',
+        width: 1,
+        dash: [4, 3],
+        path: [
+          { ...a, dx: -hw, dy: -hh },
+          { ...a, dx: hw, dy: -hh },
+          { ...a, dx: hw, dy: hh },
+          { ...a, dx: -hw, dy: hh },
+        ],
+      });
     }
     return out;
   },
 
   // a symbol is a single point; selection shows a dashed box (a mark), no reshape handles
-  handles() { return []; },
+  handles() {
+    return [];
+  },
   /** @param {ToolScreenPoint[]} pts @param {number} x @param {number} y @param {number} tol @param {ToolDrawing} [d] @returns {ToolHitResult} */
   hitTest(pts, x, y, tol, d) {
     if (!pts.length) return null;
-    const s = (d && d.style) || {}, size = s.size || 28, w = glyphWidth(s.glyph, size);
+    const s = (d && d.style) || {},
+      size = s.size || 28,
+      w = glyphWidth(s.glyph, size);
     const b = { x: pts[0].x - w / 2, y: pts[0].y - size / 2, w, h: size };
     if (x >= b.x - tol && x <= b.x + b.w + tol && y >= b.y - tol && y <= b.y + b.h + tol) return { part: 'body' };
     return null;
@@ -50,7 +75,7 @@ Tools.register({
 });
 
 // ---------------------------------------------------------------- palette wiring + glyph measurement
-initSymbolPicker();   // wire the palette to tool activation (idempotent)
+initSymbolPicker(); // wire the palette to tool activation (idempotent)
 
 const FONT = "system-ui, 'Noto Sans Symbols2', 'Segoe UI Symbol', 'DejaVu Sans', sans-serif";
 
