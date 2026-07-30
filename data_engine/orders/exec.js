@@ -179,140 +179,17 @@ export async function placeResting(ctx, side, qty, orderType, price, tif, goodTh
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
 export async function execScript(ops, ctx, onStatus = () => {}) {
-  const brokerId = ctx.broker || '';
   try {
     for (let i = 0; i < ops.length; i++) {
       const op = ops[i];
       if (op.op === 'market') {
-        // a bare "buy"/"sell" TRIGGER is resolved by the ticket UI (it fires the tab's form); it never reaches the worker
-        // through the ticket path. If one arrives here (e.g. an alert/assistant script), there is no form to read -> reject.
-        if (op.trigger) throw new Error('a bare "' + op.side + '" fires the order ticket tab -- it only runs from the ticket, give a quantity for a headless order (e.g. "' + op.side + ' 1")');
-        if (!brokerId || !ctx.symbol) throw new Error(op.side + ' needs an account + symbol');
-        // gather the DISTANCE exits (set stop/target N) that immediately follow this order -> they bracket THIS
-        // entry. be/% forms are position-modify only (no range at a fresh entry) and are left to run standalone.
-        /** @type {any[]} */ const brk = [];
-        while (i + 1 < ops.length && ((ops[i + 1].op === 'setStop' && ops[i + 1].mode === 'dist') || ops[i + 1].op === 'setTarget')) { brk.push(ops[i + 1]); i++; }
-        const isStake = Number(op.stake) > 0;   // "buy stake N": qty sized from the risk amount + the stop
-        if (!brk.length) {
-          if (isStake) throw new Error('stake needs a stop -- add "set stop N", e.g. "' + op.side + ' stake ' + op.stake + ' and set stop 20"');
-          onStatus(op.side + ' ' + op.qty + '…');
-          const r = await placeMarket(ctx, op.side, op.qty, null);   // the ONE market implementation (shared with the dialog's place)
-          if (!r.ok) throw new Error(r.error);
-        } else {
-          // The reference is the CURRENT MARKET PRICE at button-press -- one quote, computed once for BOTH account
-          // types (that's all "N points/pips away" needs). No waiting for a fill.
-          const inst = await resolveInst(brokerId, ctx.symbol);
-          const q = await firstQuote(brokerId, inst);
-          const entry = op.side === 'buy' ? q.ask : q.bid;
-          const { sl, tp } = bracketPrices(op.side, entry, inst, brk);
-          // STAKE: size the qty from the risk amount against the just-computed stop (the SAME sizeFromStake rule the
-          // dialog uses). The stop is the risk basis, so a stake with only a target (no stop) is rejected.
-          let qty = op.qty;
-          if (isStake) {
-            if (!(sl > 0)) throw new Error('stake needs a stop -- "set target" alone has no risk basis; add "set stop N"');
-            onStatus(op.side + ' stake ' + op.stake + ' + bracket…');
-            const s = await sizeStakeQty(brokerId, ctx, op.side, { risk: Number(op.stake), stop: sl }, entry, inst);
-            if (s.error) throw new Error(s.error);
-            qty = s.qty;
-          } else {
-            onStatus(op.side + ' ' + op.qty + ' + bracket…');
-          }
-          await placeMarketBracket(brokerId, ctx, op.side, Number(qty), sl, tp, inst);   // ONE bracket order; the adapter realizes it (MT5 position SL/TP, CQG server-side OCO)
-        }
+        i = await execMarketOp(ops, i, ctx, onStatus);   // consumes the bracket ops that follow the entry
       } else if (op.op === 'setTarget') {
         throw new Error('set target must follow a buy/sell in the same script');
       } else if (op.op === 'setStop' || op.op === 'moveStop') {
-        // MODIFY the current open position's protective stop. Two verbs share this path:
-        //   set stop N   (setStop/dist) -- place the stop N away from ENTRY (pips/pts)
-        //   move stop be (moveStop/be)  -- break-even: stop = entry
-        //   move stop N  (moveStop/by)  -- nudge the existing stop N (pips/pts) toward entry (and beyond -> profit lock)
-        // Account-type aware: hedging moves the position SL; netting replaces the resting stop order.
-        const verb = op.op === 'moveStop' ? 'move stop' : 'set stop';
-        if (!brokerId || !ctx.symbol) throw new Error(verb + ' needs an account + symbol');
-        const posn = currentPosition(ctx);
-        if (!posn) throw new Error('no open position on ' + ctx.symbol + ' to ' + verb);
-        const inst = await resolveInst(brokerId, ctx.symbol);
-        const dec = inst.priceDecimals != null ? Number(inst.priceDecimals) : null;
-        const tick = Number(inst.tickSize) || 0;
-        const rnd = (/** @type {number} */ p) => tick ? Math.round(p / tick) * tick : (dec != null ? Number(p.toFixed(dec)) : p);
-        const isLong = posn.side === 'long';
-        const exit = isLong ? 'sell' : 'buy';
-        // the current protective stop (an INPUT to the pct/by price maths): hedging = the position SL; netting = the
-        // live resting stop (freshestExitOrder -- the shared ghost-aware lookup).
-        const liveStop = posn.net ? freshestExitOrder(brokerId, ctx.symbol, 'stop', exit) : null;
-        const curStop = posn.net
-          ? (liveStop ? Number(liveStop.stopPrice != null ? liveStop.stopPrice : liveStop.price) : null)
-          : (posn.stopLoss != null ? Number(posn.stopLoss) : null);
-        let stop;
-        if (op.mode === 'be') { const buf = op.buffer ? (isLong ? 1 : -1) * op.buffer * unitSize(dec, op.unit) : 0; stop = rnd(posn.entry + buf); }   // buffer in the profit direction
-        else if (op.mode === 'by') {
-          if (curStop == null || !isFinite(curStop)) throw new Error('move stop N needs an existing stop to move -- set one first (e.g. "set stop 10")');
-          stop = rnd(curStop + (isLong ? 1 : -1) * op.value * unitSize(dec, op.unit));   // nudge the stop N toward entry (and beyond -> profit lock)
-        } else { const size = unitSize(dec, op.unit); stop = rnd(isLong ? posn.entry - op.value * size : posn.entry + op.value * size); }
-        const label = op.mode === 'be' ? ('BE' + (op.buffer ? (op.buffer > 0 ? '+' : '') + op.buffer : '')) : String(op.value);
-        onStatus(verb + ' ' + label + '…');
-        // the DSL only COMPUTES the price; applying it is the ONE implementation (setStopPrice: hedging position SL /
-        // netting modify-by-id of the OCO leg / standalone stop), shared with the chart drag and the dialog.
-        const r = await setStopPrice(ctx, /** @type {number} */ (stop), verb.toUpperCase() + ' ' + label);
-        if (!r.ok) throw new Error(r.error);
+        await execStopOp(op, ctx, onStatus);
       } else if (op.op === 'close') {
-        const a = /** @type {any} */ (broker.for(ctx.broker));
-        if (!a) throw new Error('close needs a connected broker');
-        if (op.what === 'all') {
-          // FLATTEN the account: first CANCEL every working order (else the resting stop/limit legs orphan -- the
-          // pile-up we hit), then CLOSE every open position. Account-scoped when ctx.broker is set. Each order/
-          // position goes through the shared verb implementations (cancelById / closeLotById / closePositionSym),
-          // fire-and-forget per item as before -- a single refusal must not strand the rest of the flatten.
-          const working = /** @type {any[]} */ (platform.orders.all()).filter((o) => (!ctx.broker || o.broker === ctx.broker) && !isTerminal(o.status));
-          if (working.length) { jlog(ctx.broker || 'app', 'CANCEL ' + working.length + ' working order' + (working.length === 1 ? '' : 's')); working.forEach((o) => { cancelById(o.broker, o.id); }); }
-          const lots = /** @type {any[]} */ (platform.positionLots.all()).filter((l) => !ctx.broker || l.broker === ctx.broker);
-          const nets = /** @type {any[]} */ (platform.positions.all()).filter((p) => (!ctx.broker || p.broker === ctx.broker) && Number(p.qty) > 0 && !lots.some((l) => l.broker === p.broker && l.symbol === p.symbol));
-          const targets = [...lots, ...nets];
-          jlog(ctx.broker || 'app', 'CLOSE ALL -- ' + targets.length + ' position' + (targets.length === 1 ? '' : 's'));
-          targets.forEach((t) => { if (t.ticket != null) closeLotById(t.broker, t.ticket); else closePositionSym(t.broker, t.symbol); });
-        } else {
-          if (!ctx.symbol) throw new Error('close ' + op.what + ' needs a symbol');
-          // ACCOUNT-TYPE AWARE. Hedging streams per-ticket lots (close by ticket); netting streams a single net
-          // position (no lots, no closeLot) -- there a side/partial close is an OPPOSING market order that reduces
-          // the net. Discriminate by what the broker actually streams for THIS symbol.
-          const lots = /** @type {any[]} */ (platform.positionLots.all()).filter((l) => (!ctx.broker || l.broker === ctx.broker) && l.symbol === ctx.symbol && Number(l.qty) > 0);
-          const net = /** @type {any[]} */ (platform.positions.all()).find((/** @type {any} */ p) => (!ctx.broker || p.broker === ctx.broker) && p.symbol === ctx.symbol && Number(p.qty) > 0);
-          const hedging = lots.length > 0;
-          if (op.what === 'symbol') {
-            // the ONE flatten-by-symbol implementation (account-type aware), shared with the closePosition verb
-            const r = await closePositionSym(ctx.broker, ctx.symbol);
-            if (!r.ok) throw new Error(r.error);
-          } else if (op.what === 'buy' || op.what === 'sell') {
-            const side = op.what === 'buy' ? 'long' : 'short';
-            if (hedging) {
-              const match = lots.filter((l) => l.side === side);
-              if (!match.length) throw new Error('no ' + op.what + ' position on ' + ctx.symbol);
-              if (!a.closeLot) throw new Error('broker cannot close one side');
-              jlog(ctx.broker, 'CLOSE ' + op.what.toUpperCase() + ' ' + ctx.symbol + ' -- ' + match.length);
-              match.forEach((l) => closeLotById(ctx.broker, l.ticket));   // per-lot via the shared verb (fire-and-forget, as before)
-            } else {
-              // NETTING: the net has one side; close it only when it matches, via an opposing market order
-              if (!net || net.side !== side) throw new Error('no ' + op.what + ' position on ' + ctx.symbol);
-              const exit = op.what === 'buy' ? 'sell' : 'buy';
-              jlog(ctx.broker, 'CLOSE ' + op.what.toUpperCase() + ' ' + ctx.symbol + ' -- ' + net.qty);
-              await placeOrderP(ctx.broker, { symbol: ctx.symbol, side: exit, qty: Number(net.qty), type: 'market' });
-            }
-          } else if (op.what === 'partial') {
-            // Close N (lots / contracts / shares) off the CURRENT position. currentPosition resolves the single position;
-            // with SEVERAL on the symbol and no ticket to pin one it throws "open the ticket on the one to modify".
-            const posn = currentPosition(ctx);
-            if (!posn) throw new Error('no position on ' + ctx.symbol + ' to partial-close');
-            const cur = Number(posn.qty);
-            const amount = Math.min(Number(op.qty), cur);
-            jlog(ctx.broker, 'PARTIAL CLOSE ' + amount + ' ' + ctx.symbol + (amount < Number(op.qty) ? ' (capped from ' + op.qty + ')' : ''));
-            if (posn.net) {
-              await placeOrderP(ctx.broker, { symbol: ctx.symbol, side: exitSide(posn.side), qty: amount, type: 'market' });   // netting: opposing market order
-            } else {
-              if (!a.closeLotPartial || !a.closeLot) throw new Error('broker cannot partial-close');
-              closeLotById(ctx.broker, posn.ticket, amount >= cur ? undefined : amount);   // hedging: partial-close THIS position (whole = undefined)
-            }
-          }
-        }
+        await execCloseOp(op, ctx);
       }
       await sleep(0);
     }
@@ -323,6 +200,154 @@ export async function execScript(ops, ctx, onStatus = () => {}) {
     onStatus(msg, true);
     jlog(ctx.broker || 'app', 'SCRIPT stopped: ' + msg, true);
     return { ok: false, error: msg };
+  }
+}
+
+// ---- the DSL ops (one function per verb; execScript dispatches, these decide). Each throws on failure --
+// execScript's envelope catches, journals, and returns { ok:false, error }. Bodies moved verbatim from the
+// dispatch arms.
+
+/** The market-entry op: gathers the DISTANCE exits that follow it into a bracket, sizes a stake, places.
+ * Returns the op index AFTER the consumed bracket ops.
+ * @param {any[]} ops @param {number} i @param {{broker:string, symbol:string}} ctx @param {(msg: string, err?: boolean) => void} onStatus @returns {Promise<number>} */
+async function execMarketOp(ops, i, ctx, onStatus) {
+  const op = ops[i];
+  const brokerId = ctx.broker || '';
+  // a bare "buy"/"sell" TRIGGER is resolved by the ticket UI (it fires the tab's form); it never reaches the worker
+  // through the ticket path. If one arrives here (e.g. an alert/assistant script), there is no form to read -> reject.
+  if (op.trigger) throw new Error('a bare "' + op.side + '" fires the order ticket tab -- it only runs from the ticket, give a quantity for a headless order (e.g. "' + op.side + ' 1")');
+  if (!brokerId || !ctx.symbol) throw new Error(op.side + ' needs an account + symbol');
+  // gather the DISTANCE exits (set stop/target N) that immediately follow this order -> they bracket THIS
+  // entry. be/% forms are position-modify only (no range at a fresh entry) and are left to run standalone.
+  /** @type {any[]} */ const brk = [];
+  while (i + 1 < ops.length && ((ops[i + 1].op === 'setStop' && ops[i + 1].mode === 'dist') || ops[i + 1].op === 'setTarget')) { brk.push(ops[i + 1]); i++; }
+  const isStake = Number(op.stake) > 0;   // "buy stake N": qty sized from the risk amount + the stop
+  if (!brk.length) {
+    if (isStake) throw new Error('stake needs a stop -- add "set stop N", e.g. "' + op.side + ' stake ' + op.stake + ' and set stop 20"');
+    onStatus(op.side + ' ' + op.qty + '…');
+    const r = await placeMarket(ctx, op.side, op.qty, null);   // the ONE market implementation (shared with the dialog's place)
+    if (!r.ok) throw new Error(r.error);
+  } else {
+    // The reference is the CURRENT MARKET PRICE at button-press -- one quote, computed once for BOTH account
+    // types (that's all "N points/pips away" needs). No waiting for a fill.
+    const inst = await resolveInst(brokerId, ctx.symbol);
+    const q = await firstQuote(brokerId, inst);
+    const entry = op.side === 'buy' ? q.ask : q.bid;
+    const { sl, tp } = bracketPrices(op.side, entry, inst, brk);
+    // STAKE: size the qty from the risk amount against the just-computed stop (the SAME sizeFromStake rule the
+    // dialog uses). The stop is the risk basis, so a stake with only a target (no stop) is rejected.
+    let qty = op.qty;
+    if (isStake) {
+      if (!(sl > 0)) throw new Error('stake needs a stop -- "set target" alone has no risk basis; add "set stop N"');
+      onStatus(op.side + ' stake ' + op.stake + ' + bracket…');
+      const s = await sizeStakeQty(brokerId, ctx, op.side, { risk: Number(op.stake), stop: sl }, entry, inst);
+      if (s.error) throw new Error(s.error);
+      qty = s.qty;
+    } else {
+      onStatus(op.side + ' ' + op.qty + ' + bracket…');
+    }
+    await placeMarketBracket(brokerId, ctx, op.side, Number(qty), sl, tp, inst);   // ONE bracket order; the adapter realizes it (MT5 position SL/TP, CQG server-side OCO)
+  }
+  return i;
+}
+
+/** The stop-modify op. MODIFY the current open position's protective stop. Two verbs share this path:
+ *   set stop N   (setStop/dist) -- place the stop N away from ENTRY (pips/pts)
+ *   move stop be (moveStop/be)  -- break-even: stop = entry
+ *   move stop N  (moveStop/by)  -- nudge the existing stop N (pips/pts) toward entry (and beyond -> profit lock)
+ * Account-type aware: hedging moves the position SL; netting replaces the resting stop order.
+ * @param {any} op @param {{broker:string, symbol:string, ticket?:any}} ctx @param {(msg: string, err?: boolean) => void} onStatus */
+async function execStopOp(op, ctx, onStatus) {
+  const brokerId = ctx.broker || '';
+  const verb = op.op === 'moveStop' ? 'move stop' : 'set stop';
+  if (!brokerId || !ctx.symbol) throw new Error(verb + ' needs an account + symbol');
+  const posn = currentPosition(ctx);
+  if (!posn) throw new Error('no open position on ' + ctx.symbol + ' to ' + verb);
+  const inst = await resolveInst(brokerId, ctx.symbol);
+  const dec = inst.priceDecimals != null ? Number(inst.priceDecimals) : null;
+  const rnd = rounder(inst);
+  const isLong = posn.side === 'long';
+  const exit = isLong ? 'sell' : 'buy';
+  // the current protective stop (an INPUT to the pct/by price maths): hedging = the position SL; netting = the
+  // live resting stop (freshestExitOrder -- the shared ghost-aware lookup).
+  const liveStop = posn.net ? freshestExitOrder(brokerId, ctx.symbol, 'stop', exit) : null;
+  const curStop = posn.net
+    ? (liveStop ? Number(liveStop.stopPrice != null ? liveStop.stopPrice : liveStop.price) : null)
+    : (posn.stopLoss != null ? Number(posn.stopLoss) : null);
+  let stop;
+  if (op.mode === 'be') { const buf = op.buffer ? (isLong ? 1 : -1) * op.buffer * unitSize(dec, op.unit) : 0; stop = rnd(posn.entry + buf); }   // buffer in the profit direction
+  else if (op.mode === 'by') {
+    if (curStop == null || !isFinite(curStop)) throw new Error('move stop N needs an existing stop to move -- set one first (e.g. "set stop 10")');
+    stop = rnd(curStop + (isLong ? 1 : -1) * op.value * unitSize(dec, op.unit));   // nudge the stop N toward entry (and beyond -> profit lock)
+  } else { const size = unitSize(dec, op.unit); stop = rnd(isLong ? posn.entry - op.value * size : posn.entry + op.value * size); }
+  const label = op.mode === 'be' ? ('BE' + (op.buffer ? (op.buffer > 0 ? '+' : '') + op.buffer : '')) : String(op.value);
+  onStatus(verb + ' ' + label + '…');
+  // the DSL only COMPUTES the price; applying it is the ONE implementation (setStopPrice: hedging position SL /
+  // netting modify-by-id of the OCO leg / standalone stop), shared with the chart drag and the dialog.
+  const r = await setStopPrice(ctx, /** @type {number} */ (stop), verb.toUpperCase() + ' ' + label);
+  if (!r.ok) throw new Error(r.error);
+}
+
+/** The close op: `close all` (flatten the account) / `close symbol` / `close buy|sell` / `close partial N`.
+ * Account-type aware via the shared verbs (cancelById / closeLotById / closePositionSym).
+ * @param {any} op @param {{broker:string, symbol:string, ticket?:any}} ctx */
+async function execCloseOp(op, ctx) {
+  const a = /** @type {any} */ (broker.for(ctx.broker));
+  if (!a) throw new Error('close needs a connected broker');
+  if (op.what === 'all') {
+    // FLATTEN the account: first CANCEL every working order (else the resting stop/limit legs orphan -- the
+    // pile-up we hit), then CLOSE every open position. Account-scoped when ctx.broker is set. Each order/
+    // position goes through the shared verb implementations (cancelById / closeLotById / closePositionSym),
+    // fire-and-forget per item as before -- a single refusal must not strand the rest of the flatten.
+    const working = /** @type {any[]} */ (platform.orders.all()).filter((o) => (!ctx.broker || o.broker === ctx.broker) && !isTerminal(o.status));
+    if (working.length) { jlog(ctx.broker || 'app', 'CANCEL ' + working.length + ' working order' + (working.length === 1 ? '' : 's')); working.forEach((o) => { cancelById(o.broker, o.id); }); }
+    const lots = /** @type {any[]} */ (platform.positionLots.all()).filter((l) => !ctx.broker || l.broker === ctx.broker);
+    const nets = /** @type {any[]} */ (platform.positions.all()).filter((p) => (!ctx.broker || p.broker === ctx.broker) && Number(p.qty) > 0 && !lots.some((l) => l.broker === p.broker && l.symbol === p.symbol));
+    const targets = [...lots, ...nets];
+    jlog(ctx.broker || 'app', 'CLOSE ALL -- ' + targets.length + ' position' + (targets.length === 1 ? '' : 's'));
+    targets.forEach((t) => { if (t.ticket != null) closeLotById(t.broker, t.ticket); else closePositionSym(t.broker, t.symbol); });
+    return;
+  }
+  if (!ctx.symbol) throw new Error('close ' + op.what + ' needs a symbol');
+  // ACCOUNT-TYPE AWARE. Hedging streams per-ticket lots (close by ticket); netting streams a single net
+  // position (no lots, no closeLot) -- there a side/partial close is an OPPOSING market order that reduces
+  // the net. Discriminate by what the broker actually streams for THIS symbol.
+  const lots = /** @type {any[]} */ (platform.positionLots.all()).filter((l) => (!ctx.broker || l.broker === ctx.broker) && l.symbol === ctx.symbol && Number(l.qty) > 0);
+  const net = /** @type {any[]} */ (platform.positions.all()).find((/** @type {any} */ p) => (!ctx.broker || p.broker === ctx.broker) && p.symbol === ctx.symbol && Number(p.qty) > 0);
+  const hedging = lots.length > 0;
+  if (op.what === 'symbol') {
+    // the ONE flatten-by-symbol implementation (account-type aware), shared with the closePosition verb
+    const r = await closePositionSym(ctx.broker, ctx.symbol);
+    if (!r.ok) throw new Error(r.error);
+  } else if (op.what === 'buy' || op.what === 'sell') {
+    const side = op.what === 'buy' ? 'long' : 'short';
+    if (hedging) {
+      const match = lots.filter((l) => l.side === side);
+      if (!match.length) throw new Error('no ' + op.what + ' position on ' + ctx.symbol);
+      if (!a.closeLot) throw new Error('broker cannot close one side');
+      jlog(ctx.broker, 'CLOSE ' + op.what.toUpperCase() + ' ' + ctx.symbol + ' -- ' + match.length);
+      match.forEach((l) => closeLotById(ctx.broker, l.ticket));   // per-lot via the shared verb (fire-and-forget, as before)
+    } else {
+      // NETTING: the net has one side; close it only when it matches, via an opposing market order
+      if (!net || net.side !== side) throw new Error('no ' + op.what + ' position on ' + ctx.symbol);
+      const exit = op.what === 'buy' ? 'sell' : 'buy';
+      jlog(ctx.broker, 'CLOSE ' + op.what.toUpperCase() + ' ' + ctx.symbol + ' -- ' + net.qty);
+      await placeOrderP(ctx.broker, { symbol: ctx.symbol, side: exit, qty: Number(net.qty), type: 'market' });
+    }
+  } else if (op.what === 'partial') {
+    // Close N (lots / contracts / shares) off the CURRENT position. currentPosition resolves the single position;
+    // with SEVERAL on the symbol and no ticket to pin one it throws "open the ticket on the one to modify".
+    const posn = currentPosition(ctx);
+    if (!posn) throw new Error('no position on ' + ctx.symbol + ' to partial-close');
+    const cur = Number(posn.qty);
+    const amount = Math.min(Number(op.qty), cur);
+    jlog(ctx.broker, 'PARTIAL CLOSE ' + amount + ' ' + ctx.symbol + (amount < Number(op.qty) ? ' (capped from ' + op.qty + ')' : ''));
+    if (posn.net) {
+      await placeOrderP(ctx.broker, { symbol: ctx.symbol, side: exitSide(posn.side), qty: amount, type: 'market' });   // netting: opposing market order
+    } else {
+      if (!a.closeLotPartial || !a.closeLot) throw new Error('broker cannot partial-close');
+      closeLotById(ctx.broker, posn.ticket, amount >= cur ? undefined : amount);   // hedging: partial-close THIS position (whole = undefined)
+    }
   }
 }
 
