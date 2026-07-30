@@ -172,6 +172,7 @@
       "path": "addons/position-manager",
       "runtime": "index.js",
       "files": [
+        "auto-engine.js",
         "auto.js",
         "config.json",
         "entry.js",
