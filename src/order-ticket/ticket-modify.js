@@ -209,7 +209,7 @@ export function buildOrderModifyEditor(o) {
     status.textContent = t('Sending…'); status.className = 'ot-mod-status';
     /** @type {any} */ const cmd = { type: 'modifyOrder', broker: o.broker, id: o.id, price, qty: vol };
     if (showSltp) { cmd.stopLoss = sl; cmd.takeProfit = tp; }   // hedging pending order: carry the SL/TP prices
-    command(cmd).then((/** @type {any} */ r) => cmdStatus(status, r, t('Modified')));
+    command(cmd).then((/** @type {any} */ r) => cmdStatus(status, r, t('Modified'))).catch((/** @type {any} */ e) => cmdStatus(status, { error: (e && e.message) || String(e) }, ''));
   };
   cancelBtn.onclick = () => {
     status.textContent = t('Canceling…'); status.className = 'ot-mod-status';

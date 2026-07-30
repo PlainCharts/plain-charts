@@ -7,6 +7,9 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Order ticket: a rejected modify on a pending order now shows the error in the ticket status line instead of nothing
+
 ## [0.1.0] - 2026-07-28
 
 Initial release.
