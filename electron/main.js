@@ -388,22 +388,18 @@ function openTicket(payload) {
     } catch (_) {}
     return;
   }
-  const rb =
-    ticketState && ticketState.bounds
-      ? clampBounds({ ...ticketState.bounds, width: TICKET_W, height: TICKET_H })
-      : null; // remembered position only; size is fixed
+  const rb = ticketState && ticketState.bounds ? clampBounds({ ...ticketState.bounds, width: TICKET_W }) : null; // remembered position + last fitted height; width is fixed
   const aot = !!(ticketState && ticketState.alwaysOnTop);
   const base = BrowserWindow.getFocusedWindow();
   const b = base ? base.getBounds() : null;
   ticketWin = new BrowserWindow({
     width: TICKET_W,
-    height: TICKET_H,
+    height: rb && rb.height ? rb.height : TICKET_H,
     minWidth: TICKET_W,
-    minHeight: TICKET_H,
+    minHeight: TICKET_H_MIN,
     maxWidth: TICKET_W,
-    maxHeight: TICKET_H,
     resizable: false,
-    title: 'Order', // FIXED size -- the layout is anchored, so the window never resizes
+    title: 'Order', // width is LOCKED; height auto-fits the content (quick-button rows) -- see 'order-ticket-height'
     icon: APP_ICON,
     x: rb ? rb.x : b ? b.x + 60 : undefined,
     y: rb ? rb.y : b ? b.y + 60 : undefined,
@@ -460,10 +456,29 @@ ipcMain.on('order-ticket-ready', (e) => {
 // The Order window is FIXED size and non-resizable (see openTicket). The renderer still measures its quick-button row
 // and sends 'order-ticket-width', but we no longer resize to it -- the window stays at TICKET_W; long quick-button
 // labels ellipsis within the 3-column grid instead of growing the window.
-const TICKET_W = 400,
-  TICKET_H = 580; // fixed Order-window content-agnostic frame size
+const TICKET_W = 400, // width is LOCKED (long quick-button labels ellipsis within the 3-col grid)
+  TICKET_H = 580, // initial height, before the renderer reports its measured content height
+  TICKET_H_MIN = 320; // floor so a fit request can never shrink the window to nothing
 ipcMain.on('order-ticket-width', () => {
-  /* no-op: the Order window is fixed-size */
+  /* no-op: the Order window width is fixed; only the height auto-fits (order-ticket-height) */
+});
+// The renderer measures its natural content height (title + tabs + body + footer/quick-buttons) and asks the
+// window to match, so adding quick-button rows GROWS the window instead of squishing the body. Height is clamped
+// to the display's work area; past that the body scrolls. Width stays locked. setResizable is toggled around
+// setBounds because a non-resizable window otherwise pins its size on some platforms.
+ipcMain.on('order-ticket-height', (_e, h) => {
+  if (!ticketWin || ticketWin.isDestroyed() || typeof h !== 'number' || !isFinite(h)) return;
+  try {
+    const wa = screen.getDisplayMatching(ticketWin.getBounds()).workArea;
+    const target = Math.max(TICKET_H_MIN, Math.min(Math.round(h), wa.height));
+    const cur = ticketWin.getBounds();
+    if (Math.abs(cur.height - target) <= 1) return; // already there -- avoid a resize/remember churn loop
+    ticketWin.setResizable(true);
+    ticketWin.setMinimumSize(TICKET_W, TICKET_H_MIN);
+    ticketWin.setMaximumSize(TICKET_W, wa.height);
+    ticketWin.setBounds({ x: cur.x, y: cur.y, width: TICKET_W, height: target });
+    ticketWin.setResizable(false);
+  } catch (_) {}
 });
 
 function destroyPreview() {

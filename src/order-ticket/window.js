@@ -170,8 +170,32 @@ function render() {
   }
   renderBody();
   if (state.syncVis) state.syncVis(); // re-target the universal visibility frame to the current tab's ctx (symbol/broker)
+  fitHeight(); // grow/shrink the OS window to the new content so a taller tab/footer never squishes the body
 }
 setRenderer(render); // plan-sync's tab mirror re-renders through the state slot
+
+// Match the OS window height to the natural content (title + tabs + body + footer). The body is momentarily
+// sized to its content -- its flex:1 stretch + inner scroll would otherwise hide the true height -- so the sum of
+// the shell's rows is the height the window should be. Growing the window is what stops added quick-button rows
+// from squishing the body. Coalesced in a rAF; main clamps to the screen and only the excess scrolls.
+function fitHeight() {
+  const d = /** @type {any} */ (window).desktop;
+  if (!d || !d.orderTicketHeight) return;
+  requestAnimationFrame(() => {
+    const prev = bodyEl.style.flex;
+    bodyEl.style.flex = '0 0 auto';
+    let needed = 0;
+    for (const k of root.children) {
+      const el = /** @type {HTMLElement} */ (k);
+      const pos = getComputedStyle(el).position;
+      if (pos === 'absolute' || pos === 'fixed') continue; // skip out-of-flow overlays (editor/script modals)
+      needed += el.offsetHeight;
+    }
+    bodyEl.style.flex = prev;
+    if (needed > 0) d.orderTicketHeight(needed);
+  });
+}
+state.fitHeight = fitHeight; // the quick-button bar (buttons.js) refits after it repaints
 
 // Open/refocus payload from main: {tab, position}. Double-clicking a position row asks for the Modify tab.
 // Fired on first load and on every re-open.

@@ -84,6 +84,7 @@ export function buildButtonBar(getCtx) {
       row.appendChild(btn);
     }
     fitWindow();
+    if (state.fitHeight) state.fitHeight(); // added/removed buttons change the footer height -> refit the window
   };
   // re-read the active template's buttons and repaint the bar (called after the editor closes / switches template)
   const refresh = () => {

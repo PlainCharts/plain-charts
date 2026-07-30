@@ -62,6 +62,7 @@ window.desktop = {
   onOrderTicketOpen: (cb) => ipcRenderer.on('order-ticket-open', (_e, opts) => cb(opts)), // (ticket window) receive open/refocus payload {tab, position}
   orderTicketReady: () => ipcRenderer.send('order-ticket-ready'), // (ticket window) listener attached -> pull the pending open intent from main
   orderTicketWidth: (w) => ipcRenderer.send('order-ticket-width', w), // (ticket window) ask main to grow/shrink the window to fit the quick-button row
+  orderTicketHeight: (h) => ipcRenderer.send('order-ticket-height', h), // (ticket window) ask main to match the window height to the measured content (quick-button rows)
   onMaxChange: (cb) => ipcRenderer.on('win-max', (_e, v) => cb(v)),
   // open/close the DevTools console for this window + the hidden data host
   devtools: (on) => ipcRenderer.send('devtools', { on }),

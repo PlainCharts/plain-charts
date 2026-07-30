@@ -67,6 +67,9 @@ export const state = {
   // the universal VISIBILITY / HIDE ON ENTRY frame's re-sync (set ONCE by buildVisibilityFrame; render() calls it on a
   // tab / symbol switch to re-target the toggles to the current ctx). NOT reset by renderBody -- the frame is persistent.
   /** @type {(() => void)|null} */ syncVis: null,
+  // ask the OS window to match its height to the current content (set once by window.js). render() and the
+  // quick-button repaint call it so adding/removing buttons GROWS/shrinks the window instead of squishing the body.
+  /** @type {(() => void)|null} */ fitHeight: null,
 };
 
 // the execution context supplied at click/send time. Broker/account come from the Account dropdown
