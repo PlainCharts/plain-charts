@@ -54,6 +54,7 @@ import { initClipboard } from './edit/clipboard.js';
 import { initCompare } from './market/compare.js';
 import { initToolController } from './tools/controller.js';
 import { initConnectDialog } from './connect/connect-dialog.js';
+import { initConnStatusChips } from './connect/status-chips.js';
 import { initBrokerAlerts } from './connect/broker-alert.js';
 import { initAddons } from './panels/addons.js';
 import { loadColors } from './ui/colors-store.js';
@@ -137,6 +138,7 @@ async function start() {
     initBottomBar();    // clock + tz offset
     initAddons();
     initConnectDialog();
+    initConnStatusChips(); // top-bar chips: one per connected account (app-lifetime, dialog-independent)
     initBrokerAlerts(); // popup on broker errors (so a failed autoconnect at startup is never silent)
     upgradeIcons();     // mask the static top-strip icons (compare / addons / connect) with the rest
   } catch (e) {
