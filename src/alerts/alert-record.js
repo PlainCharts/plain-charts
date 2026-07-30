@@ -141,3 +141,15 @@ export function withLevel(a, lvl) {
  * "Once only" (or any recurring) alert re-arms fresh -- the same reset-to-rearm rule withLevel applies on a move.
  * The rt-schema knowledge lives HERE, not in the view. @returns {{ enabled: true, rt: {} }} */
 export function restartPatch() { return { enabled: true, rt: {} }; }
+
+/** Price decimals for a record's Value fields: the alert's OWN precision (stamped on the record at creation);
+ * a legacy record (no priceDecimals) falls back to the max precision of its stored condition values -- so
+ * editing never truncates a value whose instrument differs from whatever chart is open (a forex alert edited
+ * on an index). @param {any} a @returns {number} */
+export function priceDecimalsOf(a) {
+  if (a && a.priceDecimals != null) return a.priceDecimals;
+  /** @param {any} v @returns {number} */
+  const decimalsOf = (v) => { if (v == null) return 0; const i = String(v).indexOf('.'); return i < 0 ? 0 : String(v).length - i - 1; };
+  const rows = (a && a.conditions && a.conditions.conditions) || [];
+  return rows.length ? Math.max(0, ...rows.map((/** @type {any} */ r) => decimalsOf(r.value))) : 0;
+}

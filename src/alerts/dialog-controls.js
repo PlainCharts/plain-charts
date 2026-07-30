@@ -5,6 +5,7 @@
 // openers; nothing here reaches into the engine.
 import { t } from '../i18n/i18n.js';
 import { openDateTimePicker, formatDateTime } from '../ui/datetime-picker.js';
+import { MOVE_OPS, isMoveOp } from './alert-conditions.js';   // the Moving op family (one home: the condition semantics)
 
 /** @param {string} tag @param {string | null} [cls] @param {string} [txt] @returns {HTMLElement} */
 export const el = (tag, cls, txt) => { const d = document.createElement(tag); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; };
@@ -17,10 +18,8 @@ export const roundPrice = (v, dec) => { const n = Number(v); return Number.isFin
 const EXPIRATIONS = ['Open-ended', 'End of day', '1 week', '1 month', 'Custom date'];
 // Condition operators between the two objects (left = symbol price, right = the drawing).
 const CONDITIONS = ['Crossing', 'Crossing Up', 'Crossing Down', 'Greater Than', 'Less Than'];
-// Relative (symbol-self) operators -- close moved over N bars; no right Object/Value. The base Moving Up/Down
-// take an absolute price amount; the "%" variants take a percent.
-const MOVE_OPS = ['Moving Up', 'Moving Down', 'Moving Up %', 'Moving Down %'];
-export const isMoveOp = (/** @type {string} */ op) => MOVE_OPS.indexOf(op) >= 0;
+// Relative (symbol-self) operators -- close moved over N bars; no right Object/Value. The list + the
+// isMoveOp predicate live with the condition semantics (alert-conditions.js), imported at the top.
 // Message placeholder tokens — clicked into the message text; the engine substitutes them when the
 // alert fires. Kept as literal `#tags` (NOT translated) so a message is portable across languages.
 const PLACEHOLDERS = ['#symbol', '#broker', '#interval', '#timenow', '#price'];

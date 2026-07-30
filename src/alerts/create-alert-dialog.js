@@ -11,8 +11,9 @@
 import { t } from '../i18n/i18n.js';
 import { getTool } from '../tools/registry.js';
 import { studyLabel } from '../../lib/kapelka/skin/legend.js';   // label attached indicators like the chart legend
-import { el, roundPrice, section, field, selectOf, enableToggle, expirationControl, conditionsControl, actionsControl, messageControl, isMoveOp, intervalControl } from './dialog-controls.js';   // pure DOM form-control builders (view leaf)
-import { anchorLevel, compileConditions } from './alert-conditions.js';   // pure UI-conditions -> compiled host terms (leaf, no DOM)
+import { el, roundPrice, section, field, selectOf, enableToggle, expirationControl, conditionsControl, actionsControl, messageControl, intervalControl } from './dialog-controls.js';   // pure DOM form-control builders (view leaf)
+import { anchorLevel, compileConditions, isRelativeConds, condsUseTf } from './alert-conditions.js';   // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
+import { priceDecimalsOf } from './alert-record.js';   // a record's Value precision (schema's one home)
 import { cadenceOf } from './eval.js';   // compile the Trigger label -> stable cadence key (host reads the field, not the label)
 import { alertForObject } from './alert-drawing-sync.js';   // edit mode: the existing alert on this drawing (drawing<->alert glue lives there)
 import { alertCommand } from './funnel.js';   // the single mutator path to the alert-host
@@ -67,6 +68,31 @@ export function closeCreateAlertDialog() {
 function onCreate(draft) {
   alertCommand('create', draft).catch((err) => console.error('[alert] create failed', err));
   closeCreateAlertDialog();
+}
+
+/**
+ * Assemble the AlertDraft from the gathered form state -- no DOM, exported so the schema assembly is
+ * testable apart from the dialog. Owns the scope denormalization (a watchlist option 'wl:<id>' applies the
+ * rule across a list; the list NAME rides on the scope so the panel/log display "List, tf" without a store
+ * lookup), the anchored-geometry snapshot, and the compiled host terms.
+ * @param {{ symbol: string, applyVal: string, applyText: string, chosenTf: string, brokerId: string|null,
+ *   dec: any, drawing: any|null, level: number|null, objectName: string, name: string, enabled: boolean,
+ *   trigger: string, expiration: string, expiryMs: number|null, uiConds: any, message: string, actions: string[] }} f
+ * @returns {AlertDraft & { cadence: any, priceDecimals: any }}
+ */
+export function buildDraft(f) {
+  const d = f.drawing;
+  const listName = f.applyText.replace(/\s*\(\d+\)\s*$/, '').trim();
+  const apply = /** @type {{ kind:'symbol', symbol:string } | { kind:'watchlist', listId:string, name:string }} */ (
+    f.applyVal.indexOf('wl:') === 0 ? { kind: 'watchlist', listId: f.applyVal.slice(3), name: listName } : { kind: 'symbol', symbol: f.symbol });
+  return {
+    symbol: apply.kind === 'watchlist' ? '' : f.symbol, tf: f.chosenTf, tfObj: tfById(f.chosenTf) || null, broker: f.brokerId, priceDecimals: f.dec, apply,
+    objectId: d ? d.id : null, tool: d ? d.tool : null,
+    anchor: d ? { tool: d.tool, points: (d.points || []).map((/** @type {any} */ p) => ({ time: p.time, price: p.price })), level: f.level } : null,
+    name: f.name, enabled: f.enabled, trigger: f.trigger, cadence: cadenceOf(f.trigger), expiration: f.expiration,
+    expiryMs: f.expiryMs, conditions: f.uiConds, compiled: compileConditions(f.uiConds, t('Price'), f.objectName, f.level),
+    message: f.message, actions: f.actions,
+  };
 }
 
 /**
@@ -152,9 +178,10 @@ function openAlertDialog(ctx) {
   const symOpt = /** @type {HTMLOptionElement} */ (el('option', null, symbol + (tf ? ', ' + tf : '')));
   symOpt.value = 'symbol'; applySel.appendChild(symOpt); applySel.value = 'symbol';
   applySel.addEventListener('change', () => refreshTitle());   // scope change -> live title
-  /** enable watchlist scope only when every condition row is symbol-relative; revert a stale pick. @param {any} uiConds */
+  /** enable watchlist scope only when the conditions are symbol-relative (isRelativeConds, the rule's one
+   * home beside the compiler); revert a stale pick. @param {any} uiConds */
   const applyGuard = (uiConds) => {
-    const rel = !!(uiConds && uiConds.conditions && uiConds.conditions.length && uiConds.conditions.every((/** @type {any} */ r) => isMoveOp(r.op)));
+    const rel = isRelativeConds(uiConds);
     applySel.querySelectorAll('optgroup option').forEach((o) => { /** @type {HTMLOptionElement} */ (o).disabled = !rel; });
     if (!rel && applySel.value.indexOf('wl:') === 0) applySel.value = 'symbol';
   };
@@ -194,12 +221,9 @@ function openAlertDialog(ctx) {
   const initRows = (editing && existing.conditions) ? existing.conditions.conditions
     : isWatch ? [{ left: t('Price'), op: 'Moving Up %', right: '', value: null, percent: 1, lookback: 1 }]
     : (isValue ? [{ left: t('Price'), op: 'Crossing', right: t('Value'), value: lastPrice(pane) }] : undefined);
-  // decimals for rounding the Value: the current chart's for a NEW alert; for an EDIT, the alert's OWN precision
-  // (stamped on the record at creation; legacy alerts fall back to their stored value's precision) -- so editing
-  // never truncates a value whose instrument differs from whatever chart is open (a forex alert edited on an index).
-  const decimalsOf = (/** @type {any} */ v) => { if (v == null) return 0; const i = String(v).indexOf('.'); return i < 0 ? 0 : String(v).length - i - 1; };
-  const storedDec = (editing && existing.conditions) ? Math.max(0, ...((existing.conditions.conditions || []).map((/** @type {any} */ r) => decimalsOf(r.value)))) : 0;
-  const dec = editing ? (existing.priceDecimals != null ? existing.priceDecimals : storedDec) : pane.priceDecimals;
+  // decimals for rounding the Value: the current chart's for a NEW alert; for an EDIT, the record's own
+  // precision (priceDecimalsOf: stamped at creation, legacy fallback to the stored values' precision).
+  const dec = editing ? priceDecimalsOf(existing) : pane.priceDecimals;
   const initMatch = (editing && existing.conditions) ? existing.conditions.match : undefined;
   // condition changes drive the watchlist-scope guard, the interval picker's visibility (TF only matters for the
   // Moving family), and the live title. Extended once the interval control exists.
@@ -209,17 +233,17 @@ function openAlertDialog(ctx) {
   // never silently bound to it. This is the alert's tf/tfObj; a Moving % window is measured over bars at it.
   // The segment row is a SHORT few; the full list lives under "Other" (never dump every interval as a segment).
   const interval = intervalControl(tf || firstTf() || '', favTimeframes().slice(0, 4).map((tf2) => tf2.id), listIntervals(), () => refreshTitle());
-  // TF only matters for the Moving family (price over time) -- hide the interval picker, and drop it from the
-  // title, for pure price-level conditions (Crossing / Greater / Less).
-  const condsUseTf = () => conds.get().conditions.some((/** @type {any} */ r) => isMoveOp(r.op));
-  const syncTf = () => { interval.el.style.display = condsUseTf() ? '' : 'none'; };
+  // TF only matters for the Moving family (condsUseTf, beside the compiler) -- hide the interval picker,
+  // and drop it from the title, for pure price-level conditions (Crossing / Greater / Less).
+  const usesTf = () => condsUseTf(conds.get());
+  const syncTf = () => { interval.el.style.display = usesTf() ? '' : 'none'; };
   // Live dialog title: "<verb> alert on <scope>[, <interval>]" -- scope from Apply to, interval from the picker
   // (only when the condition uses one), updating as either changes.
   const scopeText = () => {
     if (applySel.value.indexOf('wl:') === 0) { const o = applySel.options[applySel.selectedIndex]; return (o ? o.text : t('Watchlists')).replace(/\s*\(\d+\)\s*$/, '').trim(); }
     return symbol || '';
   };
-  refreshTitle = () => { const iv = condsUseTf() ? interval.get() : ''; symSpan.textContent = scopeText() + (iv ? ', ' + iv : ''); };
+  refreshTitle = () => { const iv = usesTf() ? interval.get() : ''; symSpan.textContent = scopeText() + (iv ? ', ' + iv : ''); };
   onCondsChange = (/** @type {any} */ ui) => { applyGuard(ui); syncTf(); refreshTitle(); };
   syncTf();
   refreshTitle();
@@ -255,23 +279,16 @@ function openAlertDialog(ctx) {
   const brokerId = editing ? ((existing && existing.broker) || null) : (/** @type {any} */ (pane).broker || null);
   const level = d ? anchorLevel(d) : null;
   create.onclick = () => {
-    const uiConds = conds.get();
-    const applyVal = applySel.value;
-    // scope: a watchlist option ('wl:<id>') applies the rule across a list; anything else is the single symbol.
-    // Denormalize the list NAME onto the scope for display (the panel/log show "List, tf" without a store lookup).
-    const selText = applySel.options[applySel.selectedIndex] ? applySel.options[applySel.selectedIndex].text : '';
-    const listName = selText.replace(/\s*\(\d+\)\s*$/, '').trim();
-    const apply = /** @type {{ kind:'symbol', symbol:string } | { kind:'watchlist', listId:string, name:string }} */ (
-      applyVal.indexOf('wl:') === 0 ? { kind: 'watchlist', listId: applyVal.slice(3), name: listName } : { kind: 'symbol', symbol });
-    const chosenTf = interval.get();   // the alert's own interval (from the picker), not the chart's
-    const draft = {
-      symbol: apply.kind === 'watchlist' ? '' : symbol, tf: chosenTf, tfObj: tfById(chosenTf) || null, broker: brokerId, priceDecimals: dec, apply,
-      objectId: d ? d.id : null, tool: d ? d.tool : null,
-      anchor: d ? { tool: d.tool, points: (d.points || []).map((/** @type {any} */ p) => ({ time: p.time, price: p.price })), level } : null,
-      name: nameIn.value, enabled: enable.get(), trigger: trigSel.value, cadence: cadenceOf(trigSel.value), expiration: exp.kind(),
-      expiryMs: exp.ms(), conditions: uiConds, compiled: compileConditions(uiConds, t('Price'), objectName, level),
+    // gather the form and dispatch; the draft schema itself is buildDraft's (module level, testable)
+    const draft = buildDraft({
+      symbol, applyVal: applySel.value,
+      applyText: applySel.options[applySel.selectedIndex] ? applySel.options[applySel.selectedIndex].text : '',
+      chosenTf: interval.get(),   // the alert's own interval (from the picker), not the chart's
+      brokerId, dec, drawing: d, level, objectName,
+      name: nameIn.value, enabled: enable.get(), trigger: trigSel.value,
+      expiration: exp.kind(), expiryMs: exp.ms(), uiConds: conds.get(),
       message: msg.get(), actions: actions.get(),
-    };
+    });
     if (editing) {
       // UPDATE the existing alert; reset the fired latch (rt) so an edited alert re-arms.
       alertCommand('update', { id: existing.id, patch: { ...draft, rt: {} } }).catch((err) => console.error('[alert] update failed', err));
