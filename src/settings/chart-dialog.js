@@ -14,6 +14,7 @@ import { namePrompt } from '../ui/name-prompt.js';
 import { addRailAction } from '../panels/rightpanel.js';
 import { closeColorPicker } from '../ui/colorpicker.js';
 import { t } from '../i18n/i18n.js';   // vocabulary lookup for the settings nav + chart context menu
+import { importJsonFile } from '../ui/import-json.js';   // the shared Import… file flow
 import { themeIcon } from '../ui/icon.js';
 import { row, inlineRow, labeled, unit, helpDot, makeAppearanceControls, makeLiveControls } from './sd-controls.js';
 import { IPC } from '../ipc-contract.js';   // "Send to AI" injects chart context into the AI Workspace terminal
@@ -307,22 +308,13 @@ function initTemplateMenu() {
       if (name && pane) saveTemplate(name, snapshotFromDraft(draft, pane));
     });
     add('Open folder', () => openTemplatesFolder());
-    add('Import…', () => {
-      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json,.json';
-      inp.onchange = () => {
-        const f = inp.files && inp.files[0]; if (!f) return;
-        const r = new FileReader();
-        r.onload = () => {
-          let d; try { d = JSON.parse(/** @type {string} */ (r.result)); } catch (_) { alert('That file is not valid JSON.'); return; }
-          if (!d || !d.name || !isChartSnapshot(d)) { alert('That file is not a chart template.'); return; }
-          const { name, ...rest } = d;   // store the WHOLE snapshot (every section), not a truncated subset
-          saveTemplate(name, rest);
-          render();
-        };
-        r.readAsText(f);
-      };
-      inp.click();
-    });
+    add('Import…', () => importJsonFile((d) => {
+      if (!d || !d.name || !isChartSnapshot(d)) return false;
+      const { name, ...rest } = d;   // store the WHOLE snapshot (every section), not a truncated subset
+      saveTemplate(name, rest);
+      render();
+      return true;
+    }, t('That file is not a chart template.')));
     const list = listTemplates();
     if (list.length) { const d = document.createElement('div'); d.className = 'tmpl-div'; menu.appendChild(d); }
     list.forEach((t) => {

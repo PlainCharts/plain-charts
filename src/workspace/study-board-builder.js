@@ -4,6 +4,7 @@
 // chart inside a Main Workspace's layout: that chart's timeframe + visible window drive every study
 // (studies have no independent timeframe). Pick the workspace, then click the chart in its layout.
 import { getActivePane } from '../chart/layout.js';
+import { makeDraggable } from '../ui/draggable.js';
 import { listStudies } from '../studies/registry.js';
 import { openSymbolSearch } from '../market/symbol-search.js';
 import { createWorkspaceTab, getActiveWsId, updateBoard } from './tabs.js';
@@ -22,28 +23,7 @@ const el = (tag, cls, txt) => { const d = document.createElement(tag); if (cls) 
 const oscillators = () => listStudies().filter((/** @type {any} */ s) => s.overlay === false);   // sub-pane studies only
 
 // drag the dialog by its header (switches to fixed positioning on first grab so it leaves the
-// overlay's flex centering and follows the cursor) -- same behaviour as the Workspace Manager.
-/**
- * @param {HTMLElement} dlg
- * @param {HTMLElement} handle
- */
-function dragByHandle(dlg, handle) {
-  handle.style.cursor = 'move';
-  handle.onpointerdown = (/** @type {PointerEvent} */ e) => {
-    const tgt = /** @type {HTMLElement} */ (e.target);
-    if (e.button !== 0 || (tgt.closest && tgt.closest('.lib-x'))) return;
-    const r = dlg.getBoundingClientRect();
-    dlg.style.position = 'fixed'; dlg.style.margin = '0'; dlg.style.left = r.left + 'px'; dlg.style.top = r.top + 'px';
-    const ox = e.clientX - r.left, oy = e.clientY - r.top;
-    const move = (/** @type {PointerEvent} */ ev) => {
-      dlg.style.left = Math.max(0, Math.min(window.innerWidth - 60, ev.clientX - ox)) + 'px';
-      dlg.style.top = Math.max(0, Math.min(window.innerHeight - 30, ev.clientY - oy)) + 'px';
-    };
-    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
-    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
-    try { handle.setPointerCapture(e.pointerId); } catch (_) {}
-  };
-}
+// overlay's flex centering and follows the cursor) -- the shared makeDraggable (ui/draggable.js).
 
 /** @type {HTMLElement|null} */
 let overlay = null;
@@ -74,6 +54,7 @@ export function openStudyBoardBuilder(edit) {
   const dlg = el('div', 'dialog sb-builder');
   const head = el('div', 'set-head');
   const x = el('span', 'lib-x', '✕');
+  x.onpointerdown = (e) => e.stopPropagation();   // the ✕ is not a drag handle
   head.append(el('span', 'set-title', edit ? 'Edit study board' : 'New study board'), x);
   dlg.appendChild(head);
 
@@ -198,7 +179,7 @@ export function openStudyBoardBuilder(edit) {
   dlg.appendChild(body);
   overlay.appendChild(dlg);
   document.body.appendChild(overlay);
-  dragByHandle(dlg, head);   // drag the dialog around by its header
+  makeDraggable(dlg, head);   // drag the dialog around by its header (shared helper)
 
   x.onclick = closeStudyBoardBuilder;
   overlay.onclick = (/** @type {MouseEvent} */ e) => { if (e.target === overlay) closeStudyBoardBuilder(); };

@@ -7,6 +7,7 @@ import { platform, broker, bus, command, computePositions } from '../../data_eng
 import * as accounts from '../connect/accounts.js';
 import { getSetting, setSetting } from '../settings/settings.js';
 import { GEAR, openColumnPicker } from './column-picker.js';
+import { createTableSort } from './table-sort.js';
 import { fmtDeskTime, onDeskConfigChange } from './desk-config.js';
 import { createAccountFilter } from './account-filter.js';
 import { unrealizedProfit } from './trade-derive.js';
@@ -156,23 +157,8 @@ export function mountPositions(root) {
   root.appendChild(wrap);
 
   let cols = getCols();
-  const savedSort = getSetting('positionsSort') || {};
-  let sortKey = savedSort.key || 'openTime';    // default: most recent first
-  let sortDir = savedSort.dir === 'asc' ? 'asc' : 'desc';
-
-  // comparator on RAW values: numeric when both parse as numbers, else string; blanks always sink to the bottom
-  /** @param {PosRow} a @param {PosRow} b @returns {number} */
-  const compare = (a, b) => {
-    const acc = RAW[sortKey]; if (!acc) return 0;
-    const av = acc(a), bv = acc(b);
-    const ae = av == null || av === '', be = bv == null || bv === '';
-    if (ae && be) return 0; if (ae) return 1; if (be) return -1;   // blanks last regardless of direction
-    const na = Number(av), nb = Number(bv);
-    const r = (!Number.isNaN(na) && !Number.isNaN(nb)) ? na - nb : String(av).localeCompare(String(bv));
-    return sortDir === 'asc' ? r : -r;
-  };
-  /** @param {string} k */
-  const setSort = (k) => { if (sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc'; else { sortKey = k; sortDir = 'desc'; } setSetting('positionsSort', { key: sortKey, dir: sortDir }); render(); };
+  // column sort (shared surface rule): default most recent first
+  const sort = createTableSort({ settingKey: 'positionsSort', defaultKey: 'openTime', valueOf: (k, r) => { const acc = RAW[k]; return acc ? acc(r) : undefined; }, onChange: () => render() });
 
   // Flatten is an EXECUTION -> route through the order worker (single owner), never call the broker directly. A
   // hedging LOT closes by its own ticket (`closeLot` -- not the whole symbol, that would nuke the other hedges); a
@@ -294,7 +280,7 @@ export function mountPositions(root) {
     const lotBrokers = new Set(lots.map((l) => l.broker));
     // lots (per-ticket) and nets (per-symbol) have slightly different shapes -> treat as loose rows
     const base = /** @type {any[]} */ ([...lots, ...platform.positions.all().filter((n) => !lotBrokers.has(n.broker))]);
-    const rows = base.filter(acctFilter.matches).map((r) => ({ ...r, _derived: lookupDerived(idx, r), _mark: r.price != null ? r.price : markOf(r) })).sort(compare);   // account lens -> enrich -> sort
+    const rows = base.filter(acctFilter.matches).map((r) => ({ ...r, _derived: lookupDerived(idx, r), _mark: r.price != null ? r.price : markOf(r) })).sort(sort.compare);   // account lens -> enrich -> sort
     pruneQuotes(new Set(rows.map(markKey)));   // drop feeds for closed positions
     rows.forEach(ensureQuote);                 // add feeds for newly open ones
     count.textContent = rows.length ? String(rows.length) : '';
@@ -304,8 +290,8 @@ export function mountPositions(root) {
     cols.forEach((k) => {
       const th = document.createElement('th'); th.className = 'a-' + (BY[k].align || 'left') + ' sortable';
       th.textContent = t(BY[k].label);
-      if (sortKey === k) { const ar = document.createElement('span'); ar.className = 'sort-arrow'; ar.textContent = sortDir === 'asc' ? ' ↑' : ' ↓'; th.appendChild(ar); }
-      th.onclick = () => setSort(k);
+      const ar = sort.arrowFor(k); if (ar) th.appendChild(ar);
+      th.onclick = () => sort.setSort(k);
       htr.appendChild(th);
     });
     htr.appendChild(document.createElement('th'));   // actions column (always-on, not configurable)

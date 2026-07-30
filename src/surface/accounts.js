@@ -7,6 +7,7 @@ import { platform, broker, bus } from '../../data_engine/index.js';
 import * as accounts from '../connect/accounts.js';
 import { getSetting, setSetting } from '../settings/settings.js';
 import { GEAR, openColumnPicker } from './column-picker.js';
+import { createTableSort } from './table-sort.js';
 import { t } from '../i18n/i18n.js';   // vocabulary lookup for column labels + status text
 
 /**
@@ -86,38 +87,23 @@ export function mountAccounts(root) {
   root.appendChild(wrap);
 
   let cols = getCols();
-  const savedSort = getSetting('accountsSort') || {};
-  let sortKey = savedSort.key || 'name';
-  let sortDir = savedSort.dir === 'desc' ? 'desc' : 'asc';
-
   // enrich a live account row with its saved-connection context (status / name / server)
   /** @param {AcctRow} r @returns {Ctx} */
   const ctxFor = (r) => { const saved = /** @type {Partial<import('../connect/accounts.js').SavedAccount>} */ (accounts.listAccounts().find((a) => a.protocol === r.broker) || {}); return { connected: broker.isConnected(r.broker), name: saved.name, server: saved.server, accountType: saved.accountType }; };
 
-  // comparator on RAW values (row + its context): numeric when both parse as numbers, else string; blanks last
-  /** @param {{ r: AcctRow, c: Ctx }} A @param {{ r: AcctRow, c: Ctx }} B @returns {number} */
-  const compare = (A, B) => {
-    const acc = RAW[sortKey]; if (!acc) return 0;
-    const av = acc(A.r, A.c), bv = acc(B.r, B.c);
-    const ae = av == null || av === '', be = bv == null || bv === '';
-    if (ae && be) return 0; if (ae) return 1; if (be) return -1;
-    const na = Number(av), nb = Number(bv);
-    const r = (!Number.isNaN(na) && !Number.isNaN(nb)) ? na - nb : String(av).localeCompare(String(bv));
-    return sortDir === 'asc' ? r : -r;
-  };
-  /** @param {string} k */
-  const setSort = (k) => { if (sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc'; else { sortKey = k; sortDir = 'desc'; } setSetting('accountsSort', { key: sortKey, dir: sortDir }); render(); };
+  // column sort (shared surface rule): rows are { r, c } pairs (row + context), default name ascending
+  const sort = createTableSort({ settingKey: 'accountsSort', defaultKey: 'name', defaultDir: 'asc', valueOf: (k, A) => { const acc = RAW[k]; return acc ? acc(A.r, A.c) : undefined; }, onChange: () => render() });
 
   const render = () => {
-    const rows = platform.accounts.all().map((r) => ({ r, c: ctxFor(r) })).sort(compare);   // carry context, apply the active sort
+    const rows = platform.accounts.all().map((r) => ({ r, c: ctxFor(r) })).sort(sort.compare);   // carry context, apply the active sort
     count.textContent = rows.length ? String(rows.length) : '';
     thead.innerHTML = ''; tbody.innerHTML = '';
     const htr = document.createElement('tr');
     cols.forEach((k) => {
       const th = document.createElement('th'); th.className = 'a-' + (BY[k].align || 'left') + ' sortable';
       th.textContent = t(BY[k].label);
-      if (sortKey === k) { const ar = document.createElement('span'); ar.className = 'sort-arrow'; ar.textContent = sortDir === 'asc' ? ' ↑' : ' ↓'; th.appendChild(ar); }
-      th.onclick = () => setSort(k);
+      const ar = sort.arrowFor(k); if (ar) th.appendChild(ar);
+      th.onclick = () => sort.setSort(k);
       htr.appendChild(th);
     });
     thead.appendChild(htr);

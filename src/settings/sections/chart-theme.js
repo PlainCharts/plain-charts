@@ -8,6 +8,7 @@ import { makeAppearanceControls } from '../sd-controls.js';
 import { strokeSwatch } from '../../ui/colorpicker.js';
 import { namePrompt } from '../../ui/name-prompt.js';
 import { t } from '../../i18n/i18n.js';
+import { importJsonFile } from '../../ui/import-json.js';   // the shared Import… file flow
 import { listChartThemes, getChartTheme, currentChartThemeName, selectChartTheme, saveChartTheme,
          deleteChartTheme, openChartThemesFolder, importChartTheme, themeFromDraft, mergeThemeIntoDraft } from '../chart-theme.js';
 
@@ -72,20 +73,11 @@ export function render(ctx) {
       renderContent();
     }, !names.length),
     btn('Folder', () => openChartThemesFolder()),
-    btn('Import', () => {
-      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json,.json';
-      inp.onchange = () => {
-        const f = inp.files && inp.files[0]; if (!f) return;
-        const r = new FileReader();
-        r.onload = () => {
-          let d; try { d = JSON.parse(/** @type {string} */ (r.result)); } catch (_) { alert(t('That file is not valid JSON.')); return; }
-          if (!importChartTheme(d)) { alert(t('That file is not a chart theme (needs name + candles or canvas).')); return; }
-          renderContent();
-        };
-        r.readAsText(f);
-      };
-      inp.click();
-    }));
+    btn('Import', () => importJsonFile((d) => {
+      if (!importChartTheme(d)) return false;
+      renderContent();
+      return true;
+    }, t('That file is not a chart theme (needs name + candles or canvas).'))));
   content.appendChild(bar);
 
   // ---- editable colours (same controls as Instrument / Canvas / Scales) ----

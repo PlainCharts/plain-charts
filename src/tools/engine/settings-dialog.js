@@ -7,6 +7,7 @@
 // live; Cancel reverts to a snapshot, OK persists.
 import { getTool } from '../registry.js';
 import { closeColorPicker } from '../../ui/colorpicker.js';
+import { makeDraggable } from '../../ui/draggable.js';
 import { closeLineStyleMenu } from '../../ui/linestyle.js';
 import { buildRow, closeMultiMenu } from './style-controls.js';
 import { renderTextTab } from './text-tab.js';
@@ -71,7 +72,7 @@ export function openSettingsDialog(engine, id, startTab) {
   const dlg = el('div', 'dialog set-dlg');
 
   const head = el('div', 'set-head');
-  head.append(el('span', 'set-title', tool.name), (() => { const x = el('span', 'lib-x', '✕'); x.onclick = cancel; return x; })());
+  head.append(el('span', 'set-title', tool.name), (() => { const x = el('span', 'lib-x', '✕'); x.onclick = cancel; x.onpointerdown = (e) => e.stopPropagation(); return x; })());   // the ✕ is not a drag handle
   dlg.appendChild(head);
 
   const tabbar = el('div', 'set-tabs');
@@ -99,24 +100,11 @@ export function openSettingsDialog(engine, id, startTab) {
   overlay.appendChild(dlg);
   document.body.appendChild(overlay);
 
-  // float + drag by the header (so it doesn't sit on top of the drawing)
+  // float + drag by the header (so it doesn't sit on top of the drawing) -- the shared makeDraggable
   dlg.style.position = 'fixed'; dlg.style.margin = '0';
   dlg.style.left = Math.max(8, (window.innerWidth - dlg.offsetWidth) / 2) + 'px';
   dlg.style.top = Math.max(8, (window.innerHeight - dlg.offsetHeight) / 3) + 'px';
-  /** @type {{ dx: number, dy: number } | null} */
-  let drag = null;
-  head.style.cursor = 'move';
-  head.addEventListener('pointerdown', (e) => {
-    if (/** @type {Element} */ (e.target).closest('.lib-x')) return;
-    drag = { dx: e.clientX - dlg.offsetLeft, dy: e.clientY - dlg.offsetTop };
-    head.setPointerCapture(e.pointerId);
-  });
-  head.addEventListener('pointermove', (e) => {
-    if (!drag) return;
-    dlg.style.left = Math.max(0, Math.min(window.innerWidth - 80, e.clientX - drag.dx)) + 'px';
-    dlg.style.top = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - drag.dy)) + 'px';
-  });
-  head.addEventListener('pointerup', () => { drag = null; });
+  makeDraggable(dlg, head);
 
   const renderTabs = () => tabbar.querySelectorAll('.set-tab').forEach((b) => b.classList.toggle('active', b.textContent === /** @type {DialogState} */ (state).tab));
   const renderBody = () => {

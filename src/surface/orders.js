@@ -6,6 +6,7 @@ import { platform, bus, command } from '../../data_engine/index.js';   // stores
 import * as accounts from '../connect/accounts.js';
 import { getSetting, setSetting } from '../settings/settings.js';
 import { GEAR, openColumnPicker } from './column-picker.js';
+import { createTableSort } from './table-sort.js';
 import { fmtDeskTime, onDeskConfigChange } from './desk-config.js';
 import { createAccountFilter } from './account-filter.js';
 import { createDateFilter } from './date-filter.js';
@@ -126,23 +127,8 @@ export function mountOrders(root) {
 
   let cols = getCols();
   let filter = 'all';
-  const savedSort = getSetting('ordersSort') || {};
-  let sortKey = savedSort.key || 'time';        // default: newest first
-  let sortDir = savedSort.dir === 'asc' ? 'asc' : 'desc';
-
-  // comparator on RAW values: numeric when both parse as numbers, else string; blanks always sink to the bottom
-  /** @param {OrderRow} a @param {OrderRow} b @returns {number} */
-  const compare = (a, b) => {
-    const acc = RAW[sortKey]; if (!acc) return 0;
-    const av = acc(a), bv = acc(b);
-    const ae = av == null || av === '', be = bv == null || bv === '';
-    if (ae && be) return 0; if (ae) return 1; if (be) return -1;   // blanks last regardless of direction
-    const na = Number(av), nb = Number(bv);
-    const r = (!Number.isNaN(na) && !Number.isNaN(nb)) ? na - nb : String(av).localeCompare(String(bv));
-    return sortDir === 'asc' ? r : -r;
-  };
-  /** @param {string} k */
-  const setSort = (k) => { if (sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc'; else { sortKey = k; sortDir = 'desc'; } setSetting('ordersSort', { key: sortKey, dir: sortDir }); render(); };
+  // column sort (shared surface rule): default newest first
+  const sort = createTableSort({ settingKey: 'ordersSort', defaultKey: 'time', valueOf: (k, r) => { const acc = RAW[k]; return acc ? acc(r) : undefined; }, onChange: () => render() });
 
   // Cancel is an EXECUTION -> route through the order worker (single owner), never call the broker directly. The
   // surface is a dumb sender: it posts the command and only surfaces a failure; the worker journals the action.
@@ -177,14 +163,14 @@ export function mountOrders(root) {
     const all = platform.orders.all().filter((o) => acctFilter.matches(o) && (WORKING_ST.has(o.status) || dateFilter.matches(o.updateTime != null ? o.updateTime : o.time)));
     renderFilters(all);
     const match = (FILTERS.find((f) => f.key === filter) || FILTERS[0]).match;
-    const rows = all.filter(match).slice().sort(compare);   // active sort column + direction
+    const rows = all.filter(match).slice().sort(sort.compare);   // active sort column + direction
     thead.innerHTML = ''; tbody.innerHTML = '';
     const htr = document.createElement('tr');
     cols.forEach((k) => {
       const th = document.createElement('th'); th.className = 'a-' + (BY[k].align || 'left') + ' sortable';
       th.textContent = t(BY[k].label);
-      if (sortKey === k) { const ar = document.createElement('span'); ar.className = 'sort-arrow'; ar.textContent = sortDir === 'asc' ? ' ↑' : ' ↓'; th.appendChild(ar); }
-      th.onclick = () => setSort(k);
+      const ar = sort.arrowFor(k); if (ar) th.appendChild(ar);
+      th.onclick = () => sort.setSort(k);
       htr.appendChild(th);
     });
     htr.appendChild(document.createElement('th'));   // actions column (always-on, not configurable)

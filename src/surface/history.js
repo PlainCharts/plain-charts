@@ -9,6 +9,7 @@ import { platform, bus, computePositions } from '../../data_engine/index.js';
 import * as accounts from '../connect/accounts.js';
 import { getSetting, setSetting } from '../settings/settings.js';
 import { GEAR, openColumnPicker } from './column-picker.js';
+import { createTableSort } from './table-sort.js';
 import { fmtDeskTime, fmtDeskTag, onDeskConfigChange, getDeskStats, getDeskBeThreshold } from './desk-config.js';
 import { createAccountFilter } from './account-filter.js';
 import { createDateFilter } from './date-filter.js';
@@ -156,22 +157,8 @@ export function mountHistory(root) {
   let cols = getCols();
   /** @type {Set<string>} */
   const expanded = new Set();   // round-trip rowIds currently expanded to their fills (survives live re-renders)
-  const savedSort = getSetting('historySort') || {};
-  let sortKey = savedSort.key || 'exitTime';    // default: most recently closed first
-  let sortDir = savedSort.dir === 'asc' ? 'asc' : 'desc';
-
-  /** @param {Trade} a @param {Trade} b @returns {number} */
-  const compare = (a, b) => {
-    const acc = RAW[sortKey]; if (!acc) return 0;
-    const av = acc(a), bv = acc(b);
-    const ae = av == null || av === '', be = bv == null || bv === '';
-    if (ae && be) return 0; if (ae) return 1; if (be) return -1;   // blanks last regardless of direction
-    const na = Number(av), nb = Number(bv);
-    const r = (!Number.isNaN(na) && !Number.isNaN(nb)) ? na - nb : String(av).localeCompare(String(bv));
-    return sortDir === 'asc' ? r : -r;
-  };
-  /** @param {string} k */
-  const setSort = (k) => { if (sortKey === k) sortDir = sortDir === 'asc' ? 'desc' : 'asc'; else { sortKey = k; sortDir = 'desc'; } setSetting('historySort', { key: sortKey, dir: sortDir }); render(); };
+  // column sort (shared surface rule): default most recently closed first
+  const sort = createTableSort({ settingKey: 'historySort', defaultKey: 'exitTime', valueOf: (k, r) => { const acc = RAW[k]; return acc ? acc(r) : undefined; }, onChange: () => render() });
 
   // ---- bottom Stats strip (History-only): boxes computed from the VISIBLE (filtered) round-trips, in the order
   // and on/off set the user configured in Trade Desk > Configure > Stats. Balance uses the account's starting
@@ -231,7 +218,7 @@ export function mountHistory(root) {
     // balance is replayed over the FULL set above (each trade's ending balance is range-independent); the FILTER
     // only narrows which rows are shown, by the trade's exit (close) time in the selected range.
     const visible = closed.filter((r) => acctFilter.matches(r) && dateFilter.matches(r.exitTime));
-    const rows = visible.slice().sort(compare);
+    const rows = visible.slice().sort(sort.compare);
     count.textContent = rows.length ? String(rows.length) : '';
     renderStats(visible);   // the bottom stats strip, computed from the same filtered set
     thead.innerHTML = ''; tbody.innerHTML = '';
@@ -239,8 +226,8 @@ export function mountHistory(root) {
     cols.forEach((k) => {
       const th = document.createElement('th'); th.className = 'a-' + (BY[k].align || 'left') + ' sortable';
       th.textContent = t(BY[k].label);
-      if (sortKey === k) { const ar = document.createElement('span'); ar.className = 'sort-arrow'; ar.textContent = sortDir === 'asc' ? ' ↑' : ' ↓'; th.appendChild(ar); }
-      th.onclick = () => setSort(k);
+      const ar = sort.arrowFor(k); if (ar) th.appendChild(ar);
+      th.onclick = () => sort.setSort(k);
       htr.appendChild(th);
     });
     thead.appendChild(htr);

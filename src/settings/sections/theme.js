@@ -12,6 +12,7 @@ import { listThemes, getCurrentName, getLivePalette, selectTheme,
 import { getThemeModes, setThemeModeField, getActiveMode, applyThemeMode } from '../theme-modes.js';
 import { applyIconMode } from '../../ui/icon.js';
 import { t } from '../../i18n/i18n.js';   // vocabulary lookup
+import { importJsonFile } from '../../ui/import-json.js';   // the shared Import… file flow
 
 // Light/Dark theme modes: pick an app theme per mode. Clicking a row applies that mode (app theme,
 // cross-window). The rail toggle (by the camera) does the same. The active mode is highlighted.
@@ -96,20 +97,11 @@ export function render(ctx) {
     }),
     btn(t('Delete'), () => { deleteUserTheme(getCurrentName()); renderContent(); }, listThemes().length <= 1),
     btn(t('Folder'), () => openThemesFolder()),
-    btn(t('Import'), () => {
-      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/json,.json';
-      inp.onchange = () => {
-        const f = inp.files && inp.files[0]; if (!f) return;
-        const r = new FileReader();
-        r.onload = () => {
-          let d; try { d = JSON.parse(/** @type {string} */ (r.result)); } catch (_) { alert(t('That file is not valid JSON.')); return; }
-          if (!importTheme(d)) { alert(t('That file is not a theme (needs name + palette).')); return; }
-          renderContent();
-        };
-        r.readAsText(f);
-      };
-      inp.click();
-    }));
+    btn(t('Import'), () => importJsonFile((d) => {
+      if (!importTheme(d)) return false;
+      renderContent();
+      return true;
+    }, t('That file is not a theme (needs name + palette).'))));
   content.appendChild(bar);
 
   const colorRowT = (/** @type {string} */ label, /** @type {string} */ key) => {
