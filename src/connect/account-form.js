@@ -19,6 +19,9 @@ import { t } from '../i18n/i18n.js';
 export function createAccountForm() {
   const protoSel = /** @type {HTMLSelectElement} */ ($('f-protocol'));
   const fieldsEl = /** @type {HTMLElement} */ ($('f-fields'));
+  // checkgroup fields (e.g. CQG market-data exchanges) render here -- the right column, UNDER the connections
+  // list -- not inline in the credential form. Still saved with the edited account; readForm finds the boxes by id.
+  const mdEl = /** @type {HTMLElement | null} */ ($('conn-md'));
 
   /** @param {string} id @returns {BrokerAdapter | undefined} */
   const adapterById = (id) => listBrokers().find((b) => b.id === id);
@@ -90,7 +93,7 @@ export function createAccountForm() {
   const optLabel = (o) => (o && o.label != null ? o.label : o);
 
   // render the active adapter's declarative `form` (no generic template; each adapter declares exactly the
-  // fields it needs). Field types: text/password/number/bool/select/note/action.
+  // fields it needs). Field types: text/password/number/bool/select/note/action/checkgroup.
   /** @param {Record<string, any>} [vals] */
   const renderFields = (vals = {}) => {
     const a = currentAdapter();
@@ -102,6 +105,7 @@ export function createAccountForm() {
     const hdRow = $('f-histdays-row');
     if (hdRow) hdRow.style.display = trading ? '' : 'none'; // history-days only for trading adapters
     fieldsEl.innerHTML = '';
+    if (mdEl) mdEl.innerHTML = ''; // clear the right-column market-data panel each render (empty for non-checkgroup adapters)
     if (!a) {
       const n = document.createElement('div');
       n.className = 'form-note';
@@ -124,6 +128,10 @@ export function createAccountForm() {
       }
       if (f.type === 'action') {
         fieldsEl.appendChild(actionRow(a, f));
+        return;
+      }
+      if (f.type === 'checkgroup') {
+        (mdEl || fieldsEl).appendChild(checkgroupRow(f, vals)); // right column (under connections), not the left form
         return;
       }
       const key = /** @type {string} */ (f.key); // note + action are filtered above; value fields always carry a key
@@ -236,6 +244,42 @@ export function createAccountForm() {
     return row;
   };
 
+  // A grouped checklist (contract type 'checkgroup'): a header per group, a checkbox per item. The saved value
+  // is a string[] of the checked item `value`s (see readForm). The adapter owns the catalog (CQG's market-data
+  // exchanges); the user checks what their subscription covers. Nothing consumes the selection yet.
+  /** @param {FormField} f @param {Record<string, any>} vals */
+  const checkgroupRow = (f, vals) => {
+    const key = /** @type {string} */ (f.key);
+    const row = fieldRow(f.label);
+    const box = document.createElement('div');
+    box.className = 'cg';
+    box.id = 'f-field-' + key;
+    const selected = Array.isArray(vals[key]) ? vals[key] : [];
+    /** @type {any[]} */ (f.groups || []).forEach((g) => {
+      const grp = document.createElement('div');
+      grp.className = 'cg-group';
+      const h = document.createElement('div');
+      h.className = 'cg-ghead';
+      h.textContent = g.group;
+      grp.appendChild(h);
+      (g.items || []).forEach((/** @type {any} */ it) => {
+        const lbl = document.createElement('label');
+        lbl.className = 'cg-item';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.value = it.value;
+        cb.checked = selected.includes(it.value);
+        const span = document.createElement('span');
+        span.textContent = it.label;
+        lbl.append(cb, span);
+        grp.appendChild(lbl);
+      });
+      box.appendChild(grp);
+    });
+    row.appendChild(box);
+    return row;
+  };
+
   /** @returns {SavedAccount} */
   const readForm = () => {
     const a = currentAdapter();
@@ -259,6 +303,12 @@ export function createAccountForm() {
       const key = /** @type {string} */ (f.key); // value fields (not note/action) always carry a key
       const el = /** @type {HTMLInputElement | null} */ ($('f-field-' + key));
       if (!el) return;
+      if (f.type === 'checkgroup') {
+        acct[key] = [...el.querySelectorAll('input[type="checkbox"]')]
+          .filter((c) => /** @type {HTMLInputElement} */ (c).checked)
+          .map((c) => /** @type {HTMLInputElement} */ (c).dataset.value);
+        return;
+      }
       if (f.type === 'bool') acct[key] = !!el.checked;
       else if (f.type === 'number') {
         const v = el.value.trim();
@@ -292,6 +342,7 @@ export function createAccountForm() {
         f.type !== 'action' &&
         f.type !== 'note' &&
         f.type !== 'bool' &&
+        f.type !== 'checkgroup' &&
         f.default == null &&
         !acct[/** @type {string} */ (f.key)],
     );
