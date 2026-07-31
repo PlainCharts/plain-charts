@@ -54,6 +54,8 @@
 //           action — a button + a live status line; drives an async flow via handlers on the field:
 //                    { type:'action', key, label, button?, run(account, ui), status(account) }
 //                    ui = { status(msg,kind), openUrl(url), account(), promptInput({placeholder,submit})->Promise<string> }
+//           checkgroup — a grouped checklist: { type:'checkgroup', key, label, groups:[{ group, items:[{value,label}] }] }.
+//                    The saved value is a string[] of the checked item `value`s. (CQG market-data exchange targeting uses it.)
 //   Non-action field values are saved onto the account under `key`. Actions save nothing (e.g. OAuth tokens
 //   live server-side). Example: CQG declares server/username/password; Schwab declares clientId/clientSecret/
 //   redirectUri + an Authorize action.
@@ -244,7 +246,7 @@
  * @property {(range: { fromMs: number, toMs: number }, cb: (orders: Order[]) => void) => void} [getHistory]
  */
 
-export const FORM_FIELD_TYPES = ['text', 'password', 'number', 'bool', 'select', 'note', 'action'];
+export const FORM_FIELD_TYPES = ['text', 'password', 'number', 'bool', 'select', 'note', 'action', 'checkgroup'];
 
 export const CAPABILITIES = ['marketData', 'trading', 'depth'];
 export const ORDER_STATUS = ['in_transit', 'working', 'filled', 'cancelled', 'rejected', 'expired', 'suspended', 'in_cancel', 'in_modify', 'replaced'];

@@ -7,6 +7,7 @@ import { registerBroker, event } from '/data_engine/data/adapter-sdk.js'; // the
 import { connection } from './transport.js';
 import { trading } from './trade.js';
 import { loadProtocol, BAR_STATUS } from './protocol.js';
+import { MD_EXCHANGES } from './md-exchanges.js'; // full CQG exchange catalog (Connections market-data targeting)
 // The CQG-specific transport, treated opaquely at the adapter boundary (it emits raw CQG shapes the
 // adapter translates). Two planes behind one surface: the connection (data) + the trade routing.
 const transport = /** @type {any} */ ({ ...connection, ...trading });
@@ -200,6 +201,14 @@ function toBarUpdate(rep, scale) {
   return { bars, complete: rep.isReportComplete !== false, reachedStart: !!rep.reachedStartOfData };
 }
 
+// The full exchange catalog as a generic checkgroup for the Connections form. A user checks the exchanges
+// their CQG market-data subscription covers; the saved mdExchanges (string[] of codes) will later FILTER the
+// symbol tree. Nothing consumes it yet -- this is the foundation only.
+const MD_EXCHANGE_GROUPS = MD_EXCHANGES.map((g) => ({
+  group: g.group,
+  items: g.exchanges.map((e) => ({ value: e.code, label: e.name })),
+}));
+
 /** @type {import('/data_engine/data/adapter-contract.js').BrokerAdapter} */
 const adapter = {
   id: 'cqg',
@@ -209,6 +218,12 @@ const adapter = {
     { key: 'username', label: 'Username', type: 'text' },
     { key: 'password', label: 'Password', type: 'password' },
     { key: 'appId', label: 'App ID', type: 'text', default: 'TradingView' },
+    {
+      key: 'mdExchanges',
+      type: 'checkgroup',
+      label: 'Market data (exchanges you subscribe to)',
+      groups: MD_EXCHANGE_GROUPS,
+    },
   ],
 
   /** @param {any} account */
