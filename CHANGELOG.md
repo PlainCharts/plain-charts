@@ -7,9 +7,6 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-- Connections: for a CQG account, choose which exchanges your market-data subscription covers (foundation for the upcoming symbol browser)
-
 ### Fixed
 - Order ticket: the window now grows to fit your quick buttons instead of squishing the form and hiding Buy/Sell
 - Order ticket: a rejected modify on a pending order now shows the error in the ticket status line instead of nothing
