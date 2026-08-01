@@ -8,9 +8,11 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Symbol dialog: clear (✕) button in the search box that wipes the text in one click without closing the dialog
 - Symbol dialog: browse CQG instruments in a tree (group / exchange / instrument type) beside the search, with a saved exchange filter and per-broker recents
 
 ### Fixed
+- Symbol dialog: CQG search now matches by symbol code (e.g. EP), not only by description
 - Order ticket: the window now grows to fit your quick buttons instead of squishing the form and hiding Buy/Sell
 - Order ticket: a rejected modify on a pending order now shows the error in the ticket status line instead of nothing
 
