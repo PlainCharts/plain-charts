@@ -74,6 +74,8 @@ function proxyAdapter(id) {
     unsubscribeDepth(symId, cb) { const c = qmap.get(cb); if (c == null) return; qmap.delete(cb); cbs.delete(c); send('adapter', id, 'unsubscribeDepth', [symId], c); },
     /** @param {string} query @param {Function} cb */
     searchSymbols(query, cb) { const c = ++seq; cbs.set(c, { cb, one: true }); send('adapter', id, 'searchSymbols', [query], c); },
+    /** @param {Function} cb */
+    listSymbols(cb) { const c = ++seq; cbs.set(c, { cb, one: true }); send('adapter', id, 'listSymbols', [], c); },
     // trading — one request/one reply, forwarded to the real adapter in the host
     /** @param {any} order @param {Function} cb */
     placeOrder(order, cb) { const c = ++seq; cbs.set(c, { cb, one: true }); send('adapter', id, 'placeOrder', [order], c); return c; },
@@ -348,6 +350,7 @@ export function startHost(core) {
         case 'subscribeDepth': { if (ad.subscribeDepth) { const dcb = (/** @type {any} */ d) => post(m.win, m.callId, [d]); relays.set(key, { dcb }); ad.subscribeDepth(m.args[0], dcb); } break; }
         case 'unsubscribeDepth': { const r = relays.get(key); if (r && r.dcb && ad.unsubscribeDepth) { try { ad.unsubscribeDepth(m.args[0], r.dcb); } catch (_) {} relays.delete(key); } break; }
         case 'searchSymbols': if (ad.searchSymbols) ad.searchSymbols(m.args[0], (/** @type {any} */ res) => post(m.win, m.callId, [res])); break;
+        case 'listSymbols': ad.listSymbols ? ad.listSymbols((/** @type {any} */ res) => post(m.win, m.callId, [res])) : post(m.win, m.callId, [[]]); break;
         case 'placeOrder': ad.placeOrder ? ad.placeOrder(m.args[0], (/** @type {any} */ r) => post(m.win, m.callId, [r])) : post(m.win, m.callId, [{ error: 'broker has no order routing' }]); break;
         case 'modifyOrder': ad.modifyOrder ? ad.modifyOrder(m.args[0], (/** @type {any} */ r) => post(m.win, m.callId, [r])) : post(m.win, m.callId, [{ error: 'no modify' }]); break;
         case 'cancelOrder': ad.cancelOrder ? ad.cancelOrder(m.args[0], (/** @type {any} */ r) => post(m.win, m.callId, [r])) : post(m.win, m.callId, [{ error: 'no cancel' }]); break;

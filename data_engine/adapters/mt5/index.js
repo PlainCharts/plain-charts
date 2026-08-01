@@ -42,6 +42,7 @@ let idc = 0;
 const rpc = new Map(); // id -> { resolve }
 /** @type {any} */ let pendingBars = null;
 /** @type {any} */ let pendingHist = null;
+/** @type {any} */ let pendingSyms = null; // in-flight list_symbols: { id, items: [{symbol,path,description}] }
 const nextId = () => ++idc;
 
 // ---- gapless live stream (contiguity cursor) ----
@@ -599,6 +600,22 @@ function route(m) {
       }
       break;
     }
+    case 'symbol': {
+      // one item of a list_symbols stream (code + broker SYMBOL_PATH + description) -> accumulate
+      if (pendingSyms) pendingSyms.items.push({ symbol: m.symbol, path: m.path, description: m.description });
+      break;
+    }
+    case 'symbols_end': {
+      if (pendingSyms && pendingSyms.id === m.id) {
+        const r = rpc.get(m.id);
+        if (r) {
+          r.resolve(pendingSyms.items);
+          rpc.delete(m.id);
+        }
+        pendingSyms = null;
+      }
+      break;
+    }
     case 'symbol_info': {
       const r = rpc.get(m.id);
       if (r) {
@@ -698,6 +715,28 @@ const adapter = {
       if (m.contract_size != null) inst.contractSize = Number(m.contract_size);
       cb(inst);
     });
+  },
+
+  /** Enumerate every symbol the broker exposes: [{ symbol, path, description }]. `path` is the broker's
+   *  native SYMBOL_PATH (backslash-delimited) -- the app splits it to build the browse tree. One EA round-trip
+   *  (list_symbols); a stale/old EA that never sends symbols_end is released by a timeout with whatever arrived.
+   *  @param {(items: Array<{symbol:string,path:string,description:string}>) => void} cb */
+  listSymbols(cb) {
+    const rid = nextId();
+    let done = false;
+    /** @type {any} */ let timer = null;
+    const finish = (/** @type {any} */ items) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      rpc.delete(rid);
+      if (pendingSyms && pendingSyms.id === rid) pendingSyms = null;
+      cb(items || []);
+    };
+    rpc.set(rid, { resolve: finish });
+    pendingSyms = { id: rid, items: [] };
+    timer = setTimeout(() => finish(pendingSyms && pendingSyms.items), 15000);
+    send({ cmd: 'list_symbols', id: rid });
   },
 
   /** @param {string|number} id @param {Function} cb */

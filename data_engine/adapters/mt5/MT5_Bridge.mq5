@@ -28,7 +28,10 @@
 //+------------------------------------------------------------------+
 #property strict
 #property description "MT5 Bridge: connects to a TCP server"
-#property version     "1.4"
+#property version     "1.6"
+// v1.6: added list_symbols -> streams every broker symbol with its SYMBOL_PATH + description.
+//   {"cmd":"list_symbols","id":N}
+//     -> N x {"type":"symbol","id":N,"symbol":,"path":<broker tree path>,"description":} then {"type":"symbols_end",...}
 // v1.4: added subscribe_depth/unsubscribe_depth -> DOM via MarketBookAdd/OnBookEvent
 //   {"cmd":"subscribe_depth","symbol":"US500","id":N} -> {"type":"depth","symbol":,"bids":[{price,qty}],"asks":[...]}
 // v1.2: added symbol_info (instrument metadata) and get_bars (CopyRates OHLC) commands
@@ -387,6 +390,10 @@ void _ProcessCommand(const string json)
         string sym = _JStr(json, "symbol");
         _SendSymbolInfo(id, sym);
     }
+    else if(cmd == "list_symbols")
+    {
+        _SendSymbolList(id);
+    }
     else if(cmd == "get_bars")
     {
         string sym  = _JStr(json, "symbol");
@@ -684,6 +691,39 @@ void _SendSymbolInfo(long id, string sym)
         + ",\"volume_step\":"   + _D(vol_step, 2)
         + ",\"book_depth\":"    + _I(book_dep)
         + ",\"description\":\"" + desc + "\"}");
+}
+
+
+//+------------------------------------------------------------------+
+//| Enumerate every symbol in the broker's symbol tree. Streams one   |
+//| 'symbol' line each (code + SYMBOL_PATH grouping + description),    |
+//| then a 'symbols_end'. Feeds the app's symbol browser, which       |
+//| splits the path on '\' to build group -> subgroup -> instrument.  |
+//| SymbolsTotal(false) = ALL broker symbols, not just Market Watch.  |
+//| One-shot on demand (the dialog opening), NOT a timer poll, so the |
+//| burst of SymbolInfoString reads is a single pass, not sustained   |
+//| lock contention. path/desc are escaped: SYMBOL_PATH is literally  |
+//| backslash-delimited and would otherwise break the JSON.           |
+//+------------------------------------------------------------------+
+void _SendSymbolList(long id)
+{
+    int total = SymbolsTotal(false);
+    int sent  = 0;
+    for(int i = 0; i < total; i++)
+    {
+        string sym = SymbolName(i, false);
+        if(sym == "") continue;
+        string path = SymbolInfoString(sym, SYMBOL_PATH);
+        string desc = SymbolInfoString(sym, SYMBOL_DESCRIPTION);
+        _Send("{\"type\":\"symbol\""
+            + ",\"id\":"            + _I(id)
+            + ",\"symbol\":\""      + _JsonEsc(sym)  + "\""
+            + ",\"path\":\""        + _JsonEsc(path) + "\""
+            + ",\"description\":\"" + _JsonEsc(desc) + "\"}");
+        sent++;
+    }
+    _Send("{\"type\":\"symbols_end\",\"id\":" + _I(id)
+        + ",\"count\":" + _I((long)sent) + "}");
 }
 
 
@@ -1543,6 +1583,17 @@ long _JLng(const string json, const string key) { return (long)_JDbl(json, key);
 //+------------------------------------------------------------------+
 string _D(double v, int digits) { return DoubleToString(v, digits); }
 string _I(long   v)             { return IntegerToString(v); }
+
+// Escape a raw string for embedding in a JSON string literal. Backslash FIRST, then quote -- order
+// matters or the quote-escape's own backslash gets doubled. Needed for SYMBOL_PATH (backslash-delimited)
+// and descriptions that may carry a quote. The other _Send call sites embed clean codes/numbers, so they
+// skip this by design.
+string _JsonEsc(string s)
+{
+    StringReplace(s, "\\", "\\\\");
+    StringReplace(s, "\"", "\\\"");
+    return s;
+}
 
 // Convert a broker server-time timestamp to UTC. DEAL_TIME / tick.time / bar time are in
 // broker server time; the app expects pure UTC. The server->UTC offset is derived from
