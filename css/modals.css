@@ -133,6 +133,11 @@
 .ss-broker:hover { background: var(--btn-h); color: var(--tx); }
 .ss-broker.on { background: var(--active); color: var(--tx); border-color: var(--accent-ui); }
 .ss-input { width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; }
+.ss-input-wrap { position: relative; }
+.ss-input-wrap .ss-input { padding-right: 34px; }   /* room for the clear (X) button */
+.ss-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none;
+            color: var(--tx-dim); cursor: pointer; font-size: 13px; line-height: 1; padding: 4px 6px; border-radius: 4px; }
+.ss-clear:hover { color: var(--tx); background: var(--hover); }
 .ss-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .ss-cats:empty { display: none; }
 .ss-cat { padding: 3px 10px; font-size: 11px; border: 1px solid var(--bd-soft); border-radius: 12px;
