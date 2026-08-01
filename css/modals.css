@@ -126,7 +126,7 @@
 .ba-actions button.primary { background: var(--accent); color: var(--accent-tx); border-color: var(--accent); }
 .ba-actions button.primary:hover { background: var(--accent-h); }
 /* Symbol search */
-.dialog.ss-dlg { width: 460px; max-width: 94vw; display: flex; flex-direction: column; }
+.dialog.ss-dlg { width: 600px; max-width: 94vw; display: flex; flex-direction: column; }
 .ss-brokers { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
 .ss-broker { padding: 5px 12px; font-size: 12px; border: 1px solid var(--bd); border-radius: 16px;
              background: var(--btn); color: var(--tx-dim); cursor: pointer; }
@@ -150,11 +150,31 @@
 .ss-row.ss-use .ss-sym { color: var(--tx-dim); }
 .ss-recent { padding: 6px 2px; }
 .ss-recent-lbl { font-size: 11px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
-.ss-recent-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ss-recent-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 30px; overflow: hidden; }   /* 1 row max (by height); extra chips clip */
 .ss-recent-chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px; font-size: 12px;
                   border: 1px solid var(--bd); border-radius: 16px; background: var(--btn); color: var(--tx); cursor: pointer; }
 .ss-recent-chip:hover { background: var(--btn-h); border-color: var(--accent-ui); }
 .ss-recent-bk { font-size: 10px; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .04em; }
+/* CQG browse pane: left tree (group>exchange>type) over the exchange filter, right symbol list.
+   NB: prefix is sbx- (not sb-) -- sb- is the Study Board Builder's namespace; reusing it stole
+   .sb-sym's flex:1 1 120px and blew out the symbol column. */
+.sbx-browse { display: flex; gap: 14px; margin-top: 12px; border-top: 1px solid var(--bd-soft); padding-top: 12px; }
+.sbx-left { width: 210px; flex: none; display: flex; flex-direction: column; }
+.sbx-tree { flex: 1 1 auto; min-height: 210px; max-height: 330px; overflow-y: auto; }
+.sbx-grp { font-size: 12px; font-weight: 600; color: var(--tx); padding: 4px 2px; }
+.sbx-exch { font-size: 12px; color: var(--tx); padding: 3px 2px 3px 14px; }
+.sbx-type { font-size: 12px; color: var(--tx-dim); padding: 4px 8px 4px 28px; border-radius: 6px; cursor: pointer; }
+.sbx-type:hover { background: var(--hover); color: var(--tx); }
+.sbx-type.sel { background: var(--active); color: var(--tx); font-weight: 600; }
+.sbx-filt { border-top: 1px solid var(--bd-soft); margin-top: 10px; padding-top: 10px; }
+.sbx-filt-h { font-size: 10px; font-weight: 600; color: var(--tx-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.sbx-filt-i { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--tx); padding: 2px 0; cursor: pointer; }
+.sbx-filt-i input { width: auto; margin: 0; }
+.sbx-right { flex: 1 1 auto; min-width: 0; border-left: 1px solid var(--bd-soft); padding-left: 16px; max-height: 360px; overflow-y: auto; }
+.sbx-row { display: flex; align-items: baseline; gap: 14px; padding: 8px; border-radius: 6px; cursor: pointer; }
+.sbx-row:hover { background: var(--hover); }
+.sbx-sym { font-weight: 600; color: var(--tx); font-size: 13px; flex: none; min-width: 56px; }
+.sbx-name { color: var(--tx-dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .set-tpl-btn { margin-right: auto; background: var(--btn); border: 1px solid var(--bd);
        color: var(--tx); border-radius: 6px; padding: 7px 12px; font-size: 13px; cursor: pointer; }
 .set-tpl-btn:hover { background: var(--btn-h); }

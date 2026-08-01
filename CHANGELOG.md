@@ -7,6 +7,9 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Symbol dialog: browse CQG instruments in a tree (group / exchange / instrument type) beside the search, with a saved exchange filter and per-broker recents
+
 ### Fixed
 - Order ticket: the window now grows to fit your quick buttons instead of squishing the form and hiding Buy/Sell
 - Order ticket: a rejected modify on a pending order now shows the error in the ticket status line instead of nothing
