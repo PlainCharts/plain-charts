@@ -6,7 +6,7 @@
 import { getSetting, setSetting } from '../settings/settings.js';
 
 const KEY = 'tradeDesk';
-/** @returns {{ tzOffsetMin?: number, beThreshold?: number, stats?: { enabled?: boolean, items?: { key: string, on: boolean }[] }, colors?: { out?: string, in?: string } }} */
+/** @returns {{ tzOffsetMin?: number, beThreshold?: number, stats?: { enabled?: boolean, items?: { key: string, on: boolean }[] }, colors?: Record<string, string> }} */
 const cfg = () => getSetting(KEY) || {};
 
 /** @type {Set<() => void>} */
@@ -94,24 +94,58 @@ export function setDeskStats(v) {
   notify();
 }
 
-// ---- Console DIRECTION colours: the journal tint for OUT (app -> broker requests) and IN (broker -> app replies).
-// Defaults match the shipped palette; the Trade Desk > Colors tab overrides them. Applied as CSS vars (--dir-out /
-// --dir-in) by the Console surface, so who-sent-what is user-themeable.
-export const DESK_COLOR_DEFAULTS = { out: '#e79457', in: '#4fb6c9' };
-/** @returns {{ out: string, in: string }} */
+// ---- Desk colours: the Console DIRECTION tints (OUT = app -> broker requests, IN = broker -> app replies)
+// plus the Money Man zone/ladder colours. All user-themeable from Trade Desk > Colors, stored in this same
+// config, and pushed onto :root as CSS vars so the surfaces (console rows; the Money Man grid + ladder) read
+// them live. Defaults match the shipped palette.
+/** @type {Record<string, string>} */
+export const DESK_COLOR_DEFAULTS = {
+  out: '#e79457',
+  in: '#4fb6c9',
+  // Money Man -- zone bands
+  mmShot: '#a371f7',
+  mmBase: '#2ea043',
+  mmFloor: '#d29922',
+  mmStop: '#f85149',
+  // Money Man -- ladder levels (default to the matching zone hues)
+  mmMax: '#2ea043',
+  mmMid: '#d29922',
+  mmMin: '#f85149',
+};
+// color key -> the CSS custom property the surfaces read
+/** @type {Record<string, string>} */
+const COLOR_VAR = {
+  out: '--dir-out',
+  in: '--dir-in',
+  mmShot: '--mm-shot',
+  mmBase: '--mm-base',
+  mmFloor: '--mm-floor',
+  mmStop: '--mm-stop',
+  mmMax: '--mm-max',
+  mmMid: '--mm-mid',
+  mmMin: '--mm-min',
+};
+/** @returns {Record<string, string>} */
 export function getDeskColors() {
   const c = cfg().colors || {};
-  return {
-    out: typeof c.out === 'string' ? c.out : DESK_COLOR_DEFAULTS.out,
-    in: typeof c.in === 'string' ? c.in : DESK_COLOR_DEFAULTS.in,
-  };
+  /** @type {Record<string, string>} */
+  const out = {};
+  for (const k in DESK_COLOR_DEFAULTS) out[k] = typeof c[k] === 'string' ? c[k] : DESK_COLOR_DEFAULTS[k];
+  return out;
 }
-/** @param {{ out?: string, in?: string }} v */
+/** @param {Record<string, string>} v */
 export function setDeskColors(v) {
-  const cur = getDeskColors();
-  setSetting(KEY, Object.assign({}, cfg(), { colors: { out: v.out || cur.out, in: v.in || cur.in } }));
+  setSetting(KEY, Object.assign({}, cfg(), { colors: Object.assign({}, getDeskColors(), v) }));
   notify();
 }
+/** Push every desk colour onto :root as a CSS var, so the surfaces read them live. */
+export function applyDeskColors() {
+  const c = getDeskColors();
+  const root = document.documentElement.style;
+  for (const k in COLOR_VAR) root.setProperty(COLOR_VAR[k], c[k]);
+}
+onDeskConfigChange(applyDeskColors);
+applyDeskColors();
 
 /** @param {number} n */
 const pad = (n) => (n < 10 ? '0' + n : '' + n);

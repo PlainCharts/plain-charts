@@ -216,10 +216,10 @@ export function openDeskConfigDialog() {
   // ===== COLORS: the Console journal DIRECTION tints -- OUT (app -> broker requests) and IN (broker -> app
   // replies). A native swatch per direction; changes apply live (Console subscribes to onDeskConfigChange). =====
   const colorsPanel = document.createElement('div');
-  /** @type {Record<'out'|'in', HTMLButtonElement>} */ const swatch = /** @type {any} */ ({});
-  /** @param {'out'|'in'} key @param {string} v @returns {HTMLButtonElement} */
+  /** @type {Record<string, HTMLButtonElement>} */ const swatch = {};
+  /** @param {string} key @param {string} v @returns {HTMLButtonElement} */
   const mkSwatch = (key, v) => colorSwatch(v, (nv) => setDeskColors({ [key]: nv }));
-  /** @param {string} name @param {string} sub @param {'out'|'in'} key */
+  /** @param {string} name @param {string} sub @param {string} key */
   const colorRow = (name, sub, key) => {
     const r = el('desk-color-row');
     const meta = el('desk-color-meta');
@@ -230,8 +230,17 @@ export function openDeskConfigDialog() {
     return r;
   };
   colorsPanel.append(
+    el('desk-color-cat', t('Order flow')),
     colorRow('Outgoing', 'App to broker (our requests)', 'out'),
     colorRow('Incoming', 'Broker to us (their replies)', 'in'),
+    el('desk-color-cat', t('Money management')),
+    colorRow('Shot zone', 'Shot band', 'mmShot'),
+    colorRow('Base zone', 'Base band', 'mmBase'),
+    colorRow('Floor zone', 'Below origin', 'mmFloor'),
+    colorRow('Stop zone', 'Max drawdown', 'mmStop'),
+    colorRow('MAX level', 'Top ladder rung', 'mmMax'),
+    colorRow('MID level', 'Middle ladder rung', 'mmMid'),
+    colorRow('MIN level', 'Bottom ladder rung', 'mmMin'),
   );
   const reset = document.createElement('button');
   reset.type = 'button';
@@ -239,8 +248,9 @@ export function openDeskConfigDialog() {
   reset.textContent = t('Reset to defaults');
   // colorSwatch has no external setter, so rebuild each swatch to reflect the defaults
   reset.onclick = () => {
-    setDeskColors({ out: DESK_COLOR_DEFAULTS.out, in: DESK_COLOR_DEFAULTS.in });
-    /** @type {Array<'out'|'in'>} */ (['out', 'in']).forEach((key) => {
+    setDeskColors(DESK_COLOR_DEFAULTS);
+    Object.keys(DESK_COLOR_DEFAULTS).forEach((key) => {
+      if (!swatch[key]) return;
       const fresh = mkSwatch(key, DESK_COLOR_DEFAULTS[key]);
       swatch[key].replaceWith(fresh);
       swatch[key] = fresh;

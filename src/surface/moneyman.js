@@ -7,6 +7,7 @@
 // logic here. Config edits persist to settings/trading/money-management.json (keyed by saved account name);
 // the account's starting balance is the MM origin.
 import { platform, computePositions, replayTrace } from '../../data_engine/index.js';
+import { applyDeskColors } from './desk-config.js'; // pushes the user's MM zone/level colours onto :root
 import * as accounts from '../connect/accounts.js';
 import { getMMConfig, setMMConfig, loadMMConfigs } from '../money-management/config.js';
 import { netOf } from './trade-derive.js';
@@ -40,7 +41,7 @@ function injectCss() {
   const s = el('style');
   s.id = 'mm-panel-css';
   s.textContent = `
-  .mm-panel{--mm-base:#2ea043;--mm-shot:#a371f7;--mm-floor:#d29922;--mm-stop:#f85149;--mm-win:#3fb950;
+  .mm-panel{--mm-win:#3fb950;
     display:flex;gap:14px;height:100%;overflow:hidden;padding:12px;box-sizing:border-box;color:var(--tx)}
   .mm-panel *{box-sizing:border-box}
   .mm-cfg{flex:0 0 268px;display:flex;flex-direction:column;overflow:auto}
@@ -59,9 +60,9 @@ function injectCss() {
   .mm-lad{background:var(--panel);border:1px solid var(--bd-soft);border-radius:8px;padding:12px 14px}
   .mm-lad-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .mm-pill{display:inline-block;padding:1px 9px;border-radius:999px;font-weight:700;font-size:16px}
-  .lv-MAX{background:color-mix(in srgb,var(--mm-base) 25%,transparent);color:var(--mm-base)}
-  .lv-MID{background:color-mix(in srgb,var(--mm-floor) 25%,transparent);color:var(--mm-floor)}
-  .lv-MIN{background:color-mix(in srgb,var(--mm-stop) 25%,transparent);color:var(--mm-stop)}
+  .lv-MAX{background:color-mix(in srgb,var(--mm-max) 25%,transparent);color:var(--mm-max)}
+  .lv-MID{background:color-mix(in srgb,var(--mm-mid) 25%,transparent);color:var(--mm-mid)}
+  .lv-MIN{background:color-mix(in srgb,var(--mm-min) 25%,transparent);color:var(--mm-min)}
   .mm-lad-pct{font-size:16px}.mm-lad-ceil{color:var(--tx-dim);font-size:14px}
   .mm-lad-risk{margin-left:auto;font-size:16px}.mm-lad-risk b{color:var(--tx)}
   .mm-bar{margin-top:10px}.mm-bar-h{display:flex;justify-content:space-between;font-size:14px;color:var(--tx-dim);margin-bottom:3px}
@@ -71,7 +72,7 @@ function injectCss() {
   .mm-note{margin-top:8px;padding:8px 10px;border-radius:6px;font-size:14px}
   .mm-note.floor{color:var(--mm-floor);background:color-mix(in srgb,var(--mm-floor) 12%,transparent)}
   .mm-note.stop{color:var(--mm-stop);background:color-mix(in srgb,var(--mm-stop) 12%,transparent)}
-  .mm-note.max{color:var(--mm-base)}.mm-note.manual{color:var(--tx-dim)}
+  .mm-note.max{color:var(--mm-max)}
   .mm-hint{color:var(--tx-dim);font-size:12px;padding:20px;text-align:center}
   /* console */
   .mm-con{flex:1;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--bd-soft);border-radius:8px;min-width:0}
@@ -121,6 +122,7 @@ function tradesFor(saved) {
 /** @param {HTMLElement} root */
 export function mountMoneyMan(root) {
   injectCss();
+  applyDeskColors(); // ensure the --mm-* CSS vars exist (idempotent; also re-applied on a color change)
   loadMMConfigs();
   root.innerHTML = '';
   const panel = el('div', 'mm-panel');
