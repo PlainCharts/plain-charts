@@ -1,16 +1,19 @@
 {
-  "broker": "cqg",
-  "symbol": "MESU26",
-  "qty": 4,
+  "broker": "mt5",
+  "symbol": "US500.sim",
+  "qty": 1,
   "offset": 10,
   "thresholdTicks": 1,
   "hideOnEntry": [],
   "levels": [
     {
-      "tgtQty": 2
+      "tgtQty": 1
     },
     {
-      "tgtQty": 2
+      "tgtQty": 1
+    },
+    {
+      "tgtQty": 1
     }
   ],
   "offsetUnit": "points",

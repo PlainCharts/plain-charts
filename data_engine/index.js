@@ -35,7 +35,13 @@ export { parseScript } from './orders/dsl.js';
 
 // position sizing -- pure business rule (units from a risk amount + stop + instrument specs); reused for a live
 // preview in the ticket and authoritatively in the order-host
-export { sizeFromStake } from './orders/sizing.js';
+export { sizeFromStake } from './orders/sizing/index.js';
+// money-management engine -- replay an account's closed-trade history into its zone/ladder state + next-trade
+// risk. Pure; consumed by the order worker (sizing) and the Money Man tab (display).
+export { mmState, replay, replayTrace } from './orders/sizing/mm/index.js';
+// per-account sizing policy seam: the app installs a resolver (MM risk per account); the worker calls it at
+// order time so an MM account sizes every order from its zone/ladder, overriding the form's qty/stake.
+export { setSizingPolicy } from './orders/sizing/index.js';
 
 // the engine event bus -- 'logon', 'connections:changed', 'broker:notice'
 export { bus } from './bus.js';

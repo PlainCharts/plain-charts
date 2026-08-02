@@ -8,6 +8,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Money management: a per-account sizing system that sizes every order from a zone/ladder risk model, set up in a new Money Man desk tab; when an account is on it, ticket, DSL, and on-chart orders all size automatically from the account's live balance and closed-trade history
 - Symbol dialog: browse MetaTrader 5 instruments in a tree built from the broker's own symbol groups, with each symbol's broker description
 - Symbol dialog: clear (✕) button in the search box that wipes the text in one click without closing the dialog
 - Symbol dialog: browse CQG instruments in a tree (group / exchange / instrument type) beside the search, with a saved exchange filter and per-broker recents

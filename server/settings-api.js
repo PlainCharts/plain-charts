@@ -38,6 +38,7 @@ const API_FILES = {
   '/api/order-buttons': 'trading/order-buttons.json', // user-authored quick-action buttons for the order ticket
   '/api/order-plan': 'trading/order-plan.json', // persisted on-chart PLAN state (gray projection etc.) per broker:symbol
   '/api/order-primitives': 'trading/order-primitives.json', // on-chart order primitives: the GLOBAL active primitive + per-primitive config namespaces
+  '/api/money-management': 'trading/money-management.json', // per-account money-management config, keyed by saved account name: the sizing system + zone/ladder params
   '/api/watchlist': 'market/watchlist.json',
   '/api/alert-rules': 'market/alert-rules.json', // the Alert engine's authoritative rule set (owned by the alert-host)
   '/api/alert-log': 'market/alert-log.json', // the Alert engine's persistent fire LOG (the mailbox) -- a capped ring, owned by the alert-host

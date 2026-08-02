@@ -8,7 +8,7 @@ import { broker } from '../data/broker.js';
 import { platform } from '../platform/index.js';
 import { isTerminal } from '../data/adapter-contract.js';
 import { currentPosition, exitSide, freshestExitOrder } from './book-read.js'; // book-read business logic (position + exit-side + live resting exit) lives in one place
-import { sizeFromStake } from './sizing.js'; // pure position-sizing rule (risk + stop + instrument specs -> qty)
+import { sizeFromStake } from './sizing/index.js'; // pure position-sizing rule (risk + stop + instrument specs -> qty)
 import { execGate } from '../policy.js'; // injectable assistant-order gate (the app installs its policy; default denies)
 
 // every jlog line is the APP talking to the broker (a request we send, or our note about one) -> direction 'out'.
