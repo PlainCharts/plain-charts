@@ -111,6 +111,9 @@ export const DESK_COLOR_DEFAULTS = {
   mmMax: '#2ea043',
   mmMid: '#d29922',
   mmMin: '#f85149',
+  // Money Man -- console trade outcomes (defaults match the shipped look: win green; loss = the stop red)
+  mmWin: '#3fb950',
+  mmLoss: '#f85149',
 };
 // color key -> the CSS custom property the surfaces read
 /** @type {Record<string, string>} */
@@ -124,6 +127,8 @@ const COLOR_VAR = {
   mmMax: '--mm-max',
   mmMid: '--mm-mid',
   mmMin: '--mm-min',
+  mmWin: '--mm-win',
+  mmLoss: '--mm-loss',
 };
 /** @returns {Record<string, string>} */
 export function getDeskColors() {

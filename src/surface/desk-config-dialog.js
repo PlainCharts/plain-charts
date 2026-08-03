@@ -241,6 +241,8 @@ export function openDeskConfigDialog() {
     colorRow('MAX level', 'Top ladder rung', 'mmMax'),
     colorRow('MID level', 'Middle ladder rung', 'mmMid'),
     colorRow('MIN level', 'Bottom ladder rung', 'mmMin'),
+    colorRow('Win trade', 'Console WIN lines', 'mmWin'),
+    colorRow('Loss trade', 'Console LOSS lines', 'mmLoss'),
   );
   const reset = document.createElement('button');
   reset.type = 'button';

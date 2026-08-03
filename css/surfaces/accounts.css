@@ -1,0 +1,88 @@
+/* Accounts surface — an NT8-style table with user-configurable columns */
+.surface.accounts-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+.acct-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  flex: none;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--bd-soft);
+}
+.acct-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tx);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.acct-count {
+  font-size: 11px;
+  color: var(--tx-dim);
+  background: var(--panel);
+  border-radius: 9px;
+  padding: 0 7px;
+  min-width: 8px;
+  text-align: center;
+}
+.acct-spacer {
+  flex: 1;
+}
+.ord-filters {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+}
+.ord-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-dim);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ord-filter:hover {
+  color: var(--tx);
+  background: var(--panel);
+}
+.ord-filter.active {
+  background: var(--panel);
+  color: var(--tx);
+}
+.ord-filter-n {
+  color: var(--tx-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ord-filter.active .ord-filter-n {
+  color: var(--tx);
+}
+.acct-gear {
+  background: none;
+  border: none;
+  color: var(--tx-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+.acct-gear:hover {
+  color: var(--tx);
+}
+.acct-table-wrap {
+  flex: 1;
+  overflow: auto;
+}

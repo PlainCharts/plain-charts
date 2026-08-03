@@ -1,0 +1,26 @@
+/* Workspace Manager: surface launcher row */
+.ws-surface-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 0 4px;
+}
+.ws-surface-lbl {
+  font-size: 11px;
+  color: var(--tx-dim);
+  margin-right: 2px;
+}
+.ws-surface-btn {
+  background: var(--btn);
+  border: 1px solid var(--bd);
+  color: var(--btn-tx);
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ws-surface-btn:hover {
+  background: var(--btn-h);
+}

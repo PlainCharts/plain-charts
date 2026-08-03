@@ -1,0 +1,171 @@
+/* History bottom Stats strip (boxes) */
+.hist-stats {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--bd-soft);
+  background: var(--bg);
+  overflow-x: auto;
+}
+.hist-stat {
+  flex: 1 1 0;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid var(--bd-soft);
+  border-radius: 8px;
+  background: var(--field);
+}
+.hist-stat-t {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tx-dim);
+  white-space: nowrap;
+}
+.hist-stat-v {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tx);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.hist-stat-v.pos {
+  color: var(--pos);
+}
+.hist-stat-v.neg {
+  color: var(--neg);
+}
+.acct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font:
+    12px ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+.acct-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  color: var(--tx-dim);
+  font-weight: 400;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--bd-soft);
+  white-space: nowrap;
+  z-index: 1;
+}
+.acct-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.acct-table th.sortable:hover {
+  color: var(--tx);
+}
+.acct-table th .sort-arrow {
+  color: var(--tx);
+  font-size: 11px;
+}
+.acct-table td {
+  padding: 4px 10px;
+  color: var(--tx);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--bd-soft);
+}
+.acct-table tr:hover td {
+  background: var(--panel);
+}
+.acct-table .a-right {
+  text-align: right;
+}
+.acct-table td.pos {
+  color: var(--pos);
+}
+.acct-table td.neg {
+  color: var(--neg);
+}
+.acct-table td.dim {
+  opacity: 0.5;
+}
+/* History tree: round-trip PARENT rows expand to their constituent FILL children */
+.acct-table tr.hist-child td {
+  color: var(--tx-dim);
+  background: var(--bg);
+}
+.acct-table tr.hist-child:hover td {
+  background: var(--panel);
+}
+.acct-table tr.hist-child td:first-child {
+  padding-left: 30px;
+}
+.hist-toggle {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 7px;
+  vertical-align: middle;
+  border: 4px solid transparent;
+  border-left-color: var(--tx-dim);
+  cursor: pointer;
+}
+.hist-toggle:hover {
+  border-left-color: var(--tx);
+}
+.hist-toggle.open {
+  border-left-color: transparent;
+  border-top-color: var(--tx-dim);
+  margin-top: 4px;
+}
+.hist-toggle.open:hover {
+  border-top-color: var(--tx);
+}
+.acct-table td.ord-actions {
+  width: 1%;
+  white-space: nowrap;
+  padding-left: 4px;
+  padding-right: 8px;
+}
+.ord-cancel {
+  background: none;
+  border: 1px solid var(--bd);
+  color: var(--tx-dim);
+  border-radius: 4px;
+  width: 22px;
+  height: 20px;
+  line-height: 1;
+  cursor: pointer;
+  font-size: 11px;
+}
+.ord-cancel:hover {
+  background: #e81123;
+  border-color: #e81123;
+  color: #fff;
+}
+.acct-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tx-dim);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.acct-dot.on {
+  background: #26a69a;
+}
+.acct-empty {
+  color: var(--tx-dim);
+  padding: 16px 10px;
+  font-family: system-ui;
+}

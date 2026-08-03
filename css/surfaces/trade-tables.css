@@ -1,0 +1,106 @@
+/* trade-view tables (Orders / Positions / Accounts surfaces) */
+.surface.trade-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+}
+.tv-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  flex: none;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--bd-soft);
+}
+.tv-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tx);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.tv-count {
+  font-size: 11px;
+  color: var(--tx-dim);
+  background: var(--panel);
+  border-radius: 9px;
+  padding: 0 7px;
+  min-width: 8px;
+  text-align: center;
+}
+.tv-table {
+  flex: 1;
+  overflow-y: auto;
+  font:
+    12px ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+.tv-row {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 12px;
+}
+.tv-hrow {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  color: var(--tx-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--bd-soft);
+  z-index: 1;
+}
+.tv-body .tv-row:hover {
+  background: var(--panel);
+}
+.tv-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tx);
+}
+.tv-cell.a-right {
+  text-align: right;
+}
+.tv-cell.pos {
+  color: var(--pos);
+}
+.tv-cell.neg {
+  color: var(--neg);
+}
+.tv-empty {
+  padding: 16px 12px;
+  color: var(--tx-dim);
+  font: 12px system-ui;
+}
+.tv-acts {
+  display: flex;
+  justify-content: flex-end;
+}
+.tv-btn {
+  background: none;
+  border: 1px solid var(--bd);
+  color: var(--tx-dim);
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tv-btn:hover {
+  color: var(--tx);
+  border-color: var(--tx-dim);
+}
+.tv-btn.danger:hover {
+  color: #ef5350;
+  border-color: #ef5350;
+}
+

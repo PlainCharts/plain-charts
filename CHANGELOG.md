@@ -10,6 +10,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - Money management: a per-account sizing system that sizes every order from a zone/ladder risk model, set up in a new Money Man desk tab; when an account is on it, ticket, DSL, and on-chart orders all size automatically from the account's live balance and closed-trade history
 - Order ticket: picking a money-management account locks the Qt type to Money man, shows the engine's current level and risk (e.g. MIN 0.75% · $2,316.59), and previews the sized Volume live off the moving price -- the same number the worker executes, on the on-chart pill too
+- Money Man colors: the console's Win and Loss line colors are now picker-editable in Trade Desk > Colors, alongside the zone and level colors
 
 ### Changed
 - Money management sizing is keyed by the exact account (accountId), not the broker -- multiple saved accounts on one protocol can no longer cross-match; config edits now reach every window instantly instead of on a 4-second poll

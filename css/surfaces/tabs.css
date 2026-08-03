@@ -1,0 +1,20 @@
+/* ---- surface tabs (non-chart tabs, e.g. Console) ---- */
+/* on a surface tab the chart chrome is irrelevant: hide the toolbar strip + drawing rail + right rail/panel */
+body.surface-active #strip,
+body.surface-active #bottombar {
+  display: none;
+} /* chart-only chrome */
+body.surface-active #workarea {
+  height: calc(100% - 40px);
+} /* only the tabbar (40) remains */
+body.surface-active #toolbar,
+body.surface-active #rightrail,
+body.surface-active #rightpanel {
+  display: none;
+}
+#panes.surface-host {
+  display: block;
+  grid-template: none;
+  overflow: hidden;
+}
+
