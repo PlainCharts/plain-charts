@@ -62,8 +62,8 @@ register('place', (/** @type {any} */ cmd) => {
   // Per-account sizing policy: an MM account sizes every order from its zone/ladder risk (the engine),
   // overriding the form's qty/stake. This ONE point covers the ticket AND on-chart primitives -- both send
   // 'place'. No policy installed -> null -> the order's own sizing stands. The stop (risk basis) comes from
-  // the order's bracket, same as a stake order.
-  const mmRisk = accountRisk(cmd.ctx && cmd.ctx.broker);
+  // the order's bracket, same as a stake order. The ctx keys the policy by ACCOUNT (broker + accountId).
+  const mmRisk = accountRisk(cmd.ctx || {});
   if (mmRisk != null) {
     const stop = cmd.bracket && Number(cmd.bracket.stopLoss) > 0 ? Number(cmd.bracket.stopLoss) : 0;
     cmd.sizing = { risk: mmRisk, stop };

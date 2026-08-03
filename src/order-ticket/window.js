@@ -13,6 +13,8 @@ import '../perf/sampler.js'; // publish this window's live perf sample (Performa
 import { loadSettings } from '../settings/settings.js';
 import { loadThemes } from '../settings/theme.js';
 import { loadAccounts } from '../connect/accounts.js';
+import { loadMMConfigs, onMMConfigChange } from '../money-management/config.js'; // sizing-system config (warm + ui-bus synced)
+import { refreshMM } from './ticket-quotes.js';
 import { buildButtonBar } from './buttons.js';
 import { buildVisibilityFrame } from './visibility-frame.js'; // universal VISIBILITY / HIDE ON ENTRY frame (all tabs, like the button bar)
 import { isProjecting, setLevels } from '../chart/order-view/plan-store.js'; // a tab click while projecting writes plan.orderType
@@ -41,10 +43,16 @@ import { t, loadVocab } from '../i18n/i18n.js'; // this standalone window has it
     await loadThemes();
     await loadVocab();
     await loadAccounts();
+    await loadMMConfigs(); // the sizing-system config (MM lock + risk) -- before the account pick resolves it
     if (state.accountSelEl) populateAccounts(state.accountSelEl);
     render();
   } catch (_) {}
 })();
+
+// Money-management re-resolve triggers -- EVENTS, never ticks: a fill can close a trade (the ladder moves),
+// a config edit can flip the account's system or its parameters. Both re-run the cached snapshot + preview.
+platform.fills.subscribe(refreshMM);
+onMMConfigChange(refreshMM);
 
 /** @type {[string, string][]} */
 const TABS = [

@@ -43,6 +43,12 @@ const keyOf = (broker, symbol) => (broker || '') + ':' + symbol;
  *  the projection. */
 /** @type {Map<string, Plan>} */
 const state = new Map();
+// Keys with a SESSION-LIVE value: written by this window (set) or received as another window's real-time
+// edit (op 'set'). Disk hydration is NOT live: the file persists only the Project flag, so a freshly opened
+// window's disk copy is a stub. A late snapshot (the full in-session plan: levels, side, type) must OVERWRITE
+// that stub, but must never regress a live edit.
+/** @type {Set<string>} */
+const liveKeys = new Set();
 /** @type {Set<() => void>} */
 const subs = new Set();
 const ch = new BroadcastChannel(IPC.ORDER_PLAN);
@@ -59,19 +65,22 @@ ch.onmessage = (/** @type {MessageEvent} */ e) => {
   if (m.op === 'set') {
     const cur = state.get(m.key) || {};
     state.set(m.key, { ...cur, ...m.patch });
+    liveKeys.add(m.key); // another window's real-time edit -> this key is session-live here too
     notify();
   } else if (m.op === 'query') {
     try {
       ch.postMessage({ op: 'snapshot', entries: [...state.entries()] });
     } catch (_) {}
   } else if (m.op === 'snapshot' && Array.isArray(m.entries)) {
+    // fill gaps AND replace disk-hydrated stubs; only a session-live key (a real edit) wins over a snapshot.
+    // Deliberately NOT marking these keys live: a later reply (multi-window) may carry a fuller state.
     let changed = false;
     for (const [k, v] of m.entries) {
-      if (!state.has(k)) {
+      if (!liveKeys.has(k)) {
         state.set(k, v);
         changed = true;
       }
-    } // fill only gaps; a local opinion wins
+    }
     if (changed) notify();
   }
 };
@@ -115,6 +124,7 @@ function set(broker, symbol, patch, doPersist) {
   const key = keyOf(broker, symbol);
   const cur = state.get(key) || {};
   state.set(key, { ...cur, ...patch });
+  liveKeys.add(key); // a local edit is session-live: no snapshot may regress it
   notify();
   try {
     ch.postMessage({ op: 'set', key, patch });

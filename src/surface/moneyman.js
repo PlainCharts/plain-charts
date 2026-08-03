@@ -6,11 +6,11 @@
 // only GATHERS the account's config + closed-trade history and RENDERS the engine's state + trace. No business
 // logic here. Config edits persist to settings/trading/money-management.json (keyed by saved account name);
 // the account's starting balance is the MM origin.
-import { platform, computePositions, replayTrace } from '../../data_engine/index.js';
+import { platform, replayTrace } from '../../data_engine/index.js';
 import { applyDeskColors } from './desk-config.js'; // pushes the user's MM zone/level colours onto :root
 import * as accounts from '../connect/accounts.js';
 import { getMMConfig, setMMConfig, loadMMConfigs } from '../money-management/config.js';
-import { netOf } from './trade-derive.js';
+import { closedNets } from '../money-management/resolver.js'; // the ONE shared gather (also feeds the order worker)
 
 /** @param {string} tag @param {string} [cls] @param {string} [txt] */
 const el = (tag, cls, txt) => {
@@ -96,27 +96,14 @@ const NUM_LABEL = {
 /** Saved accounts that can trade (have a starting balance = an MM origin). */
 const tradingAccounts = () => accounts.listAccounts().filter((a) => a.startingBalance != null);
 
-/** The account's closed round-trip nets, oldest first -- the MM replay input. Tick specs (stamped on each
- *  fill by the adapter) are required for currency P&L, same as the History surface.
+/** The account's closed round-trip nets, oldest first -- the MM replay input. The saved profile names the
+ *  protocol; the connected account on it supplies the accountId; the shared gather (closedNets) does the rest.
  *  @param {{ protocol: string }} saved @returns {number[]} */
 function tradesFor(saved) {
   const conn = platform.accounts
     .all()
     .find((a) => String(a.broker).toLowerCase() === String(saved.protocol).toLowerCase());
-  if (!conn) return [];
-  const fills = platform.fills.all();
-  /** @type {Map<string, {tickSize?:any, tickValue?:any}>} */
-  const tickBySym = new Map();
-  for (const s of fills)
-    if (s.symbol && !tickBySym.has(s.symbol) && (s.tickValue != null || s.tickSize != null))
-      tickBySym.set(s.symbol, { tickSize: s.tickSize, tickValue: s.tickValue });
-  const { closed } = computePositions(fills, { contractInfo: (sym) => tickBySym.get(sym) });
-  return closed
-    .filter((r) => r.broker === conn.broker && String(r.accountId) === String(conn.accountId))
-    .sort((a, b) => (Number(a.exitTime) || 0) - (Number(b.exitTime) || 0))
-    .map((r) => netOf(r))
-    .filter((n) => n != null)
-    .map((n) => Number(n));
+  return conn ? closedNets(conn.broker, conn.accountId) : [];
 }
 
 /** @param {HTMLElement} root */

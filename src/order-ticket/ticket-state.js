@@ -31,9 +31,14 @@ export const state = {
   /** @type {HTMLElement|null} */ posTableEl: null,
   /** @type {(() => void)|null} */ repaintTable: null, // repaint fn; set by the build fn in use
   /** @type {(() => void)|null} */ syncModify: null, // Modify-editor live-sync: re-read the loaded order/position from the book into the fields (set by the modify build fn; window.js calls it on any book change, skipping a field the user is editing)
-  // Quantity-type: how the Volume field is READ -- 'units' (contracts) | 'stake' ($ risk) | later 'mm' (engine). The
+  // Quantity-type: how the Volume field is READ -- 'units' (contracts) | 'stake' ($ risk) | 'mm' (engine). The
   // dropdown lives in the Volume row, so it shows on every entry tab and the choice carries across Market/Limit/Stop.
+  // On a money-management account qtType is FORCED to 'mm' (per-account system, not a per-order choice).
   qtType: 'units',
+  // The selected account's money-management snapshot (resolver mmSnapshot: risk/level/zone), or null on a
+  // manual account. Cached: refreshed on account change / a closed trade / a config edit -- never per tick.
+  /** @type {any} */ mmSnap: null,
+  /** @type {(() => void)|null} */ syncQtType: null, // the active form's Qt-type rebuild (lock to 'mm' / restore Units+Stake); set per build, run by refreshMM
   // Market tab ORDER FORM values. SL/TP are ABSOLUTE prices; step/decimals come from the instrument.
   mktVol: 1, // volume / qty (shared with the Limit/Stop tabs)
   mktSl: 0, // stop-loss price (0 = none)

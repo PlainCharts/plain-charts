@@ -9,11 +9,17 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 - Money management: a per-account sizing system that sizes every order from a zone/ladder risk model, set up in a new Money Man desk tab; when an account is on it, ticket, DSL, and on-chart orders all size automatically from the account's live balance and closed-trade history
+- Order ticket: picking a money-management account locks the Qt type to Money man, shows the engine's current level and risk (e.g. MIN 0.75% · $2,316.59), and previews the sized Volume live off the moving price -- the same number the worker executes, on the on-chart pill too
+
+### Changed
+- Money management sizing is keyed by the exact account (accountId), not the broker -- multiple saved accounts on one protocol can no longer cross-match; config edits now reach every window instantly instead of on a 4-second poll
 - Symbol dialog: browse MetaTrader 5 instruments in a tree built from the broker's own symbol groups, with each symbol's broker description
 - Symbol dialog: clear (✕) button in the search box that wipes the text in one click without closing the dialog
 - Symbol dialog: browse CQG instruments in a tree (group / exchange / instrument type) beside the search, with a saved exchange filter and per-broker recents
 
 ### Fixed
+- On-chart order pill: on a money-management account it now sizes itself from the engine and the live price with no order dialog open; before, it showed qty 1 until the dialog was opened
+- Order dialog: opening it now picks up a stop that was dragged on the chart while it was closed; a stale startup snapshot no longer wins over the live plan
 - Symbol dialog: CQG search now matches by symbol code (e.g. EP), not only by description
 - Order ticket: the window now grows to fit your quick buttons instead of squishing the form and hiding Buy/Sell
 - Order ticket: a rejected modify on a pending order now shows the error in the ticket status line instead of nothing

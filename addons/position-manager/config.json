@@ -1,6 +1,6 @@
 {
-  "broker": "mt5",
-  "symbol": "US500.sim",
+  "broker": "cqg",
+  "symbol": "MES",
   "qty": 1,
   "offset": 10,
   "thresholdTicks": 1,
