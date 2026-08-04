@@ -1,0 +1,248 @@
+/* Stats surface: a vertical grid -- header (auto) / charts (the one flexible row) / summary board (auto),
+   bounded to the desk body so the summary is always visible and the plots fit the space above it. Every
+   color is a theme var; the Plot SVGs inherit their axis color from the plot box (currentColor). */
+.surface.stats-view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  overflow: hidden;
+}
+/* sample-size "Last N" control in the header (beside the shared account/date filters) */
+.stats-nctl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tx-dim);
+  font-size: 12px;
+}
+.stats-numin {
+  width: 56px;
+  background: var(--field);
+  color: var(--tx);
+  border: 1px solid var(--bd);
+  border-radius: 5px;
+  padding: 4px 6px;
+  font: inherit;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.stats-numin::-webkit-outer-spin-button,
+.stats-numin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* charts row: the flexible track; a 6-col grid so the cards' edges line up with the summary columns below */
+.stats-charts {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+  min-height: 0; /* bounded; the plots fit this row, never inflate it */
+  overflow: hidden;
+  padding: 12px;
+}
+.stats-card {
+  background: var(--panel);
+  border: 1px solid var(--bd-soft);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.stats-card h3 {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--tx-dim);
+  margin: 0 0 10px;
+}
+.stats-equity {
+  grid-column: 1 / 5; /* 4 of 6 */
+}
+.stats-spread {
+  grid-column: 5 / 7; /* 2 of 6 */
+}
+/* the plot box: the SVG is sized to this; clip any transient overflow before a re-fit. Plot axis text uses
+   currentColor, so the box color sets the axis/label color from the live theme. */
+.stats-plot {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--tx-dim);
+}
+.stats-note {
+  color: var(--tx-dim);
+  font-size: 11px;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+/* summary board: the bottom auto row; rows stack upward (row 0 = bottom) to match the editor */
+.stats-summary-card {
+  align-self: end;
+  margin: 0 12px 12px;
+}
+.stats-summary {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 14px;
+}
+.srow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px 18px;
+}
+.stat b {
+  display: block;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.stat span {
+  color: var(--tx-dim);
+  font-size: 12px;
+}
+.stats-view .pos {
+  color: var(--pos);
+}
+.stats-view .neg {
+  color: var(--neg);
+}
+
+/* ---- board editor dialog: two positioned grids (inventory + board) with drag-and-drop ---- */
+.stats-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+.stats-modal.open {
+  display: flex;
+}
+.stats-dialog {
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  width: 1080px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 20px;
+  color: var(--tx);
+}
+.stats-dialog h3 {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.stats-sec {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--tx-dim);
+  margin: 18px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stats-sec .stats-subtle {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.stats-hint {
+  color: var(--tx-dim);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.stats-brow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr) 28px;
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 10px;
+}
+.stats-slot {
+  min-height: 56px;
+  border: 1px dashed var(--bd);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stats-slot.drop {
+  border-color: var(--accent-ui);
+  background: color-mix(in srgb, var(--accent-ui) 12%, transparent);
+}
+.stats-tile {
+  background: var(--panel);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: grab;
+  width: 100%;
+  min-height: 52px;
+}
+.stats-tile b {
+  display: block;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.stats-tile span {
+  color: var(--tx-dim);
+  font-size: 11px;
+}
+.stats-tile.dragging {
+  opacity: 0.4;
+}
+.stats-rowx {
+  border: 0;
+  background: transparent;
+  color: var(--tx-dim);
+  cursor: pointer;
+  font-size: 16px;
+}
+.stats-rowx:hover {
+  color: var(--tx);
+}
+.stats-dbtn {
+  background: var(--panel);
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--tx);
+}
+.stats-dbtn:hover {
+  border-color: var(--bd-soft);
+}
+.stats-dbtn.addrow {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+.stats-dfoot {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.stats-dfoot .done {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--accent-tx);
+  border-color: var(--accent);
+}
+/* the per-tab gear in the header (reuses the shared GEAR svg) */
+.stats-gear {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--tx-dim);
+  padding: 0 4px;
+}
+.stats-gear:hover {
+  color: var(--tx);
+}

@@ -11,6 +11,7 @@ import { mountOrders } from './orders.js';
 import { mountPositions } from './positions.js';
 import { mountAccounts } from './accounts.js';
 import { mountHistory } from './history.js';
+import { mountStats } from './stats.js';
 
 /** @param {string} [cls] @param {string} [txt] */
 const el = (cls, txt) => {
@@ -32,6 +33,7 @@ const PANELS = [
   ['orders', 'Orders', mountOrders],
   ['positions', 'Positions', mountPositions],
   ['history', 'History', mountHistory],
+  ['stats', 'Stats', mountStats],
   ['accounts', 'Accounts', mountAccounts],
 ];
 /** @type {Record<string, Panel>} */

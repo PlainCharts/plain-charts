@@ -7,5 +7,6 @@
 @import url('surfaces/trade-tables.css'); /* shared Orders / Positions trade-view tables */
 @import url('surfaces/accounts.css'); /* Accounts: NT8-style table + its config */
 @import url('surfaces/history.css'); /* History: round-trip tree */
+@import url('surfaces/stats.css'); /* Stats: equity curve, edge/spread bell, configurable board */
 @import url('surfaces/column-picker.css'); /* the shared column picker */
 @import url('surfaces/workspace-launcher.css'); /* Workspace Manager: surface launcher row */

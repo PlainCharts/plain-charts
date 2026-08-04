@@ -7,6 +7,9 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Stats desk tab: a strategy dashboard over your closed round-trips -- an equity curve, an edge/spread (mean ± σ) distribution, and a drag-configurable board of USD summary stats (EV, avg win/loss, win/loss/BE %, max drawdown, max loss streak, profit factor, Sharpe). Opt-in via the desk "+", with the same account + date filters as History plus a "last N trades" sample size; the gear opens a two-grid editor to arrange which tiles show and where
+
 ### Removed
 - Stats bar: removed the History surface's bottom stats strip and its Trade Desk > Configure > Stats tab (the reorderable, on/off stat list); a dedicated Stats surface replaces it
 
