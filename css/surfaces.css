@@ -2,11 +2,10 @@
    tables, the NT8-style Accounts/History table with configurable columns, and the WS launcher.
    Split ONE FILE PER SURFACE (the seams the old section comments drew); this file only composes them. */
 @import url('surfaces/tabs.css'); /* generic surface-tab chrome: hide the chart toolbar/rails on a surface tab */
-@import url('surfaces/desk.css'); /* Trade Desk: mini-tab bar + the Configure dialog (General / Stats / Colors) */
+@import url('surfaces/desk.css'); /* Trade Desk: mini-tab bar + the Configure dialog (General / Colors) */
 @import url('surfaces/console.css'); /* Console: journal table, direction tints, level colors */
 @import url('surfaces/trade-tables.css'); /* shared Orders / Positions trade-view tables */
 @import url('surfaces/accounts.css'); /* Accounts: NT8-style table + its config */
-@import url('surfaces/history.css'); /* History: stats strip + round-trip tree */
-@import url('surfaces/moneyman.css'); /* Money Man: config column, zone board, ladder, console */
+@import url('surfaces/history.css'); /* History: round-trip tree */
 @import url('surfaces/column-picker.css'); /* the shared column picker */
 @import url('surfaces/workspace-launcher.css'); /* Workspace Manager: surface launcher row */

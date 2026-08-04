@@ -40,15 +40,12 @@ export const IPC = {
 // ---------------------------------------------------------------------------------------------------
 /** theme + optimization broadcasts (re-skin / re-throttle every other window).
  * @typedef {{ type: 'theme', name: string } | { type: 'optimization' }} UiThemeMsg */
-/** money-management config sync: a save in one window carries the NEW store (name -> config) to every other
- * window's warm copy (order worker, ticket) -- no polling.
- * @typedef {{ type: 'mm-config', store: Record<string, any> }} UiMMConfigMsg */
 /** study-board sync: range/crosshair/presence. `sb-*range`/`sb-*cross` share time/price; board variants
  * (`sb-b*`) target a linked anchor via `to`, non-board variants carry `ws` + `pane`.
  * @typedef {{ t: ('sb-range'|'sb-cross'|'sb-presence'), ws: string, pane?: number, range?: any, time?: any,
  *   price?: any, panes?: any } | { t: ('sb-brange'|'sb-bcross'), to: any, pane: any, range?: any, time?: any,
  *   price?: any }} UiBoardMsg */
-/** @typedef {UiThemeMsg | UiBoardMsg | UiMMConfigMsg} UiBusMsg */
+/** @typedef {UiThemeMsg | UiBoardMsg} UiBusMsg */
 
 // ---------------------------------------------------------------------------------------------------
 // drawing-clipboard -- share the copy buffer (an array of drawing records) with every other window.

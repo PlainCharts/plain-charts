@@ -34,9 +34,7 @@ export const syncFields = () => {
   // while PROJECTING the plan's qty / type / ref mirror into whatever entry form is shown (the pill's cells and
   // drags edited them); never overwrite a field being typed in
   if (isProjecting(c.broker, c.symbol)) {
-    // plan.qty never touches the Volume box in MM mode: there the box is a DERIVED preview (recalcStake), and
-    // the stored qty is at best a stale copy from another mode. Units/Stake keep the two-way mirror.
-    const pq = state.qtType === 'mm' ? 0 : Number(p.qty);
+    const pq = Number(p.qty);
     if (pq > 0) {
       if (state.mktInputs && state.mktInputs.vol !== document.activeElement) {
         state.mktVol = pq;

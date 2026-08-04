@@ -9,7 +9,6 @@ import { platform } from '../platform/index.js';
 import { ROLE } from '../data/broker-bridge.js';
 import { register } from './index.js';
 import { parseScript } from './dsl.js';
-import { accountRisk } from './sizing/index.js';
 import {
   execScript,
   placeMarket,
@@ -59,15 +58,6 @@ register('script', async (/** @type {any} */ cmd) => {
 // the dialog's Buy/Sell. Market tab -> a MARKET order + optional absolute-price bracket (account-type aware). Limit/Stop
 // tab -> a single RESTING order at a price with time-in-force. Discriminated by cmd.orderType.
 register('place', (/** @type {any} */ cmd) => {
-  // Per-account sizing policy: an MM account sizes every order from its zone/ladder risk (the engine),
-  // overriding the form's qty/stake. This ONE point covers the ticket AND on-chart primitives -- both send
-  // 'place'. No policy installed -> null -> the order's own sizing stands. The stop (risk basis) comes from
-  // the order's bracket, same as a stake order. The ctx keys the policy by ACCOUNT (broker + accountId).
-  const mmRisk = accountRisk(cmd.ctx || {});
-  if (mmRisk != null) {
-    const stop = cmd.bracket && Number(cmd.bracket.stopLoss) > 0 ? Number(cmd.bracket.stopLoss) : 0;
-    cmd.sizing = { risk: mmRisk, stop };
-  }
   return cmd.orderType === 'limit' || cmd.orderType === 'stop'
     ? placeResting(
         cmd.ctx || {},

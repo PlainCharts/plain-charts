@@ -93,7 +93,7 @@
   cursor: move;
   user-select: none;
 } /* drag by the header */
-/* tabbed settings: General / Stats / Colors */
+/* tabbed settings: General / Colors */
 .desk-config-tabs {
   display: flex;
   gap: 2px;

@@ -8,7 +8,6 @@ import { broker, sizeFromStake } from '../../data_engine/index.js';
 import { state, getCtx } from './ticket-state.js';
 import { syncFields } from './ticket-plan-sync.js'; // an instrument resolve mirrors plan levels back into the fields
 import { planControl } from './plan-control.js'; // the Stake preview writes the sizing intent to the plan through the one seam
-import { mmSnapshot } from '../money-management/resolver.js'; // the ONE shared MM gather (also feeds the order worker)
 
 // push the resolved instrument's tick/decimals onto the price inputs (step for the spinners): Market SL/TP + Limit/Stop price
 export function applyMktInst() {
@@ -97,29 +96,9 @@ export function unsubscribeMktQuotes() {
   state.mktAsk = 0;
 }
 
-// The risk$ driving the sized preview: the typed stake, or -- on a money-management account -- the engine's
-// answer for the selected account (cached snapshot; refreshMM keeps it current). 0 = nothing to size with.
+// The risk$ driving the sized preview: the typed stake. 0 = nothing to size with.
 export function previewRisk() {
-  if (state.qtType === 'mm') return state.mmSnap && state.mmSnap.risk > 0 ? Number(state.mmSnap.risk) : 0;
   return state.qtType === 'stake' ? Number(state.mktStake) || 0 : 0;
-}
-
-// Refresh the cached MM snapshot for the SELECTED account and re-arm the form: qtType locks to 'mm' when the
-// account is on money management (restores Units/Stake otherwise), then the preview + side gate re-run.
-// Called on account change, a fills change (a closed trade moves the ladder), and an MM config edit --
-// never on a quote tick (the per-tick work stays the one cheap sizeFromStake below, same as Stake).
-export function refreshMM() {
-  const c = getCtx();
-  state.mmSnap = c.broker ? mmSnapshot({ broker: c.broker, accountId: c.accountId }) : null;
-  if (state.mmSnap) {
-    if (state.qtType !== 'mm') {
-      state.qtType = 'mm';
-      planControl.setSizing(null); // entering MM: clear any stale stake intent -- MM stores nothing in the plan
-    }
-  } else if (state.qtType === 'mm') state.qtType = 'units';
-  if (state.syncQtType) state.syncQtType(); // rebuild the Qt-type select (locked 'mm' vs Units/Stake)
-  if (state.recalcStake) state.recalcStake();
-  if (state.syncSideGate) state.syncSideGate();
 }
 
 // Position-sizing PREVIEW -- the SAME pure rule the order-host runs at fire-time (sizeFromStake), mirrored in the UI so
@@ -144,13 +123,13 @@ export function previewStakeUnits(entry, stop) {
   return r.qty; // 0 = valid inputs but too small to size (below min); shown as 0 so the trader sees "risk too tight"
 }
 
-// Wire a Volume input as the sized live-preview: in Stake / MM mode it goes READ-ONLY (grayed) and displays the
+// Wire a Volume input as the sized live-preview: in Stake mode it goes READ-ONLY (grayed) and displays the
 // computed qty; in Units mode it's the editable volume. entryOf() supplies the fill estimate for the active tab.
 // Returns the recompute fn (stored on state so quote ticks and field edits can re-run it).
 /** @param {HTMLInputElement} volInput @param {() => number} entryOf @param {() => number} stopOf @returns {() => void} */
 export function wireStakePreview(volInput, entryOf, stopOf) {
   const recalc = () => {
-    if (state.qtType !== 'stake' && state.qtType !== 'mm') {
+    if (state.qtType !== 'stake') {
       volInput.disabled = false;
       volInput.classList.remove('ot-computed');
       volInput.title = '';
@@ -162,22 +141,19 @@ export function wireStakePreview(volInput, entryOf, stopOf) {
     volInput.classList.add('ot-computed');
     // STAKE: the plan carries the typed SIZING INTENT (user intent -> stored) so the on-chart pill's V places the
     // SAME way the dialog's Buy/Sell does (worker-sized); plan.qty mirrors the Volume box.
-    // MM: the plan gets NO qty/sizing writes -- the number is DERIVED wherever it is shown (the chart overlay
-    // derives its own from the same resolver; the worker decides at fire). Storing it would be a shadow copy.
-    const mm = state.qtType === 'mm';
     const risk = previewRisk();
-    const sizing = !mm && risk > 0 && stopOf() > 0 ? { risk, stop: stopOf() } : null;
+    const sizing = risk > 0 && stopOf() > 0 ? { risk, stop: stopOf() } : null;
     const u = previewStakeUnits(entryOf(), stopOf());
     if (u == null) {
       volInput.value = '';
-      volInput.title = mm ? 'set a stop' : 'enter a stake + stop';
-      if (!mm) planControl.setSizing(sizing);
+      volInput.title = 'enter a stake + stop';
+      planControl.setSizing(sizing);
       return;
     }
     volInput.value = String(u);
     volInput.title = u > 0 ? '' : 'risk too tight for one unit';
     state.mktVol = u > 0 ? u : state.mktVol; // keep the shared volume in step (status text, intent fallback qty)
-    if (!mm) planControl.setQtyAndSizing(state.mktVol, sizing); // pill reflects the Volume box AND carries the sizing so V sizes like the dialog
+    planControl.setQtyAndSizing(state.mktVol, sizing); // pill reflects the Volume box AND carries the sizing so V sizes like the dialog
   };
   return recalc;
 }

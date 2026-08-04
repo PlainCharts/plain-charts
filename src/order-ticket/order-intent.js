@@ -55,9 +55,6 @@ export function buildPlaceIntent(p) {
   const stake = p.qtType === 'stake';
   if (stake && !(p.stake > 0)) return { ok: false, error: 'enter a stake' };
   if (stake && !(p.sl > 0)) return { ok: false, error: 'stake needs a stop' }; // sizing has no meaning without a stop basis
-  // MM mode: the WORKER computes the risk itself (its sizing policy) from the stop in the bracket -- the ticket
-  // sends no risk number (one authority, never a stale UI copy). It still needs the stop basis to exist.
-  if (p.qtType === 'mm' && !(p.sl > 0)) return { ok: false, error: 'money management needs a stop' };
   const sizing = stake ? { risk: p.stake, stop: p.sl } : null;
   // bracket = the Stop/Target fields; always on a market order, hedging-only on a pending order
   const bracketOn = p.orderType === 'market' ? p.sl > 0 || p.tp > 0 : !!ctx.hedging && (p.sl > 0 || p.tp > 0);

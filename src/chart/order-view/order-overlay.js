@@ -28,7 +28,6 @@ import {
   subscribe as subscribePlan,
 } from './plan-store.js'; // shared PLAN state (gray projection + bracket ladder), keyed by broker+symbol
 import { applyEntryVisibility, resetEntryVisibility } from './order-visibility.js'; // fill-driven HIDE-ON-ENTRY: apply the global policy the moment a position opens; reset when flat
-import { mmPlanQty } from './plan-sizing.js'; // money-management pill qty, derived IN this window (no dialog needed)
 
 /** @param {any} pane @returns {{ setEnabled: (on: boolean) => void, refresh: () => void, destroy: () => void }} */
 export function createOrderOverlay(pane) {
@@ -526,18 +525,7 @@ export function createOrderOverlay(pane) {
     if (planPre) {
       const px = livePrice();
       const p = getPlan(pane.broker, pane.symbol);
-      // On a money-management account the pill DERIVES its qty here, in this window (engine risk + live price
-      // + the plan's stop) -- the store carries intent, never a derived number, so the pill is correct with no
-      // dialog open. Manual account (null) -> the shared plan qty, as before.
-      const l0 = Array.isArray(p.levels) && p.levels[0] ? p.levels[0] : null;
-      const mm = mmPlanQty({
-        broker: pane.broker,
-        entry: px,
-        stop: l0 && l0.stop != null ? Number(l0.stop) : 0,
-        tickSize: pane.tickSize,
-        tickValue: pane.tickValue,
-      });
-      projectionQty = mm ? mm.qty : Number(p.qty) > 0 ? Number(p.qty) : 1; // the planned entry volume (shared with the dialog's Volume; 1 until set)
+      projectionQty = Number(p.qty) > 0 ? Number(p.qty) : 1; // the planned entry volume (shared with the dialog's Volume; 1 until set)
       projectionType = p.orderType === 'limit' || p.orderType === 'stop' ? p.orderType : 'market'; // the planned type (shared with the dialog's tabs)
       projectionSide = p.side === 'sell' ? 'sell' : 'buy'; // the planned side (the pill's B/S cell; default buy)
       // a PINNED entry level (plan ref, e.g. set by the automation's pending setup or dragged here) anchors the dot and

@@ -58,29 +58,6 @@ function buildPlacedActions() {
   return wrap;
 }
 
-// The MM readout -- on a money-management account the Stake input's slot shows the ENGINE's decision instead:
-// level + ceiling% + the risk$ the next order will size from (e.g. "MIN 0.75% · $2,316.59"). Display only; the
-// number comes from the cached resolver snapshot (state.mmSnap, kept current by refreshMM). Returns the row +
-// its refresh (called by syncStake).
-function buildMMReadout() {
-  const row = document.createElement('div');
-  row.className = 'ot-mod-row';
-  row.style.justifyContent = 'flex-end';
-  const txt = document.createElement('span');
-  txt.className = 'ot-mod-label';
-  txt.style.flex = '0 0 auto';
-  row.appendChild(txt);
-  const refresh = () => {
-    const s = state.mmSnap;
-    txt.textContent = s
-      ? s.level + ' ' + Number(s.levelPct).toFixed(2) + '% · $' +
-        Number(s.risk).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      : '';
-  };
-  refresh();
-  return { row, refresh };
-}
-
 // Buy/Sell GATE: a bracket implies a DIRECTION -- Stop BELOW the entry (Target above) is a LONG; Stop ABOVE is a SHORT.
 // So the button that contradicts the setup is disabled: long -> Sell off, short -> Buy off. Entry = the live market
 // (Market tab) or the order Price (Limit/Stop). No levels, or no entry reference yet -> both buttons work.
@@ -223,16 +200,10 @@ export function buildMarketForm() {
     if (state.syncSideGate) state.syncSideGate();
   };
   stakeRow.append(stakeLbl, stakeIn);
-  // MM readout -- shares the Stake slot (col2 row1); shown instead of the Stake input on an MM account.
-  const mmOut = buildMMReadout();
-  mmOut.row.style.gridColumn = '2 / 4';
-  mmOut.row.style.gridRow = '1';
-  // Qt-type change: show the Stake input (stake) or the MM readout (mm), and flip the Volume box between
-  // editable (Units) and grayed live-preview (sized modes).
+  // Qt-type change: show the Stake input (stake), and flip the Volume box between editable (Units) and
+  // grayed live-preview (stake).
   const syncStake = () => {
     stakeRow.style.display = state.qtType === 'stake' ? '' : 'none';
-    mmOut.row.style.display = state.qtType === 'mm' ? '' : 'none';
-    mmOut.refresh();
     if (state.recalcStake) state.recalcStake();
     if (state.syncSideGate) state.syncSideGate();
   };
@@ -240,7 +211,7 @@ export function buildMarketForm() {
   qt.style.gridColumn = '1 / 2';
   qt.style.gridRow = '1'; // Qt type in col1, ABOVE Volume
   syncStake();
-  grid.append(vol.row, sl.row, tp.row, toggles, qt, stakeRow, mmOut.row, slDist.row, tpDist.row);
+  grid.append(vol.row, sl.row, tp.row, toggles, qt, stakeRow, slDist.row, tpDist.row);
   // SL/TP are the BRACKET on every account type -- always active (the broker places a server-side OCO from them, hedging
   // attaches them to the position). The red/green chart beads mirror these fields via the plan store (syncFields).
   applyMktInst();
@@ -317,7 +288,7 @@ export function buildMarketActions() {
       status.className = 'ot-foot-status err';
       return;
     }
-    const sized = state.qtType === 'stake' || state.qtType === 'mm';
+    const sized = state.qtType === 'stake';
     status.textContent = t(side.toUpperCase()) + ' ' + (sized ? t('sizing') : state.mktVol) + '…';
     status.className = 'ot-foot-status';
     command(res.intent)
@@ -539,14 +510,8 @@ export function buildLimitStopForm(_type) {
     if (state.syncSideGate) state.syncSideGate();
   };
   stakeRow.append(stakeLbl, stakeIn);
-  // MM readout -- shares the Stake slot (col2 row1); shown instead of the Stake input on an MM account.
-  const mmOut = buildMMReadout();
-  mmOut.row.style.gridColumn = '2 / 3';
-  mmOut.row.style.gridRow = '1';
   const syncStake = () => {
     stakeRow.style.display = state.qtType === 'stake' ? '' : 'none';
-    mmOut.row.style.display = state.qtType === 'mm' ? '' : 'none';
-    mmOut.refresh();
     if (state.recalcStake) state.recalcStake();
     if (state.syncSideGate) state.syncSideGate();
   };
@@ -554,7 +519,7 @@ export function buildLimitStopForm(_type) {
   qt.style.gridColumn = '1 / 2';
   qt.style.gridRow = '1'; // Qt type in col1, ABOVE Volume
   syncStake();
-  wrap.append(vol.row, price.row, sl.row, tp.row, expRow, gDateRow, qt, stakeRow, mmOut.row, slDist.row, tpDist.row);
+  wrap.append(vol.row, price.row, sl.row, tp.row, expRow, gDateRow, qt, stakeRow, slDist.row, tpDist.row);
   syncLsSltp(); // hedging -> SL/TP column + Dist show; netting -> dimmed/disabled
   applyMktInst();
   syncFields();
@@ -604,7 +569,7 @@ export function buildLimitStopActions(type) {
       status.className = 'ot-foot-status err';
       return;
     }
-    const sized = state.qtType === 'stake' || state.qtType === 'mm';
+    const sized = state.qtType === 'stake';
     status.textContent = t(side.toUpperCase()) + ' ' + t(type) + ' ' + (sized ? t('sizing') : state.mktVol) + '…';
     status.className = 'ot-foot-status';
     command(res.intent)

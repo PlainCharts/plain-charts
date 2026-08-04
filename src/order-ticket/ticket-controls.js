@@ -24,12 +24,10 @@ export function mktRow(label, value, o = {}) {
   return { row, input };
 }
 
-// Qt type (quantity type): how the Volume field is READ -- Units (contracts) | Stake ($ risk) | MM (engine).
+// Qt type (quantity type): how the Volume field is READ -- Units (contracts) | Stake ($ risk).
 // Sits in col1 as the TOP row ABOVE Volume on every entry tab (Market/Limit/Stop, not Modify), so the choice reads
 // first and carries across tabs; Stake shares its row (col2). Label uses the col1 width (47.3px) so the select's left
 // edge lines up with the Volume box below it. Sets state.qtType; onChange fires after (reveal/hide Stake + re-preview).
-// On a MONEY-MANAGEMENT account (state.mmSnap set by refreshMM) the select shows a locked 'Money man' -- the
-// sizing system is a per-account commitment, not a per-order choice. rebuild() re-arms it on an account switch.
 /** @param {() => void} [onChange] @returns {HTMLElement} */
 export function buildQtTypeRow(onChange) {
   const row = document.createElement('div');
@@ -40,26 +38,13 @@ export function buildQtTypeRow(onChange) {
   const sel = document.createElement('select');
   sel.className = 'ot-input';
   sel.style.flex = '0 0 120px'; // == Exp/Symbol box width
-  const rebuild = () => {
-    const mm = !!state.mmSnap;
-    sel.innerHTML = '';
-    /** @type {[string,string][]} */ (mm ? [['mm', 'Money man']] : [['units', 'Units'], ['stake', 'Stake']]).forEach(
-      ([v, l]) => {
-        const o = document.createElement('option');
-        o.value = v;
-        o.textContent = t(l);
-        sel.appendChild(o);
-      },
-    );
-    sel.value = state.qtType;
-    sel.disabled = mm;
-    sel.title = mm ? t('this account is on money management') : '';
-  };
-  rebuild();
-  state.syncQtType = () => {
-    rebuild();
-    if (onChange) onChange();
-  };
+  /** @type {[string,string][]} */ ([['units', 'Units'], ['stake', 'Stake']]).forEach(([v, l]) => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = t(l);
+    sel.appendChild(o);
+  });
+  sel.value = state.qtType;
   sel.onchange = () => {
     state.qtType = sel.value;
     if (onChange) onChange();

@@ -9,7 +9,6 @@ import { listAccounts } from '../connect/accounts.js';
 import { state } from './ticket-state.js';
 import { syncToggle, syncFields } from './ticket-plan-sync.js';
 import { syncLsSltp } from './ticket-controls.js';
-import { refreshMM } from './ticket-quotes.js'; // the picked account decides the sizing system (MM lock vs Units/Stake)
 import { t } from '../i18n/i18n.js'; // vocabulary lookup
 
 // The union of every symbol across every named watchlist (deduped by broker+symbol), the pick-list for the dropdown.
@@ -150,7 +149,6 @@ export function populateAccounts(sel) {
     sel.appendChild(o);
     sel.disabled = true;
     state.selectedAccount = null;
-    refreshMM(); // nothing connected -> clear any MM lock
     return;
   }
   sel.disabled = false;
@@ -184,11 +182,9 @@ export function populateAccounts(sel) {
   sel.value = String(idx);
   const pick = accts[idx];
   state.selectedAccount = { broker: pick.broker, accountId: pick.accountId, hedging: !!pick.hedging };
-  refreshMM(); // the initial pick decides the sizing system (MM accounts lock the Qt type)
   sel.onchange = () => {
     const a = accts[Number(sel.value)];
     if (a) state.selectedAccount = { broker: a.broker, accountId: a.accountId, hedging: !!a.hedging };
-    refreshMM(); // account switch: re-resolve the sizing system for the new account
     syncToggle();
     syncFields();
     syncLsSltp();

@@ -1,6 +1,6 @@
 // @ts-check
 // The Trade Desk configuration dialog: desk-wide settings that apply to every tab, organised into TABS
-// (General / Stats / Colors). The window is draggable by its header (the shared makeDraggable). Changes
+// (General / Colors). The window is draggable by its header (the shared makeDraggable). Changes
 // re-render open tabs live (they subscribe to onDeskConfigChange). Opened by the desk bar's Configure button;
 // nothing here touches the desk's own tab state.
 import { t } from '../i18n/i18n.js'; // vocabulary lookup
@@ -134,16 +134,6 @@ export function openDeskConfigDialog() {
     el('desk-color-cat', t('Order flow')),
     colorRow('Outgoing', 'App to broker (our requests)', 'out'),
     colorRow('Incoming', 'Broker to us (their replies)', 'in'),
-    el('desk-color-cat', t('Money management')),
-    colorRow('Shot zone', 'Shot band', 'mmShot'),
-    colorRow('Base zone', 'Base band', 'mmBase'),
-    colorRow('Floor zone', 'Below origin', 'mmFloor'),
-    colorRow('Stop zone', 'Max drawdown', 'mmStop'),
-    colorRow('MAX level', 'Top ladder rung', 'mmMax'),
-    colorRow('MID level', 'Middle ladder rung', 'mmMid'),
-    colorRow('MIN level', 'Bottom ladder rung', 'mmMin'),
-    colorRow('Win trade', 'Console WIN lines', 'mmWin'),
-    colorRow('Loss trade', 'Console LOSS lines', 'mmLoss'),
   );
   const reset = document.createElement('button');
   reset.type = 'button';

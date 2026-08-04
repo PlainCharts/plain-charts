@@ -51,41 +51,19 @@ export function setDeskBeThreshold(v) {
   notify();
 }
 
-// ---- Desk colours: the Console DIRECTION tints (OUT = app -> broker requests, IN = broker -> app replies)
-// plus the Money Man zone/ladder colours. All user-themeable from Trade Desk > Colors, stored in this same
-// config, and pushed onto :root as CSS vars so the surfaces (console rows; the Money Man grid + ladder) read
-// them live. Defaults match the shipped palette.
+// ---- Desk colours: the Console DIRECTION tints (OUT = app -> broker requests, IN = broker -> app replies).
+// User-themeable from Trade Desk > Colors, stored in this same config, and pushed onto :root as CSS vars so
+// the surfaces (console rows) read them live. Defaults match the shipped palette.
 /** @type {Record<string, string>} */
 export const DESK_COLOR_DEFAULTS = {
   out: '#e79457',
   in: '#4fb6c9',
-  // Money Man -- zone bands
-  mmShot: '#a371f7',
-  mmBase: '#2ea043',
-  mmFloor: '#d29922',
-  mmStop: '#f85149',
-  // Money Man -- ladder levels (default to the matching zone hues)
-  mmMax: '#2ea043',
-  mmMid: '#d29922',
-  mmMin: '#f85149',
-  // Money Man -- console trade outcomes (defaults match the shipped look: win green; loss = the stop red)
-  mmWin: '#3fb950',
-  mmLoss: '#f85149',
 };
 // color key -> the CSS custom property the surfaces read
 /** @type {Record<string, string>} */
 const COLOR_VAR = {
   out: '--dir-out',
   in: '--dir-in',
-  mmShot: '--mm-shot',
-  mmBase: '--mm-base',
-  mmFloor: '--mm-floor',
-  mmStop: '--mm-stop',
-  mmMax: '--mm-max',
-  mmMid: '--mm-mid',
-  mmMin: '--mm-min',
-  mmWin: '--mm-win',
-  mmLoss: '--mm-loss',
 };
 /** @returns {Record<string, string>} */
 export function getDeskColors() {
