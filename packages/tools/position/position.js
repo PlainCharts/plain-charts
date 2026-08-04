@@ -37,7 +37,8 @@ Tools.register({
     stopColor: 'rgba(120,123,134,0.12)', // risk zone (entry -> stop)
     textColor: '#ffffff',
     textSize: 12,
-    priceLabels: false,
+    priceLabels: false, // price-SCALE labels (engine draws one per point in the price axis)
+    toolPriceLabels: false, // price labels ON THE TOOL (this tool draws them at each line's right end)
     // which stat each level's label shows -- all None until we build actual stats
     targetStat: 'none',
     stopStat: 'none',
@@ -54,7 +55,8 @@ Tools.register({
       { name: 'Target', controls: [{ key: 'targetStat', type: 'select', options: TS_STATS }] },
       { name: 'Stop', controls: [{ key: 'stopStat', type: 'select', options: TS_STATS }] },
       { name: 'Entry', controls: [{ key: 'entryStat', type: 'select', options: ENTRY_STATS }] },
-      { name: 'Price labels', toggle: 'priceLabels' },
+      { name: 'Price labels (price scale)', toggle: 'priceLabels' },
+      { name: 'Price labels (tool)', toggle: 'toolPriceLabels' },
     ],
   },
 
@@ -141,8 +143,9 @@ Tools.register({
     statLabel('Target', s.targetStat, g.target, true);
     statLabel('Stop', s.stopStat, g.stop, false);
 
-    // ---- optional price labels at the right end of each level ----
-    if (s.priceLabels) {
+    // ---- optional price labels ON THE TOOL, at the right end of each level (separate from the price-scale
+    // labels the engine draws in the axis gutter via style.priceLabels) ----
+    if (s.toolPriceLabels) {
       /** @param {number} p */
       const label = (p) => ({
         text: p.toFixed(dec),
