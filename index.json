@@ -720,6 +720,21 @@
     },
     {
       "class": "tools",
+      "id": "position",
+      "name": "Position",
+      "description": "A position tool — drag the entry, target, and stop levels of a trade.",
+      "icon": "",
+      "info": "",
+      "path": "packages/tools/position",
+      "runtime": "position.js",
+      "files": [
+        "meta.json",
+        "pin.js",
+        "position.js"
+      ]
+    },
+    {
+      "class": "tools",
       "id": "range",
       "name": "Range",
       "description": "Three measuring tools in one — price, date, and combined range.",
