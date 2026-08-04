@@ -162,11 +162,31 @@ const write = (d, ch) => {
   ];
 };
 
+// The smart side: direction is implied by where the STOP sits relative to the ENTRY pivot -- below = long,
+// above = short. The TARGET must stay on the profit side (long: above entry, short: below); when a stop drag
+// flips the side, the target MIRRORS across entry. Same rule the pill primitive uses (plan-rules.js).
+/** @param {number} entry @param {number} stop @returns {'long'|'short'} */
+const sideOf = (entry, stop) => (stop < entry ? 'long' : 'short');
+// the target, mirrored across entry if the stop-implied side leaves it on the wrong (loss) side
+/** @param {number} entry @param {number} stop @param {number} target @returns {number} */
+const profitTarget = (entry, stop, target) => {
+  const wrong = sideOf(entry, stop) === 'long' ? target < entry : target > entry;
+  return wrong ? 2 * entry - target : target;
+};
+
 // pts (screen) are the four resolved points in order; each handle sits at its own point. Entry's two ends
 // carry the time span; target/stop are price-only (their dp.time is ignored -- they stay at the left edge).
 const PINS = pinHandles([
   pin({ at: (c) => c.pts[0], drag: (d, dp) => write(d, { left: dp.time, entry: dp.price }) }), // entry-left
   pin({ at: (c) => c.pts[1], drag: (d, dp) => write(d, { right: dp.time, entry: dp.price }) }), // entry-right
   pin({ at: (c) => c.pts[2], drag: (d, dp) => write(d, { target: dp.price }) }), // target-left (price only)
-  pin({ at: (c) => c.pts[3], drag: (d, dp) => write(d, { stop: dp.price }) }), // stop-left (price only)
+  // stop-left (price only): the smart anchor -- a stop drag re-implies the side and mirrors the target to the
+  // profit side when it flips, so target and stop are never left on the same side of entry.
+  pin({
+    at: (c) => c.pts[3],
+    drag: (d, dp) => {
+      const g = geo(d);
+      write(d, { stop: dp.price, target: profitTarget(g.entry, dp.price, g.target) });
+    },
+  }),
 ]);
