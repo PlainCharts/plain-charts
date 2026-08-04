@@ -150,6 +150,8 @@ function controlWidget(d, ctrl, preview) {
 
 /** @param {Drawing} d @param {any} row @param {Preview} preview */
 export function buildRow(d, row, preview) {
+  // a SECTION HEADING -- groups the rows below it under a title (no controls). e.g. { heading: 'Stats' }.
+  if (row.heading) return el('div', 'set-section', row.heading);
   // several labelled fields on ONE row (each: optional toggle + label + control), e.g. Label + Background.
   if (row.fields) {
     const r = el('div', 'set-row set-fields');

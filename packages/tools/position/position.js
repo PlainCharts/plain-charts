@@ -16,6 +16,10 @@
 import { pin, pinHandles } from './pin.js';
 // (`Tools`, `ToolDrawing`, `ToolView`, `ToolScreenPoint`, `ToolDataPoint`, `ToolPane`, … are ambiently typed in tools-global.d.ts.)
 
+// The stat catalog for the per-level labels. EMPTY for now -- the only choice is None. Real stats (which come
+// from the sizing algorithm we have not built yet) get added here as we develop them.
+const STATS = [{ key: 'none', name: 'None' }];
+
 Tools.register({
   id: 'position',
   name: 'Position',
@@ -31,6 +35,10 @@ Tools.register({
     textColor: '#ffffff',
     textSize: 12,
     priceLabels: false,
+    // which stat each level's label shows -- all None until we build actual stats
+    targetStat: 'none',
+    stopStat: 'none',
+    entryStat: 'none',
   },
   settings: {
     style: [
@@ -38,6 +46,11 @@ Tools.register({
       { name: 'Stop color', controls: [{ key: 'stopColor', type: 'color' }] },
       { name: 'Target color', controls: [{ key: 'targetColor', type: 'color' }] },
       { name: 'Text', controls: [{ key: 'textColor', type: 'color', size: 'textSize' }] },
+      // STATS: pick which stat each level's label shows. The catalog is seeded here and grows in later steps.
+      { heading: 'Stats' },
+      { name: 'Target', controls: [{ key: 'targetStat', type: 'select', options: STATS }] },
+      { name: 'Stop', controls: [{ key: 'stopStat', type: 'select', options: STATS }] },
+      { name: 'Entry', controls: [{ key: 'entryStat', type: 'select', options: STATS }] },
       { name: 'Price labels', toggle: 'priceLabels' },
     ],
   },

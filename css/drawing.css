@@ -20,6 +20,8 @@
 .set-tab.active { color: var(--tx); border-bottom-color: var(--tx); }
 .set-body { min-height: 84px; max-height: 56vh; overflow-y: auto; }
 .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; }
+/* a settings SECTION heading (groups the rows beneath it) */
+.set-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--tx-dim); margin: 12px 0 2px; padding-top: 10px; border-top: 1px solid var(--bd-soft); }
 .set-row-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tx); }
 .set-row-left input[type=checkbox] { cursor: pointer; }
 .set-controls { display: flex; align-items: center; gap: 6px; }
