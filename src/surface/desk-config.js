@@ -6,7 +6,7 @@
 import { getSetting, setSetting } from '../settings/settings.js';
 
 const KEY = 'tradeDesk';
-/** @returns {{ tzOffsetMin?: number, beThreshold?: number, stats?: { enabled?: boolean, items?: { key: string, on: boolean }[] }, colors?: Record<string, string> }} */
+/** @returns {{ tzOffsetMin?: number, beThreshold?: number, colors?: Record<string, string> }} */
 const cfg = () => getSetting(KEY) || {};
 
 /** @type {Set<() => void>} */
@@ -48,49 +48,6 @@ export function getDeskBeThreshold() {
 export function setDeskBeThreshold(v) {
   const n = Number(v);
   setSetting(KEY, Object.assign({}, cfg(), { beThreshold: Number.isFinite(n) && n > 0 ? n : 0 }));
-  notify();
-}
-
-// ---- Stats bar config (History): which stats show, in what order, and whether the bar is on. One desk-wide
-// config (like the timezone). The Trade Desk > Configure > Stats UI edits it; rendering the bar is wired later.
-// The catalog is the source of truth for available stats + their default on/off + default order.
-/** @type {{ key: string, label: string, on: boolean }[]} */
-export const STATS_CATALOG = [
-  { key: 'netProfit', label: 'Net Profit', on: true },
-  { key: 'trades', label: 'Trades', on: true },
-  { key: 'hitRate', label: 'Hit Rate', on: true },
-  { key: 'profitFactor', label: 'Profit Factor', on: true },
-  { key: 'balance', label: 'Balance', on: true },
-  { key: 'points', label: 'Points', on: false },
-  { key: 'commission', label: 'Commission', on: false },
-];
-const STAT_KEYS = new Set(STATS_CATALOG.map((s) => s.key));
-
-// merged stats config: the saved order + on-state reconciled against the catalog (new stats appended in catalog
-// order, removed keys dropped). `enabled` defaults on.
-/** @returns {{ enabled: boolean, items: { key: string, label: string, on: boolean }[] }} */
-export function getDeskStats() {
-  const s = cfg().stats || {};
-  const saved = Array.isArray(s.items) ? s.items.filter((i) => i && STAT_KEYS.has(i.key)) : [];
-  const order = saved.map((i) => i.key);
-  STATS_CATALOG.forEach((c) => {
-    if (!order.includes(c.key)) order.push(c.key);
-  });
-  const onMap = new Map(saved.map((i) => [i.key, !!i.on]));
-  const items = order.map((k) => {
-    const c = /** @type {any} */ (STATS_CATALOG.find((x) => x.key === k));
-    return { key: k, label: c.label, on: onMap.has(k) ? !!onMap.get(k) : c.on };
-  });
-  return { enabled: s.enabled !== false, items };
-}
-/** @param {{ enabled: boolean, items: { key: string, on: boolean }[] }} v */
-export function setDeskStats(v) {
-  setSetting(
-    KEY,
-    Object.assign({}, cfg(), {
-      stats: { enabled: !!v.enabled, items: (v.items || []).map((i) => ({ key: i.key, on: !!i.on })) },
-    }),
-  );
   notify();
 }
 

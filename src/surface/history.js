@@ -10,10 +10,10 @@ import * as accounts from '../connect/accounts.js';
 import { getSetting, setSetting } from '../settings/settings.js';
 import { GEAR, openColumnPicker } from './column-picker.js';
 import { createTableSort } from './table-sort.js';
-import { fmtDeskTime, fmtDeskTag, onDeskConfigChange, getDeskStats, getDeskBeThreshold } from './desk-config.js';
+import { fmtDeskTime, fmtDeskTag, onDeskConfigChange, getDeskBeThreshold } from './desk-config.js';
 import { createAccountFilter } from './account-filter.js';
 import { createDateFilter } from './date-filter.js';
-import { netOf, classifyNet, computeRunningBalances, computeTradeStats } from './trade-derive.js';
+import { netOf, classifyNet, computeRunningBalances } from './trade-derive.js';
 import { t } from '../i18n/i18n.js'; // vocabulary lookup for column labels + status text
 
 /**
@@ -266,8 +266,7 @@ export function mountHistory(root) {
   const tbody = document.createElement('tbody');
   table.append(thead, tbody);
   listWrap.appendChild(table);
-  const statsBar = el('hist-stats'); // bottom dock: the stats strip (History-only; deals with closed positions)
-  wrap.append(head, listWrap, statsBar);
+  wrap.append(head, listWrap);
   root.appendChild(wrap);
 
   let cols = getCols();
@@ -283,103 +282,6 @@ export function mountHistory(root) {
     },
     onChange: () => render(),
   });
-
-  // ---- bottom Stats strip (History-only): boxes computed from the VISIBLE (filtered) round-trips, in the order
-  // and on/off set the user configured in Trade Desk > Configure > Stats. Balance uses the account's starting
-  // balance (Connections dialog) -> its live balance, summed over the accounts in the current account-filter scope.
-  /** @param {number} v @returns {string} */
-  const money0 = (v) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 0 });
-  /** @param {Trade[]} vis */
-  const renderStats = (vis) => {
-    const scfg = getDeskStats();
-    if (!scfg.enabled) {
-      statsBar.style.display = 'none';
-      statsBar.innerHTML = '';
-      return;
-    }
-    statsBar.style.display = '';
-
-    // aggregates + breakeven-zone classification live in trade-derive.js; this strip just formats them
-    const {
-      net,
-      points,
-      comm,
-      wins,
-      losses,
-      bes,
-      trades,
-      hitRate,
-      profitFactor: pf,
-    } = computeTradeStats(vis, getDeskBeThreshold());
-
-    // balance: sum start (saved account, by protocol) -> live balance over the accounts in the filter's scope
-    let startBal = 0,
-      curBal = 0,
-      haveStart = false,
-      haveCur = false;
-    platform.accounts
-      .all()
-      .filter((a) => acctFilter.matches(a))
-      .forEach((a) => {
-        if (a.balance != null && !Number.isNaN(Number(a.balance))) {
-          curBal += Number(a.balance);
-          haveCur = true;
-        }
-        const saved = accounts.listAccounts().find((s) => s.protocol === a.broker);
-        if (saved && saved.startingBalance != null) {
-          startBal += Number(saved.startingBalance);
-          haveStart = true;
-        }
-      });
-
-    /** @param {number} v */
-    const signedMoney = (v) => ({ text: (v > 0 ? '+' : '') + money0(v), cls: v > 0 ? 'pos' : v < 0 ? 'neg' : '' });
-    /** @type {Record<string, () => Cell>} */
-    const VAL = {
-      netProfit: () => (trades ? signedMoney(net) : { text: '—' }),
-      trades: () => ({
-        text: trades ? trades + ' (' + wins + 'H' + (bes ? '/' + bes + 'BE' : '') + '/' + losses + 'M)' : '0',
-      }),
-      hitRate: () =>
-        hitRate == null ? { text: '—' } : { text: hitRate.toFixed(0) + '%', cls: hitRate >= 50 ? 'pos' : 'neg' },
-      profitFactor: () =>
-        pf == null ? { text: '—' } : { text: pf === Infinity ? '∞' : pf.toFixed(2), cls: pf >= 1 ? 'pos' : 'neg' },
-      balance: () =>
-        haveStart || haveCur
-          ? { text: (haveStart ? money0(startBal) : '—') + ' -> ' + (haveCur ? money0(curBal) : '—') }
-          : { text: '—' },
-      points: () =>
-        trades
-          ? {
-              text:
-                (points > 0 ? '+' : '') +
-                points.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-              cls: points > 0 ? 'pos' : points < 0 ? 'neg' : '',
-            }
-          : { text: '—' },
-      commission: () =>
-        comm
-          ? {
-              text:
-                '-$' + Math.abs(comm).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-              cls: 'neg',
-            }
-          : { text: '—' },
-    };
-
-    statsBar.innerHTML = '';
-    scfg.items
-      .filter((i) => i.on)
-      .forEach((i) => {
-        const get = VAL[i.key];
-        const v = get ? get() : { text: '—' };
-        const box = el('hist-stat');
-        box.appendChild(el('hist-stat-t', i.label));
-        box.appendChild(el('hist-stat-v' + (v.cls ? ' ' + v.cls : ''), v.text));
-        statsBar.appendChild(box);
-      });
-    if (!scfg.items.some((i) => i.on)) statsBar.style.display = 'none'; // nothing enabled -> hide the strip
-  };
 
   const render = () => {
     const fills = platform.fills.all();
@@ -402,7 +304,6 @@ export function mountHistory(root) {
     const visible = closed.filter((r) => acctFilter.matches(r) && dateFilter.matches(r.exitTime));
     const rows = visible.slice().sort(sort.compare);
     count.textContent = rows.length ? String(rows.length) : '';
-    renderStats(visible); // the bottom stats strip, computed from the same filtered set
     thead.innerHTML = '';
     tbody.innerHTML = '';
     const htr = document.createElement('tr');

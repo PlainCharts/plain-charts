@@ -8,8 +8,6 @@ import {
   getDeskOffsetMin,
   setDeskOffsetMin,
   fmtDeskOffsetLabel,
-  getDeskStats,
-  setDeskStats,
   getDeskBeThreshold,
   setDeskBeThreshold,
   getDeskColors,
@@ -115,103 +113,6 @@ export function openDeskConfigDialog() {
   beRow.appendChild(beCtl);
   gen.appendChild(beRow);
   addTab('general', 'General', gen);
-
-  // ===== STATS: master toggle + a single-column, reorderable, checkable stat list. One row = drag grip +
-  // checkbox + label, so the user arranges AND turns stats on/off in one place. =====
-  const statsPanel = document.createElement('div');
-  const stats = getDeskStats();
-  const persistStats = () => setDeskStats({ enabled: stats.enabled, items: stats.items });
-  const secHead = el('desk-config-sechead');
-  const enCb = document.createElement('input');
-  enCb.type = 'checkbox';
-  enCb.checked = stats.enabled;
-  secHead.append(enCb, el('desk-config-sectitle', t('Stats bar')));
-  statsPanel.appendChild(secHead);
-  const list = el('desk-stats-list');
-  const setDim = () => {
-    list.style.opacity = stats.enabled ? '' : '.45';
-    list.style.pointerEvents = stats.enabled ? '' : 'none';
-  };
-  enCb.onchange = () => {
-    stats.enabled = enCb.checked;
-    persistStats();
-    setDim();
-  };
-  /** @type {string|null} */ let dragKey = null;
-  /** @type {string|null} */ let dropKey = null;
-  /** @type {'before'|'after'|null} */ let dropPos = null;
-  const clearDrop = () => {
-    list.querySelectorAll('.drop-before,.drop-after').forEach((r) => r.classList.remove('drop-before', 'drop-after'));
-    dropKey = null;
-    dropPos = null;
-  };
-  const doDrop = () => {
-    const dk = dragKey,
-      tk = dropKey,
-      pos = dropPos;
-    clearDrop();
-    dragKey = null;
-    if (!dk || !tk || dk === tk) return;
-    const from = stats.items.findIndex((i) => i.key === dk);
-    if (from < 0) return;
-    const moved = stats.items.splice(from, 1)[0];
-    let to = stats.items.findIndex((i) => i.key === tk);
-    if (to < 0) {
-      stats.items.splice(from, 0, moved);
-      return;
-    }
-    if (pos === 'after') to += 1;
-    stats.items.splice(to, 0, moved);
-    persistStats();
-    renderStats();
-  };
-  const renderStats = () => {
-    list.innerHTML = '';
-    stats.items.forEach((it) => {
-      const r = el('desk-stats-row');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = it.on;
-      cb.onchange = () => {
-        it.on = cb.checked;
-        persistStats();
-      };
-      r.append(el('desk-stats-grip', '⠿'), cb, el('desk-stats-lbl', t(it.label)));
-      r.draggable = true;
-      r.ondragstart = (e) => {
-        dragKey = it.key;
-        const dt = /** @type {DataTransfer} */ (e.dataTransfer);
-        dt.effectAllowed = 'move';
-        try {
-          dt.setData('text/plain', it.key);
-        } catch (_) {}
-        r.classList.add('desk-stats-drag');
-      };
-      r.ondragend = () => {
-        r.classList.remove('desk-stats-drag');
-        clearDrop();
-        dragKey = null;
-      };
-      r.ondragover = (e) => {
-        if (!dragKey || dragKey === it.key) return;
-        e.preventDefault();
-        clearDrop();
-        const rc = r.getBoundingClientRect();
-        dropKey = it.key;
-        dropPos = e.clientY - rc.top > rc.height / 2 ? 'after' : 'before';
-        r.classList.add(dropPos === 'after' ? 'drop-after' : 'drop-before');
-      };
-      r.ondrop = (e) => {
-        e.preventDefault();
-        doDrop();
-      };
-      list.appendChild(r);
-    });
-  };
-  renderStats();
-  setDim();
-  statsPanel.appendChild(list);
-  addTab('stats', 'Stats', statsPanel);
 
   // ===== COLORS: the Console journal DIRECTION tints -- OUT (app -> broker requests) and IN (broker -> app
   // replies). A native swatch per direction; changes apply live (Console subscribes to onDeskConfigChange). =====

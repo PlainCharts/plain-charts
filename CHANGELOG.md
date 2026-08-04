@@ -12,6 +12,9 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Order ticket: picking a money-management account locks the Qt type to Money man, shows the engine's current level and risk (e.g. MIN 0.75% · $2,316.59), and previews the sized Volume live off the moving price -- the same number the worker executes, on the on-chart pill too
 - Money Man colors: the console's Win and Loss line colors are now picker-editable in Trade Desk > Colors, alongside the zone and level colors
 
+### Removed
+- Stats bar: removed the History surface's bottom stats strip and its Trade Desk > Configure > Stats tab (the reorderable, on/off stat list); a dedicated Stats surface replaces it
+
 ### Changed
 - Money management sizing is keyed by the exact account (accountId), not the broker -- multiple saved accounts on one protocol can no longer cross-match; config edits now reach every window instantly instead of on a 4-second poll
 - Symbol dialog: browse MetaTrader 5 instruments in a tree built from the broker's own symbol groups, with each symbol's broker description
