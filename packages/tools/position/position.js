@@ -16,9 +16,12 @@
 import { pin, pinHandles } from './pin.js';
 // (`Tools`, `ToolDrawing`, `ToolView`, `ToolScreenPoint`, `ToolDataPoint`, `ToolPane`, … are ambiently typed in tools-global.d.ts.)
 
-// The stat catalog for the per-level labels. EMPTY for now -- the only choice is None. Real stats (which come
-// from the sizing algorithm we have not built yet) get added here as we develop them.
-const STATS = [{ key: 'none', name: 'None' }];
+// The stat catalogs for the per-level labels. Target and stop can show their PRICE OFFSET from entry (a
+// simple distance); entry has no stats yet (its stats -- e.g. quantity -- come from the sizing algorithm we
+// have not built). The catalogs grow as we develop stats.
+const NONE = { key: 'none', name: 'None' };
+const TS_STATS = [NONE, { key: 'offset', name: 'Price offset' }]; // target + stop
+const ENTRY_STATS = [NONE]; // entry: nothing yet
 
 Tools.register({
   id: 'position',
@@ -46,11 +49,11 @@ Tools.register({
       { name: 'Stop color', controls: [{ key: 'stopColor', type: 'color' }] },
       { name: 'Target color', controls: [{ key: 'targetColor', type: 'color' }] },
       { name: 'Text', controls: [{ key: 'textColor', type: 'color', size: 'textSize' }] },
-      // STATS: pick which stat each level's label shows. The catalog is seeded here and grows in later steps.
+      // STATS: pick which stat each level's label shows. The catalogs grow in later steps.
       { heading: 'Stats' },
-      { name: 'Target', controls: [{ key: 'targetStat', type: 'select', options: STATS }] },
-      { name: 'Stop', controls: [{ key: 'stopStat', type: 'select', options: STATS }] },
-      { name: 'Entry', controls: [{ key: 'entryStat', type: 'select', options: STATS }] },
+      { name: 'Target', controls: [{ key: 'targetStat', type: 'select', options: TS_STATS }] },
+      { name: 'Stop', controls: [{ key: 'stopStat', type: 'select', options: TS_STATS }] },
+      { name: 'Entry', controls: [{ key: 'entryStat', type: 'select', options: ENTRY_STATS }] },
       { name: 'Price labels', toggle: 'priceLabels' },
     ],
   },
@@ -117,9 +120,29 @@ Tools.register({
       dash: Tools.dash(s.lineStyle),
     });
 
+    const dec = view.priceDecimals != null ? view.priceDecimals : 2;
+
+    // ---- per-level STAT labels (target/stop): the selected stat's value at the left end of the line ----
+    // Currently the only stat is 'offset' = the level's price distance from entry. Placed OUTSIDE the box
+    // (target above its line, stop below) so it does not sit on the fill.
+    /** @param {string} role @param {string} stat @param {number} price @param {boolean} above */
+    const statLabel = (role, stat, price, above) => {
+      const text = stat === 'offset' ? role + ': ' + Math.abs(price - g.entry).toFixed(dec) : '';
+      if (!text) return;
+      out.push({
+        text,
+        at: { t: g.left, p: price, dx: 6, dy: above ? -5 : 5 },
+        align: 'left',
+        baseline: above ? 'bottom' : 'top',
+        color: s.textColor || '#ffffff',
+        size: parseInt(s.textSize, 10) || 12,
+      });
+    };
+    statLabel('Target', s.targetStat, g.target, true);
+    statLabel('Stop', s.stopStat, g.stop, false);
+
     // ---- optional price labels at the right end of each level ----
     if (s.priceLabels) {
-      const dec = view.priceDecimals != null ? view.priceDecimals : 2;
       /** @param {number} p */
       const label = (p) => ({
         text: p.toFixed(dec),
