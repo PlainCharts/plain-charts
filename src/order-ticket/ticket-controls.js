@@ -3,7 +3,8 @@
 // editors: the label:input number row (mktRow) and the Qt-type (quantity-type) selector. Kept here as a leaf so
 // ticket-entry and ticket-modify share ONE implementation without importing each other (no cycle). The only
 // state it touches is the shared qtType.
-import { state } from './ticket-state.js';
+import { state, restingBracketCap } from './ticket-state.js';
+import { restingBracketAllowed } from './order-intent.js'; // the ONE rule for "may a resting order carry a bracket"
 import { t } from '../i18n/i18n.js'; // vocabulary lookup -- the order ticket is the execution layer; every word here is overridable
 
 /** @param {string} label @param {number} value @param {{ step?: number|string, min?: number }} [o] @returns {{ row: HTMLElement, input: HTMLInputElement }} */
@@ -38,7 +39,10 @@ export function buildQtTypeRow(onChange) {
   const sel = document.createElement('select');
   sel.className = 'ot-input';
   sel.style.flex = '0 0 120px'; // == Exp/Symbol box width
-  /** @type {[string,string][]} */ ([['units', 'Units'], ['stake', 'Stake']]).forEach(([v, l]) => {
+  /** @type {[string,string][]} */ ([
+    ['units', 'Units'],
+    ['stake', 'Stake'],
+  ]).forEach(([v, l]) => {
     const o = document.createElement('option');
     o.value = v;
     o.textContent = t(l);
@@ -53,13 +57,15 @@ export function buildQtTypeRow(onChange) {
   return row;
 }
 
-// SL/TP on a pending order is a HEDGING-only feature (the broker attaches it natively; netting has no pending-order SL/TP).
-// Rather than HIDE the column on netting (which left the grid looking different per account and hard to reason about),
-// always SHOW it and GRAY IT OUT (disabled + dimmed) when it doesn't apply, so the grid is complete and legible on
-// every account type. Re-applied when the Account dropdown changes.
+// SL/TP on a resting order is enabled per the broker's PROTOCOL, not the account type alone: an order-level bracket
+// (CQG) works on netting; a position-level one (MT5) needs hedging; others have none (see restingBracketAllowed).
+// Rather than HIDE the column when unavailable (which left the grid looking different per account and hard to reason
+// about), always SHOW it and GRAY IT OUT (disabled + dimmed) when it doesn't apply, so the grid is complete and
+// legible on every account/broker. Re-applied when the Account dropdown changes.
 export const syncLsSltp = () => {
   if (!state.lsSltpRows) return;
-  const on = !!(state.selectedAccount && state.selectedAccount.hedging);
+  const sa = state.selectedAccount;
+  const on = !!sa && restingBracketAllowed(restingBracketCap(sa.broker), sa.hedging);
   const dim = on ? '' : '0.45';
   state.lsSltpRows.sl.style.display = '';
   state.lsSltpRows.sl.style.opacity = dim;

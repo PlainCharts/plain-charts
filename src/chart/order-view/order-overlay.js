@@ -14,7 +14,8 @@ import './pill-view.js'; // self-registers the shipped default 'pill' primitive 
 import { loadPrimitiveModules } from './primitive-modules.js'; // discovers + loads any LOADABLE primitives (string-beads, ...)
 import { getPrimitive } from './primitive-registry.js';
 import { activePrimitiveId, loadOrderPrimitives, subscribePrimitives } from '../order-primitives-config.js';
-import { command, readActive } from '../../../data_engine/index.js'; // command -> order worker; readActive -> the book's ACTIVE picture
+import { command, readActive, listBrokers } from '../../../data_engine/index.js'; // command -> order worker; readActive -> the book's ACTIVE picture; listBrokers -> adapter capabilities
+import { restingBracketAllowed } from '../../order-ticket/order-intent.js'; // THE shared rule: may a resting order carry a bracket (per adapter capability) -- same one the dialog uses
 import {
   isProjecting,
   isBracket,
@@ -372,10 +373,16 @@ export function createOrderOverlay(pane) {
     const side = p.side === 'sell' ? 'sell' : 'buy';
     const t = p.orderType === 'limit' || p.orderType === 'stop' ? p.orderType : 'market';
     const l0 = (Array.isArray(p.levels) && p.levels[0]) || {};
+    // A RESTING (limit/stop) entry may carry a bracket only when the broker's protocol supports it -- the SAME rule
+    // the dialog applies (restingBracketAllowed on the adapter's capability + the account's hedging). A MARKET bracket
+    // always rides. This keeps the pill and the order dialog identical on every broker/account type.
+    const cap = (listBrokers().find((b) => b.id === pane.broker) || {}).capabilities;
+    const acct = /** @type {any[]} */ (platform.accounts.all()).find((a) => a.broker === pane.broker);
+    const bracketOk = t === 'market' || restingBracketAllowed(cap && cap.restingBracket, !!(acct && acct.hedging));
     // whatever exit legs are planned ride the order natively -- from the full projected bracket OR individual
     // kebab pieces dragged off the pill (a lone stop / lone target is a valid bracket to the adapters)
     const bracket =
-      l0.stop != null || l0.target != null
+      bracketOk && (l0.stop != null || l0.target != null)
         ? { stopLoss: l0.stop != null ? Number(l0.stop) : 0, takeProfit: l0.target != null ? Number(l0.target) : 0 }
         : null;
     /** @type {any} */

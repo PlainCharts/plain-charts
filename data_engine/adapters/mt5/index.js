@@ -657,7 +657,7 @@ const call = (cmd) =>
 // ================= the BrokerAdapter surface =================
 const adapter = {
   id: 'mt5',
-  capabilities: { marketData: true, trading: true, depth: true },
+  capabilities: { marketData: true, trading: true, depth: true, restingBracket: /** @type {const} */ ('position') }, // native pending-order SL/TP, hedging only
   // The EA dials IN, so the app is the TCP server; `host` is the bind interface, not a destination.
   // 0.0.0.0 accepts the EA from a Windows VM / another PC on the LAN; 127.0.0.1 is same-machine only.
   // One adapter covers both cases -- the user just flips this dropdown (no separate VM/Windows build).

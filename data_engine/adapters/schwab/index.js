@@ -73,7 +73,7 @@ function pollUnsubscribe(id, cb) {
 
 const adapter = {
   id: 'schwab',
-  capabilities: { marketData: true, trading: true, depth: false },
+  capabilities: { marketData: true, trading: true, depth: false, restingBracket: /** @type {const} */ ('none') }, // no order placement (display-only)
   // app creds live on the account; Authorize is a declarative ACTION that runs the OAuth flow (open the
   // broker's page, paste the redirect URL back, exchange server-side) using the adapter's own hooks below.
   form: [

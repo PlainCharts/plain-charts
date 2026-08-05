@@ -6,6 +6,8 @@
 // slot is the dependency-inversion point: window.js registers its render at boot;
 // plan-sync re-renders through the slot without importing the shell.
 
+import { listBrokers } from '../../data_engine/index.js';
+
 /** @typedef {{ broker: string, accountId: any, hedging: boolean }} SelectedAccount */
 
 export const state = {
@@ -72,19 +74,31 @@ export const state = {
   /** @type {(() => void)|null} */ fitHeight: null,
 };
 
-// the execution context supplied at click/send time. Broker/account come from the Account dropdown
-// (falling back to the loaded position / picked symbol); hedging drives account-type-sensitive execution.
-export const getCtx = () => ({
-  broker:
+// the adapter's resting-order-bracket capability for a broker id ('order'|'position'|'none'). Resolved LIVE from
+// the registry (same source account-form uses) so it always matches the installed adapter. No broker -> 'none'.
+/** @param {string} brokerId @returns {string} */
+export const restingBracketCap = (brokerId) => {
+  const b = brokerId && listBrokers().find((x) => x.id === brokerId);
+  return (b && b.capabilities && b.capabilities.restingBracket) || 'none';
+};
+
+// the execution context supplied at click/send time. Broker/account come from the Account dropdown (falling back to
+// the loaded position / picked symbol); hedging + restingBracket drive account/protocol-sensitive execution.
+export const getCtx = () => {
+  const broker =
     (state.selectedAccount && state.selectedAccount.broker) ||
     (state.context && state.context.broker) ||
     state.symbolBroker ||
-    '',
-  accountId: state.selectedAccount && state.selectedAccount.accountId,
-  hedging: state.selectedAccount ? state.selectedAccount.hedging : undefined,
-  symbol: state.symbolValue,
-  ticket: state.context && state.context.ticket,
-});
+    '';
+  return {
+    broker,
+    accountId: state.selectedAccount && state.selectedAccount.accountId,
+    hedging: state.selectedAccount ? state.selectedAccount.hedging : undefined,
+    restingBracket: restingBracketCap(broker),
+    symbol: state.symbolValue,
+    ticket: state.context && state.context.ticket,
+  };
+};
 
 // render-dispatch indirection: window.js owns the render; plan-sync calls the slot
 let renderer = () => {};

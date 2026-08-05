@@ -203,7 +203,7 @@ function toBarUpdate(rep, scale) {
 /** @type {import('/data_engine/data/adapter-contract.js').BrokerAdapter} */
 const adapter = {
   id: 'cqg',
-  capabilities: { marketData: true, trading: true, depth: true },
+  capabilities: { marketData: true, trading: true, depth: true, restingBracket: 'order' }, // OPO->OCO compound, works on netting
   form: [
     { key: 'server', type: 'select', label: 'Server', options: ['Demo', 'Live'], default: 'Demo' },
     { key: 'username', label: 'Username', type: 'text' },

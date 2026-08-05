@@ -216,7 +216,15 @@
  * @property {string} id
  * @property {string} [name]         name/description come from the package's meta.json (merged at load), not the adapter object
  * @property {string} [description]
- * @property {{ marketData?: boolean, trading?: boolean, depth?: boolean }} capabilities
+ * @property {{ marketData?: boolean, trading?: boolean, depth?: boolean, restingBracket?: 'order'|'position'|'none' }} capabilities
+ *   restingBracket = how a LIMIT/STOP (resting) entry carries an attached stop/target bracket, since a market
+ *   bracket and a resting-order bracket are different mechanisms per protocol:
+ *     'order'    -- an order-level compound (e.g. CQG OPO->OCO): the exits are children of the entry, placed by
+ *                   the server only when the entry fills. Works on NETTING and hedging alike.
+ *     'position' -- position-level native SL/TP on the pending order (e.g. MT5): only meaningful on a HEDGING
+ *                   account (a netting account has no pending-order SL/TP).
+ *     'none'/absent -- no resting-order bracket (attach nothing; a bare resting order only).
+ *   The market bracket is separate and always attaches when the adapter can trade. See order-intent.js.
  * @property {FormField[]} [form]
  * @property {(account: any, ctx?: any) => any} connect
  * @property {() => void} disconnect

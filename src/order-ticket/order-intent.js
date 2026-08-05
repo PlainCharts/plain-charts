@@ -26,15 +26,26 @@ export function snapToTick(v, tickSize, decimals) {
   return Number.isFinite(x) ? Number(x.toFixed(dec)) : Number(v);
 }
 
+// May a RESTING (limit/stop) entry carry an attached stop/target bracket? Decided by the adapter's protocol
+// (capabilities.restingBracket, passed on ctx), NOT the account type alone:
+//   'order'    -> yes, always -- an order-level compound whose exits the server places on fill (CQG OPO->OCO).
+//   'position' -> only on a HEDGING account -- native pending-order SL/TP (MT5); netting has none.
+//   else/absent-> no -- attach nothing (a bare resting order).
+// The MARKET bracket is separate and always allowed when trading; this gate is for resting orders only. Pure.
+/** @param {string|undefined} cap @param {boolean|undefined} hedging @returns {boolean} */
+export function restingBracketAllowed(cap, hedging) {
+  return cap === 'order' || (cap === 'position' && !!hedging);
+}
+
 /**
  * The place-order INTENT the ticket sends to the worker -- ALL the order-shaping rules in one pure function, so the
  * form only gathers state and dispatches. Returns a validated intent, or an error KEY the view renders with t().
  * Rules (identical to the old inline fire() bodies): needs a broker+symbol; a limit/stop needs a price, and a GTD tif
  * needs a resolvable date (good-thru = UTC midnight of it); STAKE mode needs a stake amount AND a stop (the sizing
  * basis) -> it sends the risk intent { risk, stop } and the worker sizes the qty; the bracket is the Stop/Target
- * levels -- always attached on a MARKET order (both account types; the worker omits a 0 leg), but only on a
- * HEDGING account for a limit/stop pending order (netting has no pending-order SL/TP).
- * @param {{ orderType: 'market'|'limit'|'stop', ctx: { broker?: string, symbol?: string, hedging?: boolean }|null,
+ * levels -- always attached on a MARKET order (both account types; the worker omits a 0 leg), and on a resting
+ * limit/stop order when the broker supports it (restingBracketAllowed on ctx.restingBracket + ctx.hedging).
+ * @param {{ orderType: 'market'|'limit'|'stop', ctx: { broker?: string, symbol?: string, hedging?: boolean, restingBracket?: string }|null,
  *   side: 'buy'|'sell', qty: number, qtType: string, stake: number, sl: number, tp: number,
  *   price?: number, tif?: string, gtdDate?: string }} p
  * @returns {{ ok: true, intent: any } | { ok: false, error: string }}
@@ -56,8 +67,11 @@ export function buildPlaceIntent(p) {
   if (stake && !(p.stake > 0)) return { ok: false, error: 'enter a stake' };
   if (stake && !(p.sl > 0)) return { ok: false, error: 'stake needs a stop' }; // sizing has no meaning without a stop basis
   const sizing = stake ? { risk: p.stake, stop: p.sl } : null;
-  // bracket = the Stop/Target fields; always on a market order, hedging-only on a pending order
-  const bracketOn = p.orderType === 'market' ? p.sl > 0 || p.tp > 0 : !!ctx.hedging && (p.sl > 0 || p.tp > 0);
+  // bracket = the Stop/Target fields; always on a market order, on a resting order only when the broker supports it
+  const bracketOn =
+    p.orderType === 'market'
+      ? p.sl > 0 || p.tp > 0
+      : restingBracketAllowed(ctx.restingBracket, ctx.hedging) && (p.sl > 0 || p.tp > 0);
   const bracket = bracketOn ? { stopLoss: p.sl, takeProfit: p.tp } : null;
   const base = { type: 'place', ctx, side: p.side, qty: p.qty, bracket, sizing };
   const intent = isLS ? { ...base, orderType: p.orderType, price: p.price, tif: p.tif, goodThru } : base;

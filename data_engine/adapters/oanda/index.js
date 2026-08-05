@@ -250,7 +250,7 @@ function pollUnsubscribe(inst, cb) {
 
 const adapter = {
   id: 'oanda',
-  capabilities: { marketData: true, trading: true, depth: false },
+  capabilities: { marketData: true, trading: true, depth: false, restingBracket: /** @type {const} */ ('none') }, // bracket-on-resting not implemented yet
   form: [
     { key: 'server', type: 'select', label: 'Server', options: ['Practice', 'Live'], default: 'Practice' },
     { key: 'token', label: 'API Token', type: 'password' },

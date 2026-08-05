@@ -255,6 +255,9 @@ export const trading = {
       type: 1,
       clCompoundId: 'opo' + stamp + requestId,
       compoundOrderEntries: [{ order: entry }, child],
+      isBracket: true, // treat as a SERVER-SIDE bracket: CQG validates side/qty/type of the exits. Set with absolute
+      // exit prices (no tick offsets) -- proto marks is_bracket independent of the offset fields, and the demo accepts
+      // it on market, limit, and stop entries, with one exit or both. Satisfied by the entry + at least one exit.
     }; // OPO: entry places the exit(s)
     pendingOrders.set(requestId, { cb, clOrderId: entry.clOrderId });
     connection.send({ orderRequests: [{ requestId, newCompoundOrder: { compoundOrder } }] });
