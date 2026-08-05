@@ -107,6 +107,7 @@ Tools.register({
     entryStats: [],
   },
   settings: {
+    inputs: [], // opt into the Inputs tab (blank for now; the sizing parameters go here next)
     style: [
       { name: 'Lines', controls: [{ key: 'color', type: 'color', width: 'width', lineStyle: 'lineStyle' }] },
       { name: 'Stop color', controls: [{ key: 'stopColor', type: 'color' }] },

@@ -27,7 +27,18 @@ import { buildVisibilityRows } from './visibility-ui.js';
 /** One control spec inside a settings row (declared by the tool). */
 /** @typedef {{ key?: string, type?: string, options?: any[], min?: number, max?: number, step?: number, width?: string, lineStyle?: string, size?: string, bold?: string, italic?: string, placeholder?: string }} ControlSpec */
 
-const TABS = ['Style', 'Text', 'Coordinates', 'Visibility'];
+// Style/Coordinates/Visibility are inherent to a drawing (always shown). Inputs and Text are OPT-IN: a tool
+// gets them only by declaring `settings.inputs` / `settings.text` (see tabAvailable).
+const TABS = ['Inputs', 'Style', 'Text', 'Coordinates', 'Visibility'];
+
+// which tabs a tool actually offers. The three drawing-inherent tabs are always available; Text and Inputs
+// are opt-in via the tool's settings (Text also honors the `textEnabled` flag, e.g. range's conventional mode).
+/** @param {string} t @param {any} tool @param {Drawing} d @returns {boolean} */
+function tabAvailable(t, tool, d) {
+  if (t === 'Text') return !!(tool.settings && tool.settings.text) && (!tool.textEnabled || tool.textEnabled(d));
+  if (t === 'Inputs') return !!(tool.settings && tool.settings.inputs);
+  return true; // Style / Coordinates / Visibility
+}
 
 /** @type {HTMLElement | null} */
 let overlay = null;
@@ -77,9 +88,11 @@ export function openSettingsDialog(engine, id, startTab) {
   if (!d || !tool) return;
   // open on a requested tab (e.g. double-click the text → 'Text'), but only if it's
   // valid and — for Text — the tool actually supports it.
-  let tab = TABS.includes(/** @type {string} */ (startTab)) ? /** @type {string} */ (startTab) : 'Style';
-  if (tab === 'Text' && (!(tool.settings && tool.settings.text) || (tool.textEnabled && !tool.textEnabled(d))))
-    tab = 'Style';
+  // open on the requested tab only if it exists AND the tool offers it; otherwise Style (always available)
+  let tab =
+    TABS.includes(/** @type {string} */ (startTab)) && tabAvailable(/** @type {string} */ (startTab), tool, d)
+      ? /** @type {string} */ (startTab)
+      : 'Style';
   state = {
     engine,
     id,
@@ -118,7 +131,7 @@ export function openSettingsDialog(engine, id, startTab) {
 
   const tabbar = el('div', 'set-tabs');
   TABS.forEach((t) => {
-    if (t === 'Text' && tool.textEnabled && !tool.textEnabled(d)) return; // conventional measure: no text tab
+    if (!tabAvailable(t, tool, d)) return; // opt-in tabs (Text/Inputs) only when the tool declares them
     const b = el('div', 'set-tab' + (t === /** @type {DialogState} */ (state).tab ? ' active' : ''), t);
     b.onclick = () => {
       /** @type {DialogState} */ (state).tab = t;
@@ -173,7 +186,8 @@ export function openSettingsDialog(engine, id, startTab) {
   const renderBody = () => {
     body.innerHTML = '';
     const st = /** @type {DialogState} */ (state);
-    if (st.tab === 'Style') renderStyle(body);
+    if (st.tab === 'Inputs') renderInputs(body);
+    else if (st.tab === 'Style') renderStyle(body);
     else if (st.tab === 'Text') renderTextTab(body, /** @type {Drawing} */ (st.engine.get(st.id)), preview);
     else if (st.tab === 'Coordinates')
       renderCoordsTab(body, /** @type {Drawing} */ (st.engine.get(st.id)), st.engine.pane, preview);
@@ -215,6 +229,18 @@ function ok() {
     if (d) saveToolDefaults(d.tool, d.style, d.textStyle);
   }
   closeSettingsDialog();
+}
+
+// ---- Inputs tab (opt-in via tool.settings.inputs) -- the tool's own parameters. Same row schema as Style
+// (buildRow); blank until the tool declares controls. ----
+/** @param {HTMLElement} body */
+function renderInputs(body) {
+  const st = /** @type {DialogState} */ (state);
+  const d = /** @type {Drawing} */ (st.engine.get(st.id));
+  const tool = /** @type {any} */ (getTool(d.tool));
+  const rows = (tool.settings && tool.settings.inputs) || [];
+  rows.forEach((/** @type {any} */ row) => body.appendChild(buildRow(d, row, preview)));
+  if (!rows.length) body.appendChild(el('div', 'set-soon', 'No inputs yet.'));
 }
 
 // ---- Style tab (from tool.settings.style or the flat styleSchema) ----
