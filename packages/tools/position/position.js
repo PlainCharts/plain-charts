@@ -27,8 +27,11 @@ const TS_STATS = [
   { key: 'units', name: 'Unit offset' },
   { key: 'percent', name: 'Percent offset' },
 ];
-// entry stat: the only meaningful one is the risk/reward ratio (reward distance / risk distance)
-const ENTRY_STATS = [{ key: 'rr', name: 'Risk/reward ratio' }];
+// entry stats: risk/reward ratio and the computed position quantity
+const ENTRY_STATS = [
+  { key: 'rr', name: 'Risk/reward ratio' },
+  { key: 'qty', name: 'Quantity' },
+];
 
 // which side of the box the tool price labels sit on
 const SIDES = [
@@ -111,6 +114,10 @@ Tools.register({
     accountSize: 0,
     risk: 1,
     riskMode: 'percent', // 'percent' | 'usd'
+    // formatting: the displayed quantity is (base qty / lotSize) floored to `step`. User-set so it's broker-
+    // agnostic: futures 1/1, forex micro-lot 100000/0.01, nano-lot 100000/0.001. Decimals come from step.
+    lotSize: 1,
+    step: 1,
   },
   settings: {
     inputs: buildInputsPanel, // the Inputs tab: entry/profit/stop levels in price + units, two-way with the tool
@@ -224,14 +231,20 @@ Tools.register({
     const pill = (text, price, place, fill, stroke, txtColor) => {
       if (!text || scx == null) return;
       const sx = scx;
+      // size to the text -- multi-line for a stacked entry label (max line width x line count). lh matches
+      // the mark renderer's line height (size * 1.25).
+      const lines = String(text).split('\n');
+      const lh = size * 1.25;
+      let tw = 0;
+      for (const ln of lines) tw = Math.max(tw, measureText(ln, size));
       const padX = 7,
         padY = 4,
         gap = 3,
         rad = 7,
-        h = size + 2 * padY;
+        h = (lines.length - 1) * lh + size + 2 * padY;
       const dy = place === 'above' ? -(h / 2 + gap) : place === 'below' ? h / 2 + gap : 0;
       const sy = view.priceToY(price) + dy;
-      const w = measureText(text, size) + 2 * padX;
+      const w = tw + 2 * padX;
       out.push({
         closed: true,
         fill,
@@ -250,19 +263,24 @@ Tools.register({
     // target above its line (reward color), stop below its line (risk color), entry on the line (outlined)
     pill(joined(s.targetStats, g.target), g.target, 'above', opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'), null, s.textColor || '#ffffff');
     pill(joined(s.stopStats, g.stop), g.stop, 'below', opaqueColor(s.stopColor || 'rgba(120,123,134,0.12)'), null, s.textColor || '#ffffff');
-    if ((s.entryStats || []).includes('rr')) {
-      const reward = Math.abs(g.target - g.entry),
-        risk = Math.abs(g.stop - g.entry);
-      // same fill as the target pill; the outline (band) is what makes it stand out, so no white needed
-      if (risk > 0)
-        pill(
-          'Risk/reward ratio: ' + (reward / risk).toFixed(2),
-          g.entry,
-          'on',
-          opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'),
-          s.color || '#363a45',
-          s.textColor || '#ffffff',
-        );
+    // entry stats (risk/reward ratio and/or quantity), joined into one pill on the entry line
+    {
+      const es = s.entryStats || [];
+      /** @type {string[]} */
+      const parts = [];
+      if (es.includes('rr')) {
+        const reward = Math.abs(g.target - g.entry),
+          risk = Math.abs(g.stop - g.entry);
+        if (risk > 0) parts.push('Risk/reward ratio: ' + (reward / risk).toFixed(2));
+      }
+      if (es.includes('qty')) {
+        const q = computeQty(s, g.entry, g.stop, view.tickSize, view.tickValue);
+        if (q != null) parts.push('Qty: ' + fmtQty(q, s));
+      }
+      // same fill as the target pill; the outline (band) is what makes it stand out, so no white needed.
+      // entry stacks its stats (one per line) -- unlike the target/stop pills, which join on one line.
+      if (parts.length)
+        pill(parts.join('\n'), g.entry, 'on', opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'), s.color || '#363a45', s.textColor || '#ffffff');
     }
 
     // ---- optional price labels ON THE TOOL, at the LEFT or RIGHT end of each level (user's choice; separate
@@ -311,6 +329,29 @@ const domEl = (tag, cls, txt) => {
   if (cls) e.className = cls;
   if (txt != null) e.textContent = txt;
   return e;
+};
+
+// The position quantity from the sizing inputs (style) + the stop distance + the instrument's currency-per-
+// point. risk$ / (|entry-stop| * tickValue/tickSize). null when there isn't enough to size. Shared by the
+// Inputs read-out and the entry-line stat.
+/** @param {any} style @param {number} entry @param {number} stop @param {any} tickSize @param {any} tickValue @returns {number|null} */
+const computeQty = (style, entry, stop, tickSize, tickValue) => {
+  const account = Number(style.accountSize) || 0;
+  const risk$ = style.riskMode === 'usd' ? Number(style.risk) || 0 : (account * (Number(style.risk) || 0)) / 100;
+  const ts = Number(tickSize) || 0;
+  const perPoint = ts > 0 ? (Number(tickValue) || 0) / ts : 0; // currency per price point per unit
+  const lossPerUnit = Math.abs(entry - stop) * perPoint;
+  return risk$ > 0 && lossPerUnit > 0 ? risk$ / lossPerUnit : null;
+};
+// format the base quantity for display: divide by the lot size, floor to the tradeable step (round DOWN so
+// you never exceed the risk), and show the decimals the step implies (1 -> 0, 0.01 -> 2, 0.001 -> 3).
+/** @param {number} qBase @param {any} style @returns {string} */
+const fmtQty = (qBase, style) => {
+  const lot = Number(style.lotSize) > 0 ? Number(style.lotSize) : 1;
+  const step = Number(style.step) > 0 ? Number(style.step) : 1;
+  const snapped = Math.floor(qBase / lot / step) * step;
+  const decimals = (String(step).split('.')[1] || '').length;
+  return snapped.toFixed(decimals);
 };
 /** @param {HTMLElement} body @param {ToolDrawing} d @param {{ preview: () => void, tickSize: any, tickValue: any, priceDecimals: any }} ctx */
 function buildInputsPanel(body, d, ctx) {
@@ -411,20 +452,42 @@ function buildInputsPanel(body, d, ctx) {
       body.appendChild(r);
     }
 
-    // ---- computed QUANTITY (read-out): risk$ / loss-per-unit ----
-    // risk$   = riskMode 'usd' ? risk : account * risk/100
-    // loss/u  = |entry - stop| * (tickValue / tickSize)   (currency per price point per unit)
-    // qty     = risk$ / loss/u    (base quantity; lot-size formatting comes later)
-    const account = Number(st.accountSize) || 0;
-    const risk$ = st.riskMode === 'usd' ? Number(st.risk) || 0 : (account * (Number(st.risk) || 0)) / 100;
-    const stopDist = Math.abs(g.entry - g.stop);
-    const perPoint = unit > 0 ? (Number(ctx.tickValue) || 0) / unit : 0; // currency per price point per unit
-    const lossPerUnit = stopDist * perPoint;
-    const qty = risk$ > 0 && lossPerUnit > 0 ? risk$ / lossPerUnit : null;
+    // ---- formatting: how the quantity is expressed (broker-agnostic; user-set) ----
+    body.appendChild(domEl('div', 'set-section', 'Formatting'));
+    row('Lot size', String(Number(st.lotSize) > 0 ? Number(st.lotSize) : 1), 'any', (v) => {
+      st.lotSize = v > 0 ? v : 1;
+      ctx.preview();
+      render();
+    });
+    // Step is a dropdown of the only realistic increments (whole / micro / nano) so users don't guess
+    {
+      const r = domEl('div', 'set-row');
+      r.appendChild(domEl('div', 'set-row-left', 'Step'));
+      const c = domEl('div', 'set-controls');
+      const sel = /** @type {HTMLSelectElement} */ (domEl('select'));
+      ['1', '0.01', '0.001'].forEach((v) => {
+        const o = /** @type {HTMLOptionElement} */ (domEl('option', undefined, v));
+        o.value = v;
+        sel.appendChild(o);
+      });
+      const cur = String(Number(st.step) > 0 ? Number(st.step) : 1);
+      sel.value = ['1', '0.01', '0.001'].includes(cur) ? cur : '1';
+      sel.onchange = () => {
+        st.step = Number(sel.value);
+        ctx.preview();
+        render();
+      };
+      c.appendChild(sel);
+      r.appendChild(c);
+      body.appendChild(r);
+    }
+
+    // ---- computed QUANTITY (read-out) -- shared calc + format with the entry-line stat ----
+    const qty = computeQty(st, g.entry, g.stop, ctx.tickSize, ctx.tickValue);
     const qtyRow = domEl('div', 'set-row');
     qtyRow.appendChild(domEl('div', 'set-row-left', 'Quantity'));
     const qtyC = domEl('div', 'set-controls');
-    qtyC.appendChild(domEl('b', undefined, qty != null ? String(Math.round(qty * 100) / 100) : '—'));
+    qtyC.appendChild(domEl('b', undefined, qty != null ? fmtQty(qty, st) : '—'));
     qtyRow.appendChild(qtyC);
     body.appendChild(qtyRow);
 
