@@ -26,6 +26,7 @@ const TS_STATS = [
   { key: 'offset', name: 'Price offset' },
   { key: 'units', name: 'Unit offset' },
   { key: 'percent', name: 'Percent offset' },
+  { key: 'pnl', name: 'PnL' },
 ];
 // entry stats: risk/reward ratio and the computed position quantity
 const ENTRY_STATS = [
@@ -214,12 +215,21 @@ Tools.register({
     //           future, a pipette on forex; both are just the minimum increment)
     // percent = that distance as a percent of the entry price (entry is the 100% ruler)
     const unit = Number(view.tickSize) || 0;
-    /** @param {string} stat @param {number} price @returns {string} */
-    const statText = (stat, price) => {
+    // pnlSign: target is a profit (+1), stop is a loss (-1). Only 'pnl' uses it.
+    /** @param {string} stat @param {number} price @param {number} [pnlSign] @returns {string} */
+    const statText = (stat, price, pnlSign) => {
       const d0 = Math.abs(price - g.entry);
       if (stat === 'offset') return d0.toFixed(dec);
       if (stat === 'units') return unit > 0 ? String(Math.round(d0 / unit)) : '';
       if (stat === 'percent') return g.entry ? ((d0 / Math.abs(g.entry)) * 100).toFixed(2) + '%' : '0%';
+      if (stat === 'pnl') {
+        const q = computeQty(s, g.entry, g.stop, view.tickSize, view.tickValue);
+        const perPoint = unit > 0 ? (Number(view.tickValue) || 0) / unit : 0;
+        if (q == null || perPoint <= 0) return '';
+        const lot = Number(s.lotSize) > 0 ? Number(s.lotSize) : 1;
+        const base = qtyLots(q, s) * lot; // the actual tradeable position, in base units
+        return 'PnL: ' + signedMoney((pnlSign || 1) * d0 * perPoint * base);
+      }
       return '';
     };
     // Each level's label is a rounded PILL centered on the box. Target/stop pills are filled with their zone
@@ -254,15 +264,15 @@ Tools.register({
       });
       out.push({ text, at: sv(sx, sy), align: 'center', baseline: 'middle', color: txtColor, size });
     };
-    /** @param {string[]} stats @param {number} price */
-    const joined = (stats, price) =>
+    /** @param {string[]} stats @param {number} price @param {number} pnlSign */
+    const joined = (stats, price, pnlSign) =>
       (stats || [])
-        .map((st) => statText(st, price))
+        .map((st) => statText(st, price, pnlSign))
         .filter(Boolean)
         .join(' · ');
-    // target above its line (reward color), stop below its line (risk color), entry on the line (outlined)
-    pill(joined(s.targetStats, g.target), g.target, 'above', opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'), null, s.textColor || '#ffffff');
-    pill(joined(s.stopStats, g.stop), g.stop, 'below', opaqueColor(s.stopColor || 'rgba(120,123,134,0.12)'), null, s.textColor || '#ffffff');
+    // target above its line (reward color, +PnL), stop below its line (risk color, -PnL)
+    pill(joined(s.targetStats, g.target, 1), g.target, 'above', opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'), null, s.textColor || '#ffffff');
+    pill(joined(s.stopStats, g.stop, -1), g.stop, 'below', opaqueColor(s.stopColor || 'rgba(120,123,134,0.12)'), null, s.textColor || '#ffffff');
     // entry stats (risk/reward ratio and/or quantity), joined into one pill on the entry line
     {
       const es = s.entryStats || [];
@@ -343,16 +353,24 @@ const computeQty = (style, entry, stop, tickSize, tickValue) => {
   const lossPerUnit = Math.abs(entry - stop) * perPoint;
   return risk$ > 0 && lossPerUnit > 0 ? risk$ / lossPerUnit : null;
 };
-// format the base quantity for display: divide by the lot size, floor to the tradeable step (round DOWN so
-// you never exceed the risk), and show the decimals the step implies (1 -> 0, 0.01 -> 2, 0.001 -> 3).
-/** @param {number} qBase @param {any} style @returns {string} */
-const fmtQty = (qBase, style) => {
+// the DISPLAYED quantity as a number: base / lotSize, floored to the tradeable step (round DOWN so you never
+// exceed the risk). This is the real tradeable amount -- PnL uses it (times lotSize) too.
+/** @param {number} qBase @param {any} style @returns {number} */
+const qtyLots = (qBase, style) => {
   const lot = Number(style.lotSize) > 0 ? Number(style.lotSize) : 1;
   const step = Number(style.step) > 0 ? Number(style.step) : 1;
-  const snapped = Math.floor(qBase / lot / step) * step;
-  const decimals = (String(step).split('.')[1] || '').length;
-  return snapped.toFixed(decimals);
+  return Math.floor(qBase / lot / step) * step;
 };
+// format that quantity with the decimals the step implies (1 -> 0, 0.01 -> 2, 0.001 -> 3).
+/** @param {number} qBase @param {any} style @returns {string} */
+const fmtQty = (qBase, style) => {
+  const step = Number(style.step) > 0 ? Number(style.step) : 1;
+  const decimals = (String(step).split('.')[1] || '').length;
+  return qtyLots(qBase, style).toFixed(decimals);
+};
+// signed currency (+$X / -$X), up to 2 decimals
+/** @param {number} v */
+const signedMoney = (v) => (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
 /** @param {HTMLElement} body @param {ToolDrawing} d @param {{ preview: () => void, tickSize: any, tickValue: any, priceDecimals: any }} ctx */
 function buildInputsPanel(body, d, ctx) {
   const unit = Number(ctx.tickSize) || 0;
