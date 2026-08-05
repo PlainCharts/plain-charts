@@ -62,6 +62,7 @@ type ToolView = {
   width: number;
   height: number;
   priceDecimals?: number;
+  tickSize?: number | null;
   snapX?: (x: number) => number;
   bars?: Array<{ time: number; [k: string]: unknown }>;
   [k: string]: any;
