@@ -15,7 +15,7 @@ import { loadThemes } from '../settings/theme.js';
 import { loadAccounts } from '../connect/accounts.js';
 import { buildButtonBar } from './buttons.js';
 import { buildVisibilityFrame } from './visibility-frame.js'; // universal VISIBILITY / HIDE ON ENTRY frame (all tabs, like the button bar)
-import { isProjecting, setLevels } from '../chart/order-view/plan-store.js'; // a tab click while projecting writes plan.orderType
+import { setProjecting, setLevels } from '../chart/order-view/plan-store.js'; // open = begin planning; a tab switch arms/re-types the projection (Modify disarms it)
 import { state, getCtx, setRenderer } from './ticket-state.js';
 import {
   populateAccounts,
@@ -162,8 +162,16 @@ function render() {
         state.active = id;
         render();
         const c = getCtx();
-        if ((id === 'market' || id === 'limit' || id === 'stop') && isProjecting(c.broker, c.symbol))
-          setLevels(c.broker, c.symbol, { orderType: id });
+        if (id === 'market' || id === 'limit' || id === 'stop') {
+          // an entry tab IS planning: keep the projection armed and typed to this tab (the pill's type cell mirrors it)
+          if (c.symbol) {
+            setProjecting(c.broker, c.symbol, true);
+            setLevels(c.broker, c.symbol, { orderType: id });
+          }
+        } else if (c.symbol) {
+          // Modify (or any non-entry tab) is not a planning context -> drop the projection
+          setProjecting(c.broker, c.symbol, false);
+        }
       }
     };
     tabsEl.appendChild(tab);
@@ -227,6 +235,14 @@ if (desk && desk.onOrderTicketOpen) {
         state.active = opts.tab;
       }
       render();
+      // OPEN = begin planning: opening (or re-opening) on an entry tab arms a fresh projection typed to that tab, so
+      // the planning primitive appears with no toggle. Modify arms nothing. getCtx after render() so the account the
+      // form resolved is in scope; the pill sits at the live price and the levels seed as the user drags / types.
+      const oc = getCtx();
+      if (oc.symbol && (state.active === 'market' || state.active === 'limit' || state.active === 'stop')) {
+        setProjecting(oc.broker, oc.symbol, true);
+        setLevels(oc.broker, oc.symbol, { orderType: state.active, qty: state.mktVol });
+      }
       syncTab(); // opened/refocused onto a live projection -> reflect its planned type as the active tab
     },
   );
