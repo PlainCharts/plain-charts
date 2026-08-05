@@ -26,7 +26,8 @@ const TS_STATS = [
   { key: 'ticks', name: 'Tick offset' },
   { key: 'percent', name: 'Percent offset' },
 ];
-const ENTRY_STATS = [{ key: 'none', name: 'None' }]; // entry: nothing yet
+// entry stat: the only meaningful one is the risk/reward ratio (reward distance / risk distance)
+const ENTRY_STATS = [{ key: 'rr', name: 'Risk/reward ratio' }];
 
 // which side of the box the tool price labels sit on
 const SIDES = [
@@ -55,7 +56,7 @@ Tools.register({
     // none yet. Empty = the line shows no stat label.
     targetStats: [],
     stopStats: [],
-    entryStat: 'none',
+    entryStats: [],
   },
   settings: {
     style: [
@@ -67,7 +68,7 @@ Tools.register({
       { heading: 'Stats' },
       { name: 'Target', controls: [{ key: 'targetStats', type: 'multiselect', options: TS_STATS }] },
       { name: 'Stop', controls: [{ key: 'stopStats', type: 'multiselect', options: TS_STATS }] },
-      { name: 'Entry', controls: [{ key: 'entryStat', type: 'select', options: ENTRY_STATS }] },
+      { name: 'Entry', controls: [{ key: 'entryStats', type: 'multiselect', options: ENTRY_STATS }] },
       { name: 'Price labels (price scale)', toggle: 'priceLabels' },
       { name: 'Price labels (tool)', toggle: 'toolPriceLabels', controls: [{ key: 'toolPriceSide', type: 'select', options: SIDES }] },
     ],
@@ -172,6 +173,23 @@ Tools.register({
     };
     statLabel(s.targetStats, g.target, true);
     statLabel(s.stopStats, g.stop, false);
+
+    // ---- entry stat: risk/reward ratio (reward distance / risk distance), centered ON the entry line. Keeps
+    // its name -- a bare "0.4" would not read as a ratio like the offset numbers do. ----
+    if ((s.entryStats || []).includes('rr')) {
+      const reward = Math.abs(g.target - g.entry),
+        risk = Math.abs(g.stop - g.entry);
+      if (risk > 0) {
+        out.push({
+          text: 'Risk/reward ratio: ' + (reward / risk).toFixed(2),
+          at: { t: cx, p: g.entry },
+          align: 'center',
+          baseline: 'middle',
+          color: s.textColor || '#ffffff',
+          size: parseInt(s.textSize, 10) || 12,
+        });
+      }
+    }
 
     // ---- optional price labels ON THE TOOL, at the LEFT or RIGHT end of each level (user's choice; separate
     // from the price-scale labels the engine draws in the axis gutter via style.priceLabels) ----
