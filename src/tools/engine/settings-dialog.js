@@ -231,14 +231,20 @@ function ok() {
   closeSettingsDialog();
 }
 
-// ---- Inputs tab (opt-in via tool.settings.inputs) -- the tool's own parameters. Same row schema as Style
-// (buildRow); blank until the tool declares controls. ----
+// ---- Inputs tab (opt-in via tool.settings.inputs) -- the tool's own parameters. `settings.inputs` is either
+// a FUNCTION (the tool renders its own panel -- e.g. levels bound to d.points) called with (body, d, ctx), or
+// an array of Style-style rows (buildRow). Blank when empty. ----
 /** @param {HTMLElement} body */
 function renderInputs(body) {
   const st = /** @type {DialogState} */ (state);
   const d = /** @type {Drawing} */ (st.engine.get(st.id));
   const tool = /** @type {any} */ (getTool(d.tool));
-  const rows = (tool.settings && tool.settings.inputs) || [];
+  const inputs = tool.settings && tool.settings.inputs;
+  if (typeof inputs === 'function') {
+    inputs(body, d, { preview, tickSize: st.engine.pane.tickSize, priceDecimals: st.engine.pane.priceDecimals });
+    return;
+  }
+  const rows = inputs || [];
   rows.forEach((/** @type {any} */ row) => body.appendChild(buildRow(d, row, preview)));
   if (!rows.length) body.appendChild(el('div', 'set-soon', 'No inputs yet.'));
 }

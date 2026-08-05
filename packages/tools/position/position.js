@@ -108,7 +108,7 @@ Tools.register({
     entryStats: [],
   },
   settings: {
-    inputs: [], // opt into the Inputs tab (blank for now; the sizing parameters go here next)
+    inputs: buildInputsPanel, // the Inputs tab: entry/profit/stop levels in price + units, two-way with the tool
     style: [
       { name: 'Lines', controls: [{ key: 'color', type: 'color', width: 'width', lineStyle: 'lineStyle' }] },
       { name: 'Stop color', controls: [{ key: 'stopColor', type: 'color' }] },
@@ -294,6 +294,73 @@ Tools.register({
     PINS.reshape(d, index, dp);
   },
 });
+
+// ---------------------------------------------------------------- Inputs tab (settings.inputs)
+// The Inputs panel: entry / profit / stop levels shown as PRICE and as UNIT offset from entry (units = the
+// instrument's smallest increment). Two-way with the tool -- edits write d.points and re-render; reopening
+// reflects a dragged tool. Built with the settings-dialog's own classes so it matches the other tabs.
+// ctx = { preview, tickSize, priceDecimals } from the dialog.
+/** @param {string} tag @param {string} [cls] @param {string} [txt] */
+const domEl = (tag, cls, txt) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt != null) e.textContent = txt;
+  return e;
+};
+/** @param {HTMLElement} body @param {ToolDrawing} d @param {{ preview: () => void, tickSize: any, priceDecimals: any }} ctx */
+function buildInputsPanel(body, d, ctx) {
+  const unit = Number(ctx.tickSize) || 0;
+  const dec = ctx.priceDecimals != null ? ctx.priceDecimals : 2;
+  const step = unit > 0 ? String(unit) : 'any';
+  const render = () => {
+    body.innerHTML = '';
+    const g = geo(d);
+    /** @param {Partial<{entry:number, target:number, stop:number}>} ch */
+    const commit = (ch) => {
+      write(d, ch);
+      ctx.preview();
+      render(); // re-read so the linked price/unit fields refresh
+    };
+    // a labelled number-input row (price or unit count)
+    /** @param {string} label @param {string} value @param {string} stp @param {(v:number)=>void} onCommit @param {boolean} [disabled] */
+    const row = (label, value, stp, onCommit, disabled) => {
+      const r = domEl('div', 'set-row');
+      r.appendChild(domEl('div', 'set-row-left', label));
+      const c = domEl('div', 'set-controls');
+      const inp = /** @type {HTMLInputElement} */ (domEl('input', 'set-coord-in'));
+      inp.type = 'number';
+      inp.step = stp;
+      inp.value = value;
+      if (disabled) inp.disabled = true;
+      inp.onchange = () => {
+        const v = parseFloat(inp.value);
+        if (Number.isFinite(v)) onCommit(v);
+      };
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') inp.blur();
+      });
+      c.appendChild(inp);
+      r.appendChild(c);
+      body.appendChild(r);
+    };
+    // units of a level from entry, and the price for a given unit count keeping the level's current side
+    /** @param {number} lvl */
+    const unitsOf = (lvl) => (unit > 0 ? String(Math.round(Math.abs(lvl - g.entry) / unit)) : '');
+    /** @param {number} u @param {number} sign */
+    const priceFromUnits = (u, sign) => g.entry + sign * Math.abs(Math.round(u)) * unit;
+    const tSign = g.target < g.entry ? -1 : 1; // target defaults ABOVE entry
+    const sSign = g.stop > g.entry ? 1 : -1; // stop defaults BELOW entry
+
+    row('Entry price', g.entry.toFixed(dec), step, (v) => commit({ entry: v }));
+    body.appendChild(domEl('div', 'set-section', 'Profit level'));
+    row('Units', unitsOf(g.target), '1', (u) => commit({ target: priceFromUnits(u, tSign) }), !(unit > 0));
+    row('Price', g.target.toFixed(dec), step, (v) => commit({ target: v }));
+    body.appendChild(domEl('div', 'set-section', 'Stop level'));
+    row('Units', unitsOf(g.stop), '1', (u) => commit({ stop: priceFromUnits(u, sSign) }), !(unit > 0));
+    row('Price', g.stop.toFixed(dec), step, (v) => commit({ stop: v }));
+  };
+  render();
+}
 
 // ---------------------------------------------------------------- geometry + reshape helpers
 // the position's normalized geometry, read from its four points: [entry-left, entry-right, target, stop].
