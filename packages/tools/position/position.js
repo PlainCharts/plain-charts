@@ -187,7 +187,12 @@ Tools.register({
 
     const dec = view.priceDecimals != null ? view.priceDecimals : 2;
 
-    const cx = (g.left + g.right) / 2; // horizontal center of the box -- every tool label is centered here
+    // horizontal center of the box IN SCREEN SPACE: average the edge PIXELS, not the time midpoint. The time
+    // axis is not linear in time (non-uniform bars), so timeToX((left+right)/2) drifts off-center -- badly on
+    // a narrow box, where the error is a large fraction of the width.
+    const xL = view.timeToX(g.left),
+      xR = view.timeToX(g.right);
+    const scx = xL != null && xR != null ? (xL + xR) / 2 : null;
 
     // ---- per-level STAT labels (target/stop): the selected stat's VALUE, centered on the line. No role
     // prefix (the line's position says which it is). Placed OUTSIDE the box (target above, stop below). ----
@@ -210,9 +215,8 @@ Tools.register({
     /** @param {string} text @param {number} price @param {'above'|'below'|'on'} place @param {string} fill
      *  @param {string|null} stroke @param {string} txtColor */
     const pill = (text, price, place, fill, stroke, txtColor) => {
-      if (!text) return;
-      const sx = view.timeToX(cx);
-      if (sx == null) return;
+      if (!text || scx == null) return;
+      const sx = scx;
       const padX = 7,
         padY = 4,
         gap = 3,
