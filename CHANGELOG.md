@@ -20,6 +20,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Symbol dialog: browse CQG instruments in a tree (group / exchange / instrument type) beside the search, with a saved exchange filter and per-broker recents
 
 ### Fixed
+- Order dialog: placing an order now clears the on-chart planning projection, so the gray planning primitive no longer lingers on top of the order you just placed. Placement ends the planning session, the same way the pill's cancel and confirm already did
 - Order dialog: opening it now picks up a stop that was dragged on the chart while it was closed; a stale startup snapshot no longer wins over the live plan
 - Symbol dialog: CQG search now matches by symbol code (e.g. EP), not only by description
 - Order ticket: the window now grows to fit your quick buttons instead of squishing the form and hiding Buy/Sell

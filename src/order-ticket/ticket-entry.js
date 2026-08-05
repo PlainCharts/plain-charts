@@ -16,10 +16,14 @@ import { t } from '../i18n/i18n.js'; // vocabulary lookup -- the order ticket is
 
 // --- post-placement "placed" state: after a successful order, gray the form and swap Buy/Sell for one New Order button,
 // so the user re-arms in place instead of closing + reopening to clear stale values (a confirm-then-reset flow) ---
-/** enter the placed state after a successful order: show the ack, gray the form (renderBody adds .ot-placed). @param {string} msg */
+/** enter the placed state after a successful order: show the ack, gray the form (renderBody adds .ot-placed). A
+ *  successful placement ENDS the planning session, so drop the projection here -- the same exit the pill's V (place)
+ *  and X (cancel) already use. Without this the planning primitive lingered on top of the just-placed order. @param {string} msg */
 function enterPlaced(msg) {
   state.placed = true;
   state.placedMsg = msg;
+  const c = getCtx();
+  if (c.symbol) setProjecting(c.broker, c.symbol, false);
   render();
 }
 /** New Order: re-arm the dialog IN PLACE -- reset the form to fresh defaults, drop the projection, un-gray. No close. */
