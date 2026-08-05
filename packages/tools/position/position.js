@@ -260,12 +260,17 @@ Tools.register({
 
     // ---- optional price labels ON THE TOOL, at the LEFT or RIGHT end of each level (user's choice; separate
     // from the price-scale labels the engine draws in the axis gutter via style.priceLabels) ----
+    // Left/right are SCREEN sides, not data points -- the tool is side-agnostic. Pick the edge whose pixel is
+    // the visual left/right so a flipped box (right handle dragged past the left) still labels the right side.
     if (s.toolPriceLabels) {
       const onLeft = s.toolPriceSide === 'left';
+      const flipped = xL != null && xR != null && xR < xL; // data right is visually left
+      const leftEdge = flipped ? g.right : g.left; // time at the visual-left edge
+      const rightEdge = flipped ? g.left : g.right; // time at the visual-right edge
       /** @param {number} p */
       const label = (p) => ({
         text: p.toFixed(dec),
-        at: onLeft ? { t: g.left, p, dx: -6 } : { t: g.right, p, dx: 6 },
+        at: onLeft ? { t: leftEdge, p, dx: -6 } : { t: rightEdge, p, dx: 6 },
         align: onLeft ? 'right' : 'left',
         baseline: 'middle',
         color: s.textColor || '#ffffff',
