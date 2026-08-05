@@ -59,6 +59,14 @@ const PIN_SVG =
 
 const root = /** @type {HTMLElement} */ (document.getElementById('order-root'));
 
+// Closing the dialog ENDS the planning session -- the primitive disappears with the window, because in planning the
+// dialog and the primitive are one. If an order was already placed the projection is gone (enterPlaced cleared it),
+// so this is a no-op then; the real order, being book-driven, stays.
+function endPlanning() {
+  const c = getCtx();
+  if (c.symbol) setProjecting(c.broker, c.symbol, false);
+}
+
 // Custom frameless title bar mirroring the main app: draggable bar + always-on-top pin, minimize, maximize, close.
 function buildTitleBar() {
   const d = /** @type {any} */ (window).desktop;
@@ -95,7 +103,12 @@ function buildTitleBar() {
     }
     ctrls.appendChild(mk('ot-min', '–', t('Minimize'), () => d.winMinimize && d.winMinimize()));
     ctrls.appendChild(mk('ot-max', '□', t('Maximize'), () => d.winMaximizeToggle && d.winMaximizeToggle()));
-    ctrls.appendChild(mk('ot-close', '✕', t('Close'), () => d.winClose && d.winClose()));
+    ctrls.appendChild(
+      mk('ot-close', '✕', t('Close'), () => {
+        endPlanning(); // close = end planning: drop the projection before the window goes
+        if (d.winClose) d.winClose();
+      }),
+    );
   }
   bar.append(title, spacer, ctrls);
   return bar;
@@ -250,6 +263,8 @@ if (desk && desk.onOrderTicketOpen) {
   // did-finish-load (that races: on a fresh window the push can land before this listener exists, and is lost).
   if (desk.orderTicketReady) desk.orderTicketReady();
 }
+// safety net: if the window is destroyed (app quit / programmatic close) instead of via the ✕, still end planning
+window.addEventListener('pagehide', endPlanning);
 
 // Universal controls (on EVERY tab, rendered ONCE like the button bar -- not per-tab). The visibility frame edits the
 // shared on-chart dot visibility + the global hide-on-entry policy; the button bar holds the quick-action buttons. Both
