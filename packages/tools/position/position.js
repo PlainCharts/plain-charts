@@ -35,6 +35,54 @@ const SIDES = [
   { key: 'right', name: 'Right' },
 ];
 
+// ---- pill helpers (label backgrounds) ----
+// an offscreen canvas to measure label width; null in a non-DOM context (unit tests fall back to an estimate)
+/** @type {CanvasRenderingContext2D|null|undefined} */
+let _mctx;
+const measureCtx = () => {
+  if (_mctx !== undefined) return _mctx;
+  _mctx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+  return _mctx;
+};
+/** @param {string} txt @param {number} size @returns {number} */
+const measureText = (txt, size) => {
+  const ctx = measureCtx();
+  if (ctx) {
+    ctx.font = size + 'px sans-serif';
+    return ctx.measureText(txt).width;
+  }
+  return String(txt).length * size * 0.6; // no DOM (tests): rough estimate
+};
+// strip the alpha off an rgba() so a translucent zone color yields a SOLID pill; hex/named pass through
+/** @param {string} col @returns {string} */
+const opaqueColor = (col) => {
+  const m = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/.exec(col || '');
+  return m ? 'rgb(' + m[1] + ',' + m[2] + ',' + m[3] + ')' : col || '#787b86';
+};
+// a screen-space vertex (absolute pixels) for a mark path/anchor
+/** @param {number} x @param {number} y */
+const sv = (x, y) => ({ vpx: 0, dx: x, vp: 0, dy: y });
+// a rounded-rect path as screen vertices (4 points per corner arc)
+/** @param {number} x @param {number} y @param {number} w @param {number} h @param {number} r */
+const roundRectPath = (x, y, w, h, r) => {
+  r = Math.min(r, w / 2, h / 2);
+  /** @param {number} ccx @param {number} ccy @param {number} a0 @param {number} a1 */
+  const arc = (ccx, ccy, a0, a1) => {
+    const pts = [];
+    for (let i = 0; i <= 4; i++) {
+      const a = a0 + ((a1 - a0) * i) / 4;
+      pts.push(sv(ccx + r * Math.cos(a), ccy + r * Math.sin(a)));
+    }
+    return pts;
+  };
+  return [
+    ...arc(x + w - r, y + r, -Math.PI / 2, 0), // top-right
+    ...arc(x + w - r, y + h - r, 0, Math.PI / 2), // bottom-right
+    ...arc(x + r, y + h - r, Math.PI / 2, Math.PI), // bottom-left
+    ...arc(x + r, y + r, Math.PI, 1.5 * Math.PI), // top-left
+  ];
+};
+
 Tools.register({
   id: 'position',
   name: 'Position',
@@ -154,41 +202,55 @@ Tools.register({
       if (stat === 'percent') return g.entry ? ((d0 / Math.abs(g.entry)) * 100).toFixed(2) + '%' : '0%';
       return '';
     };
-    // a line can show several stats at once (multi-select) -- render them as one centered label, joined.
-    /** @param {string[]} stats @param {number} price @param {boolean} above */
-    const statLabel = (stats, price, above) => {
-      const text = (stats || [])
+    // Each level's label is a rounded PILL centered on the box. Target/stop pills are filled with their zone
+    // color (opaque, so they read over a translucent zone); the entry pill is light with an OUTLINE so it
+    // stands out against the zones. The pill is sized to the text (screen-space rounded rect + the text).
+    const size = parseInt(s.textSize, 10) || 12;
+    /** @param {string} text @param {number} price @param {'above'|'below'|'on'} place @param {string} fill
+     *  @param {string|null} stroke @param {string} txtColor */
+    const pill = (text, price, place, fill, stroke, txtColor) => {
+      if (!text) return;
+      const sx = view.timeToX(cx);
+      if (sx == null) return;
+      const padX = 7,
+        padY = 4,
+        gap = 3,
+        rad = 7,
+        h = size + 2 * padY;
+      const dy = place === 'above' ? -(h / 2 + gap) : place === 'below' ? h / 2 + gap : 0;
+      const sy = view.priceToY(price) + dy;
+      const w = measureText(text, size) + 2 * padX;
+      out.push({
+        closed: true,
+        fill,
+        stroke: stroke || undefined,
+        width: stroke ? 1.5 : undefined,
+        path: roundRectPath(sx - w / 2, sy - h / 2, w, h, rad),
+      });
+      out.push({ text, at: sv(sx, sy), align: 'center', baseline: 'middle', color: txtColor, size });
+    };
+    /** @param {string[]} stats @param {number} price */
+    const joined = (stats, price) =>
+      (stats || [])
         .map((st) => statText(st, price))
         .filter(Boolean)
         .join(' · ');
-      if (!text) return;
-      out.push({
-        text,
-        at: { t: cx, p: price, dy: above ? -5 : 5 },
-        align: 'center',
-        baseline: above ? 'bottom' : 'top',
-        color: s.textColor || '#ffffff',
-        size: parseInt(s.textSize, 10) || 12,
-      });
-    };
-    statLabel(s.targetStats, g.target, true);
-    statLabel(s.stopStats, g.stop, false);
-
-    // ---- entry stat: risk/reward ratio (reward distance / risk distance), centered ON the entry line. Keeps
-    // its name -- a bare "0.4" would not read as a ratio like the offset numbers do. ----
+    // target above its line (reward color), stop below its line (risk color), entry on the line (outlined)
+    pill(joined(s.targetStats, g.target), g.target, 'above', opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'), null, s.textColor || '#ffffff');
+    pill(joined(s.stopStats, g.stop), g.stop, 'below', opaqueColor(s.stopColor || 'rgba(120,123,134,0.12)'), null, s.textColor || '#ffffff');
     if ((s.entryStats || []).includes('rr')) {
       const reward = Math.abs(g.target - g.entry),
         risk = Math.abs(g.stop - g.entry);
-      if (risk > 0) {
-        out.push({
-          text: 'Risk/reward ratio: ' + (reward / risk).toFixed(2),
-          at: { t: cx, p: g.entry },
-          align: 'center',
-          baseline: 'middle',
-          color: s.textColor || '#ffffff',
-          size: parseInt(s.textSize, 10) || 12,
-        });
-      }
+      // same fill as the target pill; the outline (band) is what makes it stand out, so no white needed
+      if (risk > 0)
+        pill(
+          'Risk/reward ratio: ' + (reward / risk).toFixed(2),
+          g.entry,
+          'on',
+          opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'),
+          s.color || '#363a45',
+          s.textColor || '#ffffff',
+        );
     }
 
     // ---- optional price labels ON THE TOOL, at the LEFT or RIGHT end of each level (user's choice; separate
