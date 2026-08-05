@@ -228,7 +228,8 @@ Tools.register({
         if (q == null || perPoint <= 0) return '';
         const lot = Number(s.lotSize) > 0 ? Number(s.lotSize) : 1;
         const base = qtyLots(q, s) * lot; // the actual tradeable position, in base units
-        return 'PnL: ' + signedMoney((pnlSign || 1) * d0 * perPoint * base);
+        // no currency symbol (USD is a given); 2 decimals; a loss keeps its minus so it can't read as a gain
+        return 'PnL: ' + ((pnlSign || 1) * d0 * perPoint * base).toFixed(2);
       }
       return '';
     };
@@ -368,9 +369,6 @@ const fmtQty = (qBase, style) => {
   const decimals = (String(step).split('.')[1] || '').length;
   return qtyLots(qBase, style).toFixed(decimals);
 };
-// signed currency (+$X / -$X), up to 2 decimals
-/** @param {number} v */
-const signedMoney = (v) => (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
 /** @param {HTMLElement} body @param {ToolDrawing} d @param {{ preview: () => void, tickSize: any, tickValue: any, priceDecimals: any }} ctx */
 function buildInputsPanel(body, d, ctx) {
   const unit = Number(ctx.tickSize) || 0;
