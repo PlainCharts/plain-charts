@@ -19,11 +19,12 @@ import { pin, pinHandles } from './pin.js';
 // The stat catalogs for the per-level labels. Target and stop can show their PRICE OFFSET from entry (a
 // simple distance); entry has no stats yet (its stats -- e.g. quantity -- come from the sizing algorithm we
 // have not built). The catalogs grow as we develop stats.
-// target + stop stats: the level's distance from entry -- as price points, ticks, or a percent of the entry
-// price. MULTI-select (checkboxes): a line can show any combination; an empty selection shows nothing.
+// target + stop stats: the level's distance from entry -- as price points, in the instrument's smallest UNITS
+// (a tick on a future, a pipette on forex -- both just the min increment), or a percent of the entry price.
+// MULTI-select (checkboxes): a line can show any combination; an empty selection shows nothing.
 const TS_STATS = [
   { key: 'offset', name: 'Price offset' },
-  { key: 'ticks', name: 'Tick offset' },
+  { key: 'units', name: 'Unit offset' },
   { key: 'percent', name: 'Percent offset' },
 ];
 // entry stat: the only meaningful one is the risk/reward ratio (reward distance / risk distance)
@@ -115,9 +116,9 @@ Tools.register({
       { name: 'Text', controls: [{ key: 'textColor', type: 'color', size: 'textSize' }] },
       // STATS: pick which stat each level's label shows. The catalogs grow in later steps.
       { heading: 'Stats' },
+      { name: 'Entry', controls: [{ key: 'entryStats', type: 'multiselect', options: ENTRY_STATS }] },
       { name: 'Target', controls: [{ key: 'targetStats', type: 'multiselect', options: TS_STATS }] },
       { name: 'Stop', controls: [{ key: 'stopStats', type: 'multiselect', options: TS_STATS }] },
-      { name: 'Entry', controls: [{ key: 'entryStats', type: 'multiselect', options: ENTRY_STATS }] },
       { name: 'Price labels (price scale)', toggle: 'priceLabels' },
       { name: 'Price labels (tool)', toggle: 'toolPriceLabels', controls: [{ key: 'toolPriceSide', type: 'select', options: SIDES }] },
     ],
@@ -197,14 +198,15 @@ Tools.register({
     // ---- per-level STAT labels (target/stop): the selected stat's VALUE, centered on the line. No role
     // prefix (the line's position says which it is). Placed OUTSIDE the box (target above, stop below). ----
     // offset  = the level's price distance from entry (points)
-    // ticks   = that distance in ticks (price distance / instrument tick size)
+    // units   = that distance in the instrument's smallest units (price distance / tickSize -- a tick on a
+    //           future, a pipette on forex; both are just the minimum increment)
     // percent = that distance as a percent of the entry price (entry is the 100% ruler)
-    const tick = Number(view.tickSize) || 0;
+    const unit = Number(view.tickSize) || 0;
     /** @param {string} stat @param {number} price @returns {string} */
     const statText = (stat, price) => {
       const d0 = Math.abs(price - g.entry);
       if (stat === 'offset') return d0.toFixed(dec);
-      if (stat === 'ticks') return tick > 0 ? String(Math.round(d0 / tick)) : '';
+      if (stat === 'units') return unit > 0 ? String(Math.round(d0 / unit)) : '';
       if (stat === 'percent') return g.entry ? ((d0 / Math.abs(g.entry)) * 100).toFixed(2) + '%' : '0%';
       return '';
     };
