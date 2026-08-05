@@ -19,10 +19,14 @@ import { pin, pinHandles } from './pin.js';
 // The stat catalogs for the per-level labels. Target and stop can show their PRICE OFFSET from entry (a
 // simple distance); entry has no stats yet (its stats -- e.g. quantity -- come from the sizing algorithm we
 // have not built). The catalogs grow as we develop stats.
-const NONE = { key: 'none', name: 'None' };
-// target + stop: the level's distance from entry, as price points or as a percent of the entry price
-const TS_STATS = [NONE, { key: 'offset', name: 'Price offset' }, { key: 'percent', name: 'Percent offset' }];
-const ENTRY_STATS = [NONE]; // entry: nothing yet
+// target + stop stats: the level's distance from entry -- as price points, ticks, or a percent of the entry
+// price. MULTI-select (checkboxes): a line can show any combination; an empty selection shows nothing.
+const TS_STATS = [
+  { key: 'offset', name: 'Price offset' },
+  { key: 'ticks', name: 'Tick offset' },
+  { key: 'percent', name: 'Percent offset' },
+];
+const ENTRY_STATS = [{ key: 'none', name: 'None' }]; // entry: nothing yet
 
 // which side of the box the tool price labels sit on
 const SIDES = [
@@ -47,9 +51,10 @@ Tools.register({
     priceLabels: false, // price-SCALE labels (engine draws one per point in the price axis)
     toolPriceLabels: false, // price labels ON THE TOOL (this tool draws them at each line's end)
     toolPriceSide: 'right', // which side those tool price labels sit on
-    // which stat each level's label shows -- all None until we build actual stats
-    targetStat: 'none',
-    stopStat: 'none',
+    // which stats each level's label shows. Target/stop are multi-select arrays (any combination); entry has
+    // none yet. Empty = the line shows no stat label.
+    targetStats: [],
+    stopStats: [],
     entryStat: 'none',
   },
   settings: {
@@ -60,8 +65,8 @@ Tools.register({
       { name: 'Text', controls: [{ key: 'textColor', type: 'color', size: 'textSize' }] },
       // STATS: pick which stat each level's label shows. The catalogs grow in later steps.
       { heading: 'Stats' },
-      { name: 'Target', controls: [{ key: 'targetStat', type: 'select', options: TS_STATS }] },
-      { name: 'Stop', controls: [{ key: 'stopStat', type: 'select', options: TS_STATS }] },
+      { name: 'Target', controls: [{ key: 'targetStats', type: 'multiselect', options: TS_STATS }] },
+      { name: 'Stop', controls: [{ key: 'stopStats', type: 'multiselect', options: TS_STATS }] },
       { name: 'Entry', controls: [{ key: 'entryStat', type: 'select', options: ENTRY_STATS }] },
       { name: 'Price labels (price scale)', toggle: 'priceLabels' },
       { name: 'Price labels (tool)', toggle: 'toolPriceLabels', controls: [{ key: 'toolPriceSide', type: 'select', options: SIDES }] },
@@ -137,16 +142,24 @@ Tools.register({
     // ---- per-level STAT labels (target/stop): the selected stat's VALUE, centered on the line. No role
     // prefix (the line's position says which it is). Placed OUTSIDE the box (target above, stop below). ----
     // offset  = the level's price distance from entry (points)
+    // ticks   = that distance in ticks (price distance / instrument tick size)
     // percent = that distance as a percent of the entry price (entry is the 100% ruler)
+    const tick = Number(view.tickSize) || 0;
     /** @param {string} stat @param {number} price @returns {string} */
     const statText = (stat, price) => {
-      if (stat === 'offset') return Math.abs(price - g.entry).toFixed(dec);
-      if (stat === 'percent') return g.entry ? ((Math.abs(price - g.entry) / Math.abs(g.entry)) * 100).toFixed(2) + '%' : '0%';
+      const d0 = Math.abs(price - g.entry);
+      if (stat === 'offset') return d0.toFixed(dec);
+      if (stat === 'ticks') return tick > 0 ? String(Math.round(d0 / tick)) : '';
+      if (stat === 'percent') return g.entry ? ((d0 / Math.abs(g.entry)) * 100).toFixed(2) + '%' : '0%';
       return '';
     };
-    /** @param {string} stat @param {number} price @param {boolean} above */
-    const statLabel = (stat, price, above) => {
-      const text = statText(stat, price);
+    // a line can show several stats at once (multi-select) -- render them as one centered label, joined.
+    /** @param {string[]} stats @param {number} price @param {boolean} above */
+    const statLabel = (stats, price, above) => {
+      const text = (stats || [])
+        .map((st) => statText(st, price))
+        .filter(Boolean)
+        .join(' · ');
       if (!text) return;
       out.push({
         text,
@@ -157,8 +170,8 @@ Tools.register({
         size: parseInt(s.textSize, 10) || 12,
       });
     };
-    statLabel(s.targetStat, g.target, true);
-    statLabel(s.stopStat, g.stop, false);
+    statLabel(s.targetStats, g.target, true);
+    statLabel(s.stopStats, g.stop, false);
 
     // ---- optional price labels ON THE TOOL, at the LEFT or RIGHT end of each level (user's choice; separate
     // from the price-scale labels the engine draws in the axis gutter via style.priceLabels) ----
