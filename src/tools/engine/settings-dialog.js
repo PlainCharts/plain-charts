@@ -241,7 +241,12 @@ function renderInputs(body) {
   const tool = /** @type {any} */ (getTool(d.tool));
   const inputs = tool.settings && tool.settings.inputs;
   if (typeof inputs === 'function') {
-    inputs(body, d, { preview, tickSize: st.engine.pane.tickSize, priceDecimals: st.engine.pane.priceDecimals });
+    inputs(body, d, {
+      preview,
+      tickSize: st.engine.pane.tickSize,
+      tickValue: st.engine.pane.tickValue,
+      priceDecimals: st.engine.pane.priceDecimals,
+    });
     return;
   }
   const rows = inputs || [];

@@ -106,6 +106,11 @@ Tools.register({
     targetStats: [],
     stopStats: [],
     entryStats: [],
+    // position sizing inputs (Inputs tab). Account size is USD; 0 = unset. Risk is a % of the account or a
+    // USD amount, per riskMode.
+    accountSize: 0,
+    risk: 1,
+    riskMode: 'percent', // 'percent' | 'usd'
   },
   settings: {
     inputs: buildInputsPanel, // the Inputs tab: entry/profit/stop levels in price + units, two-way with the tool
@@ -307,7 +312,7 @@ const domEl = (tag, cls, txt) => {
   if (txt != null) e.textContent = txt;
   return e;
 };
-/** @param {HTMLElement} body @param {ToolDrawing} d @param {{ preview: () => void, tickSize: any, priceDecimals: any }} ctx */
+/** @param {HTMLElement} body @param {ToolDrawing} d @param {{ preview: () => void, tickSize: any, tickValue: any, priceDecimals: any }} ctx */
 function buildInputsPanel(body, d, ctx) {
   const unit = Number(ctx.tickSize) || 0;
   const dec = ctx.priceDecimals != null ? ctx.priceDecimals : 2;
@@ -322,8 +327,8 @@ function buildInputsPanel(body, d, ctx) {
       render(); // re-read so the linked price/unit fields refresh
     };
     // a labelled number-input row (price or unit count)
-    /** @param {string} label @param {string} value @param {string} stp @param {(v:number)=>void} onCommit @param {boolean} [disabled] */
-    const row = (label, value, stp, onCommit, disabled) => {
+    /** @param {string} label @param {string} value @param {string} stp @param {(v:number)=>void} onCommit @param {boolean} [disabled] @param {string} [ph] */
+    const row = (label, value, stp, onCommit, disabled, ph) => {
       const r = domEl('div', 'set-row');
       r.appendChild(domEl('div', 'set-row-left', label));
       const c = domEl('div', 'set-controls');
@@ -331,6 +336,7 @@ function buildInputsPanel(body, d, ctx) {
       inp.type = 'number';
       inp.step = stp;
       inp.value = value;
+      if (ph) inp.placeholder = ph;
       if (disabled) inp.disabled = true;
       inp.onchange = () => {
         const v = parseFloat(inp.value);
@@ -351,6 +357,78 @@ function buildInputsPanel(body, d, ctx) {
     const tSign = g.target < g.entry ? -1 : 1; // target defaults ABOVE entry
     const sSign = g.stop > g.entry ? 1 : -1; // stop defaults BELOW entry
 
+    // ---- sizing inputs (params in style; account size is USD, 0 = unset) ----
+    const st = /** @type {any} */ (d.style || (d.style = {}));
+    const acct = Number(st.accountSize) || 0;
+    row(
+      'Account size',
+      acct > 0 ? String(acct) : '',
+      'any',
+      (v) => {
+        st.accountSize = v > 0 ? v : 0;
+        ctx.preview();
+        render();
+      },
+      false,
+      'USD',
+    );
+
+    // Risk: a number + a %/USD mode select. Percent = of the account; USD = an absolute amount.
+    {
+      const r = domEl('div', 'set-row');
+      r.appendChild(domEl('div', 'set-row-left', 'Risk'));
+      const c = domEl('div', 'set-controls');
+      const inp = /** @type {HTMLInputElement} */ (domEl('input', 'set-coord-in'));
+      inp.type = 'number';
+      inp.step = 'any';
+      inp.value = (Number(st.risk) || 0).toFixed(2); // always a value -- blank risk is just zero
+      inp.onchange = () => {
+        const v = parseFloat(inp.value);
+        st.risk = Number.isFinite(v) && v > 0 ? v : 0;
+        ctx.preview();
+        render();
+      };
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') inp.blur();
+      });
+      const sel = /** @type {HTMLSelectElement} */ (domEl('select'));
+      [
+        ['percent', '%'],
+        ['usd', 'USD'],
+      ].forEach(([k, n]) => {
+        const o = /** @type {HTMLOptionElement} */ (domEl('option', undefined, n));
+        o.value = k;
+        sel.appendChild(o);
+      });
+      sel.value = st.riskMode === 'usd' ? 'usd' : 'percent';
+      sel.onchange = () => {
+        st.riskMode = sel.value;
+        ctx.preview();
+        render();
+      };
+      c.append(inp, sel);
+      r.appendChild(c);
+      body.appendChild(r);
+    }
+
+    // ---- computed QUANTITY (read-out): risk$ / loss-per-unit ----
+    // risk$   = riskMode 'usd' ? risk : account * risk/100
+    // loss/u  = |entry - stop| * (tickValue / tickSize)   (currency per price point per unit)
+    // qty     = risk$ / loss/u    (base quantity; lot-size formatting comes later)
+    const account = Number(st.accountSize) || 0;
+    const risk$ = st.riskMode === 'usd' ? Number(st.risk) || 0 : (account * (Number(st.risk) || 0)) / 100;
+    const stopDist = Math.abs(g.entry - g.stop);
+    const perPoint = unit > 0 ? (Number(ctx.tickValue) || 0) / unit : 0; // currency per price point per unit
+    const lossPerUnit = stopDist * perPoint;
+    const qty = risk$ > 0 && lossPerUnit > 0 ? risk$ / lossPerUnit : null;
+    const qtyRow = domEl('div', 'set-row');
+    qtyRow.appendChild(domEl('div', 'set-row-left', 'Quantity'));
+    const qtyC = domEl('div', 'set-controls');
+    qtyC.appendChild(domEl('b', undefined, qty != null ? String(Math.round(qty * 100) / 100) : '—'));
+    qtyRow.appendChild(qtyC);
+    body.appendChild(qtyRow);
+
+    body.appendChild(domEl('div', 'set-section', 'Levels'));
     row('Entry price', g.entry.toFixed(dec), step, (v) => commit({ entry: v }));
     body.appendChild(domEl('div', 'set-section', 'Profit level'));
     row('Units', unitsOf(g.target), '1', (u) => commit({ target: priceFromUnits(u, tSign) }), !(unit > 0));

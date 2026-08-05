@@ -18,7 +18,7 @@ import { alertMirror } from '../../alerts/store.js'; // which drawings have an a
 /** @typedef {import('./engine.js').Tool} Tool */
 /** @typedef {import('./engine.js').DrawingEngine} DrawingEngine */
 // The render view a tool's marks()/draw() expects (data<->screen mappers + plot size).
-/** @typedef {{ timeToX: (t: number) => number|null, priceToY: (p: number) => number|null, width: number, height: number, snapX: (x: number) => number, priceDecimals?: number, tickSize?: number|null, bars?: any[] }} View */
+/** @typedef {{ timeToX: (t: number) => number|null, priceToY: (p: number) => number|null, width: number, height: number, snapX: (x: number) => number, priceDecimals?: number, tickSize?: number|null, tickValue?: number|null, bars?: any[] }} View */
 // A canvas 2D context (the ether/tools draw through it).
 /** @typedef {CanvasRenderingContext2D} Ctx */
 // The kapelka series-primitive "draw scope": media context + pixel size.
@@ -40,6 +40,7 @@ export function createDrawingPrimitive(engine) {
         height: scope.mediaSize.height,
         priceDecimals: engine.pane.priceDecimals,
         tickSize: engine.pane.tickSize, // instrument min price increment, for tools that measure in ticks
+        tickValue: engine.pane.tickValue, // currency per tick per unit, for tools that size positions
         bars: engine.pane.barArr || [], // sorted bars, for ray-stop / level tools
         timeToX: (t) => timeToX(engine.pane, t), // data time -> screen x on this pane
         priceToY: (p) => engine.series.priceToY(p), // price -> screen y (for tools that compute screen-space bits in marks())

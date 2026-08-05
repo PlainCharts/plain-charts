@@ -190,6 +190,8 @@ export class Pane {
     this.priceDecimals = 2;
     /** @type {number|null} */
     this.tickSize = null; // instrument min price increment (e.g. 0.25 for ES); drawings snap price to it
+    /** @type {number|null} */
+    this.tickValue = null; // account-currency value of one tick per unit; position sizing uses it
     this.reqId = 0;
     this.olderReqId = 0; // in-flight lazy-history fetch (dropped on destroy)
     /** @type {number|null} */
@@ -819,6 +821,7 @@ export class Pane {
       }
       this.priceDecimals = inst.priceDecimals;
       this.tickSize = inst.tickSize || null; // kept so drawings can snap their price to the tick grid
+      this.tickValue = inst.tickValue != null ? Number(inst.tickValue) : null; // currency per tick per unit -- for position sizing
       if (this._series)
         this._series.configure({
           priceFormat: { type: 'price', precision: inst.priceDecimals, minMove: inst.tickSize },
