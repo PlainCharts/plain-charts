@@ -1,8 +1,9 @@
 // @ts-check
 // Position — a trade-sizing box. THREE reference levels across a span: TARGET, ENTRY, STOP.
 // Handle construction (deliberate):
-//   ENTRY  — TWO handles, left + right. They own the TIME span (the box's left/right edges) and move entry
-//            up/down. This is how you stretch the whole position in time.
+//   ENTRY  — TWO handles, left + right. LEFT is multidirectional: it moves entry up/down AND owns the left
+//            edge (drag it in time). RIGHT owns the right edge only -- it resizes the box in time and never
+//            re-prices the entry line (so stretching the position can't offset the level you set).
 //   TARGET — ONE handle, left side. Moves the target price up/down only.
 //   STOP   — ONE handle, left side. Moves the stop price up/down only.
 // The two tinted areas (reward = entry->target, risk = entry->stop) are just fills between the levels.
@@ -317,8 +318,8 @@ Tools.register({
     return out;
   },
 
-  // Four handles: entry-left, entry-right (own the time span + move entry), then target-left, stop-left
-  // (price only). Order matches the reshape pins below. Each handle sits at its own point's position.
+  // Four handles: entry-left (moves entry + owns left edge), entry-right (owns right edge, time only), then
+  // target-left, stop-left (price only). Order matches the reshape pins below. Each sits at its own point.
   /** @param {ToolScreenPoint[]} pts */
   handles(pts) {
     return pts.length >= 4 ? PINS.handles({ pts }) : pts;
@@ -560,11 +561,12 @@ const profitTarget = (entry, stop, target) => {
   return wrong ? 2 * entry - target : target;
 };
 
-// pts (screen) are the four resolved points in order; each handle sits at its own point. Entry's two ends
-// carry the time span; target/stop are price-only (their dp.time is ignored -- they stay at the left edge).
+// pts (screen) are the four resolved points in order; each handle sits at its own point. Entry-left carries
+// price + the left edge; entry-right carries the right edge only (dp.price ignored). Target/stop are price-
+// only (dp.time ignored -- they stay at the left edge).
 const PINS = pinHandles([
   pin({ at: (c) => c.pts[0], drag: (d, dp) => write(d, { left: dp.time, entry: dp.price }) }), // entry-left
-  pin({ at: (c) => c.pts[1], drag: (d, dp) => write(d, { right: dp.time, entry: dp.price }) }), // entry-right
+  pin({ at: (c) => c.pts[1], drag: (d, dp) => write(d, { right: dp.time }) }), // entry-right (time only -- resizes width, never re-prices entry)
   pin({ at: (c) => c.pts[2], drag: (d, dp) => write(d, { target: dp.price }) }), // target-left (price only)
   // stop-left (price only): the smart anchor -- a stop drag re-implies the side and mirrors the target to the
   // profit side when it flips, so target and stop are never left on the same side of entry.
