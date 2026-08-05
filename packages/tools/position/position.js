@@ -23,6 +23,12 @@ const NONE = { key: 'none', name: 'None' };
 const TS_STATS = [NONE, { key: 'offset', name: 'Price offset' }]; // target + stop
 const ENTRY_STATS = [NONE]; // entry: nothing yet
 
+// which side of the box the tool price labels sit on
+const SIDES = [
+  { key: 'left', name: 'Left' },
+  { key: 'right', name: 'Right' },
+];
+
 Tools.register({
   id: 'position',
   name: 'Position',
@@ -38,7 +44,8 @@ Tools.register({
     textColor: '#ffffff',
     textSize: 12,
     priceLabels: false, // price-SCALE labels (engine draws one per point in the price axis)
-    toolPriceLabels: false, // price labels ON THE TOOL (this tool draws them at each line's right end)
+    toolPriceLabels: false, // price labels ON THE TOOL (this tool draws them at each line's end)
+    toolPriceSide: 'right', // which side those tool price labels sit on
     // which stat each level's label shows -- all None until we build actual stats
     targetStat: 'none',
     stopStat: 'none',
@@ -56,7 +63,7 @@ Tools.register({
       { name: 'Stop', controls: [{ key: 'stopStat', type: 'select', options: TS_STATS }] },
       { name: 'Entry', controls: [{ key: 'entryStat', type: 'select', options: ENTRY_STATS }] },
       { name: 'Price labels (price scale)', toggle: 'priceLabels' },
-      { name: 'Price labels (tool)', toggle: 'toolPriceLabels' },
+      { name: 'Price labels (tool)', toggle: 'toolPriceLabels', controls: [{ key: 'toolPriceSide', type: 'select', options: SIDES }] },
     ],
   },
 
@@ -124,33 +131,36 @@ Tools.register({
 
     const dec = view.priceDecimals != null ? view.priceDecimals : 2;
 
-    // ---- per-level STAT labels (target/stop): the selected stat's value at the left end of the line ----
-    // Currently the only stat is 'offset' = the level's price distance from entry. Placed OUTSIDE the box
-    // (target above its line, stop below) so it does not sit on the fill.
-    /** @param {string} role @param {string} stat @param {number} price @param {boolean} above */
-    const statLabel = (role, stat, price, above) => {
-      const text = stat === 'offset' ? role + ': ' + Math.abs(price - g.entry).toFixed(dec) : '';
+    const cx = (g.left + g.right) / 2; // horizontal center of the box -- every tool label is centered here
+
+    // ---- per-level STAT labels (target/stop): the selected stat's VALUE, centered on the line. No role
+    // prefix (the line's position says which it is). Placed OUTSIDE the box (target above, stop below). ----
+    // Currently the only stat is 'offset' = the level's price distance from entry.
+    /** @param {string} stat @param {number} price @param {boolean} above */
+    const statLabel = (stat, price, above) => {
+      const text = stat === 'offset' ? Math.abs(price - g.entry).toFixed(dec) : '';
       if (!text) return;
       out.push({
         text,
-        at: { t: g.left, p: price, dx: 6, dy: above ? -5 : 5 },
-        align: 'left',
+        at: { t: cx, p: price, dy: above ? -5 : 5 },
+        align: 'center',
         baseline: above ? 'bottom' : 'top',
         color: s.textColor || '#ffffff',
         size: parseInt(s.textSize, 10) || 12,
       });
     };
-    statLabel('Target', s.targetStat, g.target, true);
-    statLabel('Stop', s.stopStat, g.stop, false);
+    statLabel(s.targetStat, g.target, true);
+    statLabel(s.stopStat, g.stop, false);
 
-    // ---- optional price labels ON THE TOOL, at the right end of each level (separate from the price-scale
-    // labels the engine draws in the axis gutter via style.priceLabels) ----
+    // ---- optional price labels ON THE TOOL, at the LEFT or RIGHT end of each level (user's choice; separate
+    // from the price-scale labels the engine draws in the axis gutter via style.priceLabels) ----
     if (s.toolPriceLabels) {
+      const onLeft = s.toolPriceSide === 'left';
       /** @param {number} p */
       const label = (p) => ({
         text: p.toFixed(dec),
-        at: { t: g.right, p, dx: 6 },
-        align: 'left',
+        at: onLeft ? { t: g.left, p, dx: -6 } : { t: g.right, p, dx: 6 },
+        align: onLeft ? 'right' : 'left',
         baseline: 'middle',
         color: s.textColor || '#ffffff',
         size: parseInt(s.textSize, 10) || 12,
