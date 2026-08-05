@@ -20,7 +20,8 @@ import { pin, pinHandles } from './pin.js';
 // simple distance); entry has no stats yet (its stats -- e.g. quantity -- come from the sizing algorithm we
 // have not built). The catalogs grow as we develop stats.
 const NONE = { key: 'none', name: 'None' };
-const TS_STATS = [NONE, { key: 'offset', name: 'Price offset' }]; // target + stop
+// target + stop: the level's distance from entry, as price points or as a percent of the entry price
+const TS_STATS = [NONE, { key: 'offset', name: 'Price offset' }, { key: 'percent', name: 'Percent offset' }];
 const ENTRY_STATS = [NONE]; // entry: nothing yet
 
 // which side of the box the tool price labels sit on
@@ -135,10 +136,17 @@ Tools.register({
 
     // ---- per-level STAT labels (target/stop): the selected stat's VALUE, centered on the line. No role
     // prefix (the line's position says which it is). Placed OUTSIDE the box (target above, stop below). ----
-    // Currently the only stat is 'offset' = the level's price distance from entry.
+    // offset  = the level's price distance from entry (points)
+    // percent = that distance as a percent of the entry price (entry is the 100% ruler)
+    /** @param {string} stat @param {number} price @returns {string} */
+    const statText = (stat, price) => {
+      if (stat === 'offset') return Math.abs(price - g.entry).toFixed(dec);
+      if (stat === 'percent') return g.entry ? ((Math.abs(price - g.entry) / Math.abs(g.entry)) * 100).toFixed(2) + '%' : '0%';
+      return '';
+    };
     /** @param {string} stat @param {number} price @param {boolean} above */
     const statLabel = (stat, price, above) => {
-      const text = stat === 'offset' ? Math.abs(price - g.entry).toFixed(dec) : '';
+      const text = statText(stat, price);
       if (!text) return;
       out.push({
         text,
