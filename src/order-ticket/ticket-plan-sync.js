@@ -15,6 +15,7 @@ import {
 } from '../chart/order-view/plan-store.js';
 import { state, getCtx, render } from './ticket-state.js';
 import { snapToTick } from './order-intent.js'; // shared tick-snap (pure) -- keep displayed levels on the instrument grid
+import { t } from '../i18n/i18n.js'; // terminal-state status string
 
 export const syncToggle = () => {
   if (state.projectCb && state.projectCb.isConnected) {
@@ -90,7 +91,28 @@ export const syncTab = () => {
     render();
   }
 };
+// Track the projection ON->OFF edge for THIS dialog's instrument, so a planning session ended from the CHART (the
+// pill's V place or X cancel) lands the dialog in its terminal state -- exactly where a dialog Buy/Sell lands. Keyed
+// by instrument so switching symbols never counts as an "ended" edge. state.placed guards the dialog's OWN placement
+// (enterPlaced set it before clearing the projection). Message is neutral: place vs cancel isn't distinguishable
+// across the window boundary, and a placed order already shows on the chart.
+let lastKey = '';
+let wasProjecting = false;
 subscribePlan(() => {
+  const c = getCtx();
+  const key = (c.broker || '') + ':' + (c.symbol || '');
+  const now = !!(c.symbol && isProjecting(c.broker, c.symbol));
+  const onEntry = state.active === 'market' || state.active === 'limit' || state.active === 'stop';
+  if (key === lastKey && wasProjecting && !now && onEntry && !state.placed) {
+    lastKey = key;
+    wasProjecting = now;
+    state.placed = true;
+    state.placedMsg = t('planning ended');
+    render();
+    return;
+  }
+  lastKey = key;
+  wasProjecting = now;
   syncToggle();
   syncFields();
   syncTab();
