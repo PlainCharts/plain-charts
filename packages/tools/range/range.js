@@ -43,6 +43,7 @@ function makeRange({ id, name, glyph, price, time, description, icon }) {
     icon,
     kind: 'draw',
     points: 2,
+    noAlert: true, // measurement tools: nothing to alert on
     defaultStyle: {
       color: '#787b86',
       width: 1,

@@ -432,13 +432,16 @@ function build(pane, eng, id, d, kind) {
   }
 
   // Create-alert quick button (right-most) -- opens the same dialog as the drawing's right-click
-  // "Create alert…". Single-selection only (an alert anchors to one drawing).
-  const alertBtn = document.createElement('button');
-  alertBtn.className = 'bb-qc-alert';
-  alertBtn.title = 'Create alert…';
-  alertBtn.innerHTML = SVG_BELL;
-  alertBtn.onclick = () => openCreateAlertDialog(eng, id);
-  host.append(alertBtn);
+  // "Create alert…". Single-selection only (an alert anchors to one drawing). A tool opts OUT with `noAlert`
+  // (same gate as the right-click menu): a multi-level box like Position has no single crossing level.
+  if (!(tool && tool.noAlert)) {
+    const alertBtn = document.createElement('button');
+    alertBtn.className = 'bb-qc-alert';
+    alertBtn.title = 'Create alert…';
+    alertBtn.innerHTML = SVG_BELL;
+    alertBtn.onclick = () => openCreateAlertDialog(eng, id);
+    host.append(alertBtn);
+  }
 }
 
 /** @param {string[]} a @param {string[]} b */

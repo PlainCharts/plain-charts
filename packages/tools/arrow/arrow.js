@@ -11,6 +11,7 @@ Tools.register({
   glyph: '↗',
   kind: 'draw',
   points: 2,
+  noAlert: true, // annotation; a trend line is the alertable line
   sliceable: true,
   shiftConstrain: 'angle', // hold Shift → snap to 45° (H/V/diagonal), like the trend line
   defaultStyle: {

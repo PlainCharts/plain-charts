@@ -14,6 +14,7 @@ Tools.register({
   glyph: 'T',
   kind: 'draw',
   points: 1,
+  noAlert: true, // annotation, not a price object
   editOnCreate: true, // text is the point of the tool -> open the in-place editor as soon as it's placed
   defaultStyle: {
     bgOn: false,

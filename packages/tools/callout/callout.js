@@ -13,6 +13,7 @@ Tools.register({
   glyph: '⤴',
   kind: 'draw',
   points: 2,
+  noAlert: true, // annotation, not a price object
   editOnCreate: true, // a callout is a text box -> open the in-place editor as soon as it's placed
   defaultStyle: {
     lineColor: '#787b86',

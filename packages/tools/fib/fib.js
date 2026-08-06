@@ -28,6 +28,7 @@ Tools.register({
   glyph: 'F',
   kind: 'draw',
   points: 2,
+  noAlert: true, // deliberate: no alerts on fib levels
   defaultStyle: {
     levels: structuredClone(DEFAULT_LEVELS),
     lineWidth: 1,

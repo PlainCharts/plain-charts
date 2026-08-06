@@ -10,6 +10,7 @@ Tools.register({
   glyph: '☺',
   kind: 'draw',
   points: 1,
+  noAlert: true, // annotation, not a price object
   defaultStyle: { glyph: DEFAULT_GLYPH, color: '#e8e8e8', size: 28 },
   settings: {
     style: [

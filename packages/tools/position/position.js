@@ -95,6 +95,7 @@ Tools.register({
   glyph: '⊞',
   kind: 'draw',
   points: 1, // one click; onCreate expands it into the three independent levels
+  noAlert: true, // a three-level box (target/entry/stop) has no single crossing level to anchor an alert to
   defaultStyle: {
     color: '#363a45', // the level lines + box edges
     width: 1,

@@ -96,8 +96,9 @@ export function openDrawingMenu(engine, id, clientX, clientY) {
   menu = el('div', 'dwg-menu');
 
   // ---- Create/Edit alert (single only) — anchors a price-crossing alert to this drawing. If an alert is
-  // already attached, the item becomes "Edit alert on <tool>…" and the dialog opens prefilled.
-  if (!multi) {
+  // already attached, the item becomes "Edit alert on <tool>…" and the dialog opens prefilled. A tool opts OUT
+  // with `noAlert` (a multi-level box like Position has no single crossing level to anchor an alert to).
+  if (!multi && !(tool && tool.noAlert)) {
     const objName = (tool && tool.name) || d.tool;
     const hasAlert = alertForObject((engine.pane && engine.pane.symbol) || '', id);
     const al = el('div', 'dwg-item');
