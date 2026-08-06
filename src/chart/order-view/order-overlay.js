@@ -589,9 +589,17 @@ export function createOrderOverlay(pane) {
       hedgeStopQty: a.hedgeStopQty,
       hedgeTarget: show('target') ? a.hedgeTarget : null,
       hedgeTargetQty: a.hedgeTargetQty,
-      // a stop-type working order IS a stop (netting's separate SL order) -- hide it with the Stop toggle, exactly
-      // like the hedging position's embedded stop. By type only; a limit order (entry vs target) is handled later.
-      orders: a.orders.filter((o) => o.type !== 'stop' || show('stop')),
+      // The Stop/Target toggles hide a netting bracket's SEPARATE exit orders, but only once there is a live POSITION
+      // to exit. With a position, a stop-type order is the stop and a limit-type order is the target (one of each, no
+      // multi-TP) -- classify by type alone. While FLAT there is no entry, so a resting order and its parked legs are
+      // pre-trade and the toggles don't apply (a stop while flat is a stop ENTRY, a limit is a limit ENTRY). Hedging
+      // embeds these as position attributes (filtered above); this covers the netting equivalent.
+      orders: a.orders.filter((o) => {
+        if (a.entry == null) return true; // flat: pre-trade orders, toggles don't apply
+        if (o.type === 'stop') return show('stop');
+        if (o.type === 'limit') return show('target');
+        return true;
+      }),
       projection: show('entry') ? projection : null,
       projectionQty,
       projectionType,
