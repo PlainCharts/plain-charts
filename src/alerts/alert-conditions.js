@@ -48,16 +48,33 @@ export function anchorLevel(d) {
     const p = d.points[0];
     return p && Number.isFinite(Number(p.price)) ? Number(p.price) : null;
   }
-  return null; // segments/region tools -> per-bar extents, the next categories to land
+  return null; // segments/region tools -> per-bar extents (anchorExtent)
+}
+
+// The SEGMENTS extent category: tools whose data-space extent is a drawn polyline -- the whole trend-line
+// family (extend is per-drawing style: trendline none / ray right / extendedline both, reconfigurable),
+// the level ray (a finite 2-point line), and the multi-point path. The eval resolves the polyline's price
+// value(s) at each bar on the alert-interval bar grid (eval.js segLevelsAt).
+export const SEGMENT_TOOLS = ['trendline', 'ray', 'extendedline', 'levelray', 'path'];
+/** snapshot the anchored drawing's polyline extent, if it is a SEGMENTS-category tool.
+ * @param {any} d @returns {{ kind:'segments', points:{time:number,price:number}[], extend:string }|null} */
+export function anchorExtent(d) {
+  if (!d || SEGMENT_TOOLS.indexOf(d.tool) < 0 || !Array.isArray(d.points) || d.points.length < 2) return null;
+  const points = d.points
+    .map((/** @type {any} */ p) => p && { time: Number(p.time), price: Number(p.price) })
+    .filter((/** @type {any} */ p) => p && Number.isFinite(p.time) && Number.isFinite(p.price));
+  if (points.length < 2) return null;
+  return { kind: 'segments', points, extend: (d.style && d.style.extend) || 'none' };
 }
 /**
  * @param {{ match: string, conditions: { left:string, op:string, right:string, value?:(number|null), percent?:(number|null), amount?:(number|null), lookback?:(number|null) }[] }} ui
  * @param {string} priceLabel  the localized "Price" label the dropdowns stored
  * @param {string} objectLabel the anchored drawing's label
- * @param {number|null} level  the drawing's snapshotted price level (hline)
- * @returns {{ match: 'all'|'any', terms: { op: string, level?: number, percent?: number, amount?: number, lookback?: number }[] }}
+ * @param {number|null} level  the drawing's snapshotted price level (LEVEL category), null otherwise
+ * @param {{ kind:'segments', points:{time:number,price:number}[], extend:string }|null} [extent]  the drawing's polyline snapshot (SEGMENTS category), null otherwise
+ * @returns {{ match: 'all'|'any', terms: { op: string, level?: number, extent?: any, percent?: number, amount?: number, lookback?: number }[] }}
  */
-export function compileConditions(ui, priceLabel, objectLabel, level) {
+export function compileConditions(ui, priceLabel, objectLabel, level, extent) {
   const rows = (ui && ui.conditions) || [];
   const valueLabel = t('Value');
   const match = /any/i.test((ui && ui.match) || 'all') ? 'any' : 'all';
@@ -81,15 +98,18 @@ export function compileConditions(ui, priceLabel, objectLabel, level) {
     const rightPrice = r.right === priceLabel;
     if (leftPrice === rightPrice) return { op: 'unsupported' }; // both or neither Price
     const objSide = leftPrice ? r.right : r.left;
-    // the level is either the typed "Value", or the anchored LEVEL-category drawing's price
+    // the object side resolves to the typed "Value", the anchored LEVEL drawing's price, or the anchored
+    // SEGMENTS drawing's polyline extent -- in that order; nothing resolvable = unsupported.
     let lvl = null;
     if (objSide === valueLabel) lvl = r.value != null && Number.isFinite(Number(r.value)) ? Number(r.value) : null;
     else if (objSide === objectLabel) lvl = level;
-    if (lvl == null) return { op: 'unsupported' }; // non-level drawing / empty value -> can't fire (yet)
+    const seg = lvl == null && objSide === objectLabel && objSide !== valueLabel ? extent : null;
+    if (lvl == null && !seg) return { op: 'unsupported' }; // non-reducible drawing / empty value -> can't fire (yet)
     let op = /** @type {any} */ (OP_MAP[/** @type {keyof typeof OP_MAP} */ (r.op)]) || 'unsupported';
     if (!leftPrice && OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)])
       op = OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)]; // Price on the right -> invert sense
-    return op === 'unsupported' ? { op } : { op, level: lvl };
+    if (op === 'unsupported') return { op };
+    return lvl != null ? { op, level: lvl } : { op, extent: seg };
   });
   return { match, terms };
 }

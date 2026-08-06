@@ -145,14 +145,39 @@ export function createDrawingPrimitive(engine) {
           if (!overlay) return;
 
           // alert badges (top overlay, always on top): a bell on each drawing that has an alert. PINNED to the
-          // right edge (by the price scale) at the drawing's price -- so it stays put as the
-          // chart scrolls horizontally (only its price-level y tracks the drawing).
+          // right edge (by the price scale) at the drawing's OWN y there -- a one-point drawing at its anchor
+          // price, a polyline (trend family / path) where the line meets the badge column, interpolated in
+          // screen space with the drawing's extend rule (so the bell rides the line, not the first anchor).
+          // A line that ends short of the column pins to its endpoint nearest it.
           engine.canvasItems().forEach((/** @type {Drawing} */ d) => {
             if (!d.points || !d.points.length || d.hidden || !hasAlert(d)) return;
-            const p = toScreen(engine.pane, d.points[0], engine.series);
-            if (!p) return;
             const bx = view.width - 14; // fixed to the right of the plot (next to the price scale)
-            const by = Math.max(12, Math.min(view.height - 12, p.y));
+            const pts = /** @type {{ x:number, y:number }[]} */ (
+              d.points.map((/** @type {any} */ p) => toScreen(engine.pane, p, engine.series)).filter(Boolean)
+            );
+            if (!pts.length) return;
+            let y = null;
+            if (pts.length > 1) {
+              const ext = (d.style && d.style.extend) || 'none';
+              const extL = ext === 'left' || ext === 'both';
+              const extR = ext === 'right' || ext === 'both';
+              const last = pts.length - 2;
+              for (let j = 0; j <= last && y == null; j++) {
+                const a = pts[j],
+                  b = pts[j + 1];
+                if (a.x === b.x) continue;
+                const s = (bx - a.x) / (b.x - a.x); // parametric along A->B (direction-aware, like the renderer)
+                if (s < 0 && !(extL && j === 0)) continue;
+                if (s > 1 && !(extR && j === last)) continue;
+                y = a.y + (b.y - a.y) * s;
+              }
+            }
+            if (y == null) {
+              let np = pts[0];
+              for (const p of pts) if (Math.abs(bx - p.x) < Math.abs(bx - np.x)) np = p;
+              y = np.y;
+            }
+            const by = Math.max(12, Math.min(view.height - 12, y));
             drawAlertBadge(c, bx, by);
           });
 

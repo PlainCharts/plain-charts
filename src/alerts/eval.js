@@ -6,8 +6,13 @@
 // A "compiled" condition is the host-friendly form the dialog produces (create-alert-dialog.js compile()):
 // display labels + i18n live in the UI; the host only ever sees stable terms.
 //   compiled = { match: 'all' | 'any', terms: Term[] }
-//   Term     = { op: 'cross'|'cross-up'|'cross-down'|'gt'|'lt', level: number }   (price vs a fixed level)
-//            | { op: 'unsupported', ... }                                          (drawing/indicator side -- P5)
+//   Term     = { op: 'cross'|'cross-up'|'cross-down'|'gt'|'lt', level: number }    (price vs a fixed level)
+//            | { op: <same level ops>, extent: SegExtent }                          (price vs a drawn line)
+//            | { op: 'unsupported', ... }                                           (nothing to evaluate)
+//   SegExtent = { kind: 'segments', points: [{time,price}...], extend: 'none'|'left'|'right'|'both' }
+// A segments extent is the SEGMENTS data-space category: the anchored drawing's polyline (trend-line family,
+// path), resolved to its price value(s) at the CURRENT bar on the alert-interval bar grid -- the level ops
+// then run against those values exactly as they run against a fixed level.
 
 // The bar-tail ring size the feed keeps -- at least the largest lookback any relative condition may ask for.
 export const BAR_TAIL_CAP = 300;
@@ -72,13 +77,100 @@ export function moveAbs(tail, bar, lookback) {
   return bar.close - ref.close;
 }
 
+/** a well-formed segments extent: at least two anchors with finite time+price. @param {any} e */
+export const validSegExtent = (e) =>
+  !!(
+    e &&
+    e.kind === 'segments' &&
+    Array.isArray(e.points) &&
+    e.points.filter((/** @type {any} */ p) => p && Number.isFinite(Number(p.time)) && Number.isFinite(Number(p.price)))
+      .length >= 2
+  );
+
+/**
+ * Fractional logical index of `time` against the ordered bar times -- the same interpolation the chart's
+ * time axis uses (geometry.js timeToX's fallback), so a segment evaluates where it is DRAWN: bar-INDEX
+ * space, not wall time (a session gap must not bend the line). Extrapolates past both ends on the edge span.
+ * @param {number[]} times @param {number} time @returns {number|null}
+ */
+export function fracIndex(times, time) {
+  const n = times.length;
+  if (n < 2) return null;
+  if (time <= times[0]) {
+    const span = times[1] - times[0];
+    return span > 0 ? (time - times[0]) / span : 0;
+  }
+  if (time >= times[n - 1]) {
+    const span = times[n - 1] - times[n - 2];
+    return n - 1 + (span > 0 ? (time - times[n - 1]) / span : 0);
+  }
+  let lo = 0,
+    hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] <= time) lo = mid;
+    else hi = mid;
+  }
+  const span = times[hi] - times[lo];
+  return lo + (span > 0 ? (time - times[lo]) / span : 0);
+}
+
+/**
+ * The price value(s) of a drawn polyline at `barTime`, on the bar grid `tail` provides. Each consecutive
+ * anchor pair is one segment, linearly interpolated in (bar-index, price) space -- exactly how the renderer
+ * places it. `extend` mirrors the renderer's direction-aware rule: 'left' extends past points[0] (s<0, first
+ * segment only), 'right' past the last point (s>1, last segment only) -- so a ray drawn right-to-left extends
+ * into the past, same as on screen. A bar outside every segment's span yields no values (nothing to fire on);
+ * a path that doubles back over a bar yields several (any strand can fire). Vertical segments are skipped.
+ * @param {{ time:number }[]} tail @param {{ time:any, price:any }[]} points @param {string|undefined} extend
+ * @param {number} barTime @returns {number[]}
+ */
+export function segLevelsAt(tail, points, extend, barTime) {
+  /** @type {number[]} */
+  const out = [];
+  if (!Array.isArray(points) || points.length < 2) return out;
+  const times = (tail || []).map((b) => b.time);
+  const k = fracIndex(times, barTime);
+  if (k == null) return out;
+  const idx = points.map((p) => (p != null ? fracIndex(times, Number(p.time)) : null));
+  const extL = extend === 'left' || extend === 'both';
+  const extR = extend === 'right' || extend === 'both';
+  const last = points.length - 2;
+  for (let j = 0; j <= last; j++) {
+    const ia = idx[j],
+      ib = idx[j + 1];
+    if (ia == null || ib == null || ia === ib) continue;
+    const pa = Number(points[j].price),
+      pb = Number(points[j + 1].price);
+    if (!Number.isFinite(pa) || !Number.isFinite(pb)) continue;
+    const s = (k - ia) / (ib - ia); // parametric position along A->B (the renderer's point order, not x order)
+    if (s < 0 && !(extL && j === 0)) continue;
+    if (s > 1 && !(extR && j === last)) continue;
+    out.push(pa + (pb - pa) * s);
+  }
+  return out;
+}
+
+/**
+ * Resolve a level-op term to the price value(s) it tests on this bar: a fixed level as-is, a segments
+ * extent via the bar grid. Empty = nothing to test (out of span / malformed) -- the term cannot fire.
+ * @param {{ level?:number, extent?:any }} term @param {{ time?:number }} bar @param {any[]} [tail]
+ * @returns {number[]}
+ */
+export function termLevels(term, bar, tail) {
+  if (term.level != null) return [Number(term.level)];
+  const e = term.extent;
+  if (e && e.kind === 'segments') return segLevelsAt(tail || [], e.points, e.extend, Number(bar.time));
+  return [];
+}
+
 /** Is a compiled term well-formed enough to arm / evaluate (not the drawing/indicator 'unsupported')?
- * @param {{ op:string, level?:number, percent?:number, amount?:number, lookback?:number }} t */
+ * @param {{ op:string, level?:number, extent?:any, percent?:number, amount?:number, lookback?:number }} t */
 export function isSupportedTerm(t) {
   if (!t || t.op === 'unsupported') return false;
   if (t.op === 'move-up-pct' || t.op === 'move-down-pct') return Number(t.percent) > 0 && Number(t.lookback) > 0;
   if (t.op === 'move-up' || t.op === 'move-down') return Number(t.amount) > 0 && Number(t.lookback) > 0;
-  return t.level != null; // level ops (cross / gt / lt)
+  return t.level != null || validSegExtent(t.extent); // level ops (cross / gt / lt): a fixed level or a drawn line
 }
 
 /**
@@ -106,16 +198,18 @@ export function conditionEvaluable(compiled) {
 export function termFires(term, bar, tail) {
   if (!term || !bar) return false;
   switch (term.op) {
+    // level ops resolve their value(s) first: one fixed level, or the anchored line's value(s) at this bar
+    // (termLevels). Any resolved value firing fires the term -- a zigzag strand behaves like its own line.
     case 'cross':
-      return term.level != null && crossed(bar, term.level, 'both');
+      return termLevels(term, bar, tail).some((l) => crossed(bar, l, 'both'));
     case 'cross-up':
-      return term.level != null && crossed(bar, term.level, 'up');
+      return termLevels(term, bar, tail).some((l) => crossed(bar, l, 'up'));
     case 'cross-down':
-      return term.level != null && crossed(bar, term.level, 'down');
+      return termLevels(term, bar, tail).some((l) => crossed(bar, l, 'down'));
     case 'gt':
-      return term.level != null && bar.close > term.level;
+      return termLevels(term, bar, tail).some((l) => bar.close > l);
     case 'lt':
-      return term.level != null && bar.close < term.level;
+      return termLevels(term, bar, tail).some((l) => bar.close < l);
     case 'move-up-pct': {
       const m = movePct(tail || [], bar, Number(term.lookback));
       return m != null && m >= Number(term.percent);

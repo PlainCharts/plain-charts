@@ -11,7 +11,7 @@ import { getTool } from '../tools/registry.js';
 import { alertCommand } from './funnel.js'; // the single mutator path to the alert-host
 import { alertMirror } from './store.js'; // read the alert mirror (find the alert on an object)
 import { withLevel } from './alert-record.js'; // the set-level/re-arm mutation (schema's one home)
-import { compileConditions, LEVEL_TOOLS } from './alert-conditions.js'; // canonical compiler + the level-category membership
+import { compileConditions, LEVEL_TOOLS, SEGMENT_TOOLS, anchorExtent } from './alert-conditions.js'; // canonical compiler + the extent-category memberships
 import { confirmDialog } from '../ui/confirm.js'; // confirm before deleting a drawing that has an alert
 import { bus } from '../bus.js'; // drawing-move events (keep alert level in sync)
 import { roundPrice } from './dialog-controls.js'; // round a level to the instrument's decimals
@@ -80,21 +80,33 @@ export function initAlertDrawingSync() {
       for (const a of alertMirror().all()) {
         if (!a || !a.objectId || (a.symbol && a.symbol !== sym)) continue;
         const d = pane.drawings.get(a.objectId);
-        // only LEVEL-category tools carry a re-snapshottable fixed price (segments/region follow later)
-        if (!d || LEVEL_TOOLS.indexOf(d.tool) < 0 || !d.points || !d.points.length) continue;
+        if (!d || !d.points || !d.points.length) continue;
         const objName = /** @type {any} */ (getTool(d.tool) || {}).name || d.tool;
         const rows = (a.conditions && a.conditions.conditions) || [];
         if (!rows.some((/** @type {any} */ c) => c && (c.left === objName || c.right === objName))) continue; // Value alerts don't track
-        const newLevel = roundPrice(d.points[0].price, pane.priceDecimals); // instrument decimals
-        if (!Number.isFinite(newLevel) || newLevel === (a.anchor && a.anchor.level)) continue;
-        // withLevel owns the compiled-term rewrite + rt re-arm; the anchor (drawing geometry) is rebuilt here.
-        const anchor = {
-          ...(a.anchor || {}),
-          tool: d.tool,
-          level: newLevel,
-          points: [{ time: d.points[0].time, price: newLevel }],
-        };
-        alertCommand('update', { id: a.id, patch: { ...withLevel(a, newLevel), anchor } }).catch(() => {});
+        if (LEVEL_TOOLS.indexOf(d.tool) >= 0) {
+          const newLevel = roundPrice(d.points[0].price, pane.priceDecimals); // instrument decimals
+          if (!Number.isFinite(newLevel) || newLevel === (a.anchor && a.anchor.level)) continue;
+          // withLevel owns the compiled-term rewrite + rt re-arm; the anchor (drawing geometry) is rebuilt here.
+          const anchor = {
+            ...(a.anchor || {}),
+            tool: d.tool,
+            level: newLevel,
+            points: [{ time: d.points[0].time, price: newLevel }],
+          };
+          alertCommand('update', { id: a.id, patch: { ...withLevel(a, newLevel), anchor } }).catch(() => {});
+        } else if (SEGMENT_TOOLS.indexOf(d.tool) >= 0) {
+          // SEGMENTS: geometry moved -> re-snapshot the polyline and RECOMPILE the stored rows with it
+          // (there is no single level to patch; the compiler is the one home for row -> term). rt resets so
+          // the moved line re-arms, same rule as a level move.
+          const ext = anchorExtent(d);
+          if (!ext) continue;
+          const prev = a.anchor || {};
+          if (JSON.stringify(prev.points) === JSON.stringify(ext.points) && prev.extend === ext.extend) continue;
+          const anchor = { tool: d.tool, points: ext.points, level: null, extend: ext.extend };
+          const compiled = compileConditions(a.conditions, t('Price'), objName, null, ext);
+          alertCommand('update', { id: a.id, patch: { anchor, compiled, rt: {} } }).catch(() => {});
+        }
       }
     } catch (_) {}
   });

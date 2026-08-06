@@ -17,12 +17,13 @@ export function scheduleOf(a) {
   return (a && a.schedule) || null;
 }
 
-/** does this alert's condition depend on a TIMEFRAME? Only the "Moving" family does -- it measures price over
- * bars/time, so the interval matters. Level conditions (cross/gt/lt) are pure price levels, TF-independent; a
- * time alert has none. The interval is shown (dialog/row/card) only when this is true. @param {any} a @returns {boolean} */
+/** does this alert's condition depend on a TIMEFRAME? The "Moving" family does (price over bars), and so
+ * does a segments extent (the drawn line evaluates on the alert-interval bar grid). Fixed-level conditions
+ * (cross/gt/lt on one price) are TF-independent; a time alert has none. The interval is shown
+ * (dialog/row/card) only when this is true. @param {any} a @returns {boolean} */
 export function usesTimeframe(a) {
   const terms = (a && a.compiled && a.compiled.terms) || [];
-  return terms.some((/** @type {any} */ t) => /^move/.test(String(t && t.op)));
+  return terms.some((/** @type {any} */ t) => t && (/^move/.test(String(t.op)) || t.extent != null));
 }
 
 /** the producer TYPE of an alert, for the Log's "show events by type" filter: 'watchlist' (one rule fanned out

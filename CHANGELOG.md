@@ -8,6 +8,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Alerts on drawn lines: the trend-line family (trend line, ray, extended line), the level ray, and the multi-point path can now carry alerts. Price is tested against the line exactly as drawn, at every slope and strand, on the alert's own interval; rays extrapolate, a finite line past its end simply never fires. Dragging the line updates its alert, and the on-chart bell badge sits on the line where it meets the price scale
 - Alerts on a Horizontal Ray: right-click a horizontal ray, Create alert, and it evaluates like a horizontal line (fixed price level, follows the line when dragged)
 - Bracket on a resting order: a Limit or Stop entry can now carry a stop and target on any broker whose protocol supports it, including CQG netting accounts. CQG places it as a server-side OPO/OCO compound, so the target and stop stay parked until the entry fills, then one filling cancels the other. Each adapter declares its own resting-order bracket support, so the order dialog and the on-chart order pill enable it per broker
 - Stats desk tab: a strategy dashboard over your closed round-trips -- an equity curve, an edge/spread (mean ± σ) distribution, and a drag-configurable board of USD summary stats (EV, avg win/loss, win/loss/BE %, max drawdown, max loss streak, profit factor, Sharpe). Opt-in via the desk "+", with the same account + date filters as History plus a "last N trades" sample size; the gear opens a two-grid editor to arrange which tiles show and where

@@ -24,7 +24,7 @@ import {
   messageControl,
   intervalControl,
 } from './dialog-controls.js'; // pure DOM form-control builders (view leaf)
-import { anchorLevel, compileConditions, isRelativeConds, condsUseTf } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
+import { anchorLevel, anchorExtent, compileConditions, isRelativeConds, condsUseTf } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
 import { priceDecimalsOf } from './alert-record.js'; // a record's Value precision (schema's one home)
 import { cadenceOf, conditionEvaluable } from './eval.js'; // stable cadence key + the can-this-ever-fire predicate (live validation)
 import { alertForObject } from './alert-drawing-sync.js'; // edit mode: the existing alert on this drawing (drawing<->alert glue lives there)
@@ -91,7 +91,7 @@ function onCreate(draft) {
  * rule across a list; the list NAME rides on the scope so the panel/log display "List, tf" without a store
  * lookup), the anchored-geometry snapshot, and the compiled host terms.
  * @param {{ symbol: string, applyVal: string, applyText: string, chosenTf: string, brokerId: string|null,
- *   dec: any, drawing: any|null, level: number|null, objectName: string, name: string, enabled: boolean,
+ *   dec: any, drawing: any|null, level: number|null, extent?: any, objectName: string, name: string, enabled: boolean,
  *   trigger: string, expiration: string, expiryMs: number|null, uiConds: any, message: string, actions: string[] }} f
  * @returns {AlertDraft & { cadence: any, priceDecimals: any }}
  */
@@ -126,7 +126,7 @@ export function buildDraft(f) {
     expiration: f.expiration,
     expiryMs: f.expiryMs,
     conditions: f.uiConds,
-    compiled: compileConditions(f.uiConds, t('Price'), f.objectName, f.level),
+    compiled: compileConditions(f.uiConds, t('Price'), f.objectName, f.level, f.extent || null),
     message: f.message,
     actions: f.actions,
   };
@@ -257,8 +257,10 @@ function openAlertDialog(ctx) {
   if (editing && existing.trigger) trigSel.value = existing.trigger;
   const exp = expirationControl(editing ? existing.expiration : undefined, editing ? existing.expiryMs : undefined);
   const objectName = isValue ? '' : /** @type {any} */ (getTool(d.tool) || {}).name || d.tool;
-  // the anchored drawing's fixed price level (hline), null otherwise -- compile input + live validation input
+  // the anchored drawing's data-space reduction -- compile input + live validation input: a fixed price
+  // (LEVEL category) or a polyline snapshot (SEGMENTS category); both null for other tools / Value alerts
   const level = d ? anchorLevel(d) : null;
+  const extent = d ? anchorExtent(d) : null;
   // Object dropdown options. Drawing alert: Price, the drawing, attached indicators (SMA, FVG, …), Value.
   // Value alert (from the manager, no chart object): just Price and Value.
   let objects;
@@ -304,9 +306,9 @@ function openAlertDialog(ctx) {
     listIntervals(),
     () => refreshTitle(),
   );
-  // TF only matters for the Moving family (condsUseTf, beside the compiler) -- hide the interval picker,
-  // and drop it from the title, for pure price-level conditions (Crossing / Greater / Less).
-  const usesTf = () => condsUseTf(conds.get());
+  // TF matters for the Moving family (condsUseTf, beside the compiler) AND for a segments-anchored drawing
+  // (its line evaluates on the alert-interval bar grid). Pure fixed-level conditions hide the picker.
+  const usesTf = () => condsUseTf(conds.get()) || !!extent;
   const syncTf = () => {
     interval.el.style.display = usesTf() ? '' : 'none';
   };
@@ -382,7 +384,7 @@ function openAlertDialog(ctx) {
   const brokerId = editing ? (existing && existing.broker) || null : /** @type {any} */ (pane).broker || null;
   // bind the real validation now that the button exists, and run it once so an edit of a dead alert opens honest
   validate = (ui) => {
-    const ok = conditionEvaluable(compileConditions(ui, t('Price'), objectName, level));
+    const ok = conditionEvaluable(compileConditions(ui, t('Price'), objectName, level, extent));
     warn.style.display = ok ? 'none' : '';
     create.disabled = !ok;
   };
@@ -398,6 +400,7 @@ function openAlertDialog(ctx) {
       dec,
       drawing: d,
       level,
+      extent,
       objectName,
       name: nameIn.value,
       enabled: enable.get(),
