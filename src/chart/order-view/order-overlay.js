@@ -501,16 +501,18 @@ export function createOrderOverlay(pane) {
     // LAYER 1 -- ACTIVE, always from the book: position entry + hedge SL/TP + EVERY working order. Never suppressed.
     const a = derive();
     const hasActive = a.entry != null || a.orders.length > 0 || a.hedgeStop != null || a.hedgeTarget != null;
-    // LAYER 2 -- PLAN. TWO cases, split by whether a position exists:
-    //   PRE-TRADE (FLAT): the planning projection + bracket seed.
-    //   POSITION OPEN: ONLY an ARMED ladder draws (live automation exits: watcher rules, NOT broker orders, so Layer 1
-    //     never draws them -- they must persist through the fill). An UNARMED plan is suppressed over a position: its
-    //     entry became either real broker orders (the dialog's bracket -- Layer 1 already draws those; drawing the plan
-    //     too doubled every level) or nothing to act on. The addon arms its bracket at the fill (watcher or manual), so
-    //     its exits always draw. The plan resumes when flat.
+    // LAYER 2 -- PLAN.
+    //   PLANNING (the user's own projection + bracket seed): draws while FLAT, and ALSO over an open position -- so
+    //     New order can start a fresh planning primitive without waiting to go flat. Placement clears the projection,
+    //     so a STALE plan can never double the just-placed order (that WAS the old reason to suppress it over a
+    //     position). Different new-order levels sit apart from the live order.
+    //   POSITION OPEN + ADDON-OWNED: only an ARMED ladder draws (live automation exits: watcher rules, NOT broker
+    //     orders, so Layer 1 never draws them -- they persist through the fill). An unarmed OWNED plan stays suppressed
+    //     over a position; the addon arms its bracket at the fill, so its exits draw via planLive.
     const armed = planActive && isArmed(pane.broker, pane.symbol);
     const planOwner = planActive ? getPlan(pane.broker, pane.symbol).owner || null : null; // addon mode: who owns the plan
-    const planPre = a.entry == null && planActive && isProjecting(pane.broker, pane.symbol); // pre-trade projection + seed
+    // flat -> always; over a position -> only the user's OWN (unowned) plan (an owned plan's live ladder is planLive)
+    const planPre = planActive && isProjecting(pane.broker, pane.symbol) && (a.entry == null || !planOwner); // planning projection + seed
     const planLive = a.entry != null && armed && isBracket(pane.broker, pane.symbol); // live automation exits over the position
     const planOn = planPre || planLive;
     if (!hasActive && !planOn) {
@@ -539,7 +541,7 @@ export function createOrderOverlay(pane) {
       // stops it riding; an unpinned market projection rides the live price. Either can be null -> no dot.
       const projPx = p.ref != null && Number.isFinite(Number(p.ref)) ? Number(p.ref) : px;
       if (projPx != null) {
-        projection = snap(projPx); // gray entry projection (planPre already guarantees we are flat)
+        projection = snap(projPx); // gray entry projection (rides the live price unless pinned to a ref)
         // render EVERY rung (level 0 = app bracket, 1+ = extra ladder from a multi-level caller), snapped to the
         // grid. Rungs draw when the BRACKET is projected *or* when individual legs exist without it (a kebab
         // piece dragged off the pill sets just its own leg). PURE READ: the rung-0 seeding is an ACTION

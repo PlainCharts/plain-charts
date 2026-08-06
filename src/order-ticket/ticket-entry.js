@@ -4,7 +4,7 @@
 // SL/TP column) with their Buy/Sell actions. Buy/Sell SEND a `place` command to the order
 // worker (the execution layer); no order logic here. Shared form state lives in ticket-state.js.
 import { command } from '../../data_engine/index.js';
-import { setProjecting } from '../chart/order-view/plan-store.js'; // newOrder clears the placed projection; all level writes go through planControl
+import { setProjecting, setLevels } from '../chart/order-view/plan-store.js'; // enterPlaced ends planning; newOrder re-begins it (arms a fresh projection); other level writes go through planControl
 import { state, getCtx, render } from './ticket-state.js';
 import { attachDist } from './ticket-levels.js';
 import { mktRow, buildQtTypeRow, syncLsSltp, seedSpinner } from './ticket-controls.js'; // shared form-control builders (leaf; also used by ticket-modify + ticket-top)
@@ -26,7 +26,9 @@ function enterPlaced(msg) {
   if (c.symbol) setProjecting(c.broker, c.symbol, false);
   render();
 }
-/** New Order: re-arm the dialog IN PLACE -- reset the form to fresh defaults, drop the projection, un-gray. No close. */
+/** New Order: re-arm the dialog IN PLACE -- reset the form to fresh defaults, un-gray, and RE-BEGIN planning with a
+ *  fresh projection. This is the entrance side of the cycle (place/cancel -> terminal -> New order -> plan again),
+ *  mirroring a dialog open. No close. */
 function newOrder() {
   state.placed = false;
   state.placedMsg = '';
@@ -40,7 +42,12 @@ function newOrder() {
   state.lsTif = 'gtc';
   state.lsGtdDate = '';
   const c = getCtx();
-  if (c.symbol) setProjecting(c.broker, c.symbol, false); // clear the placed projection -> clean slate
+  // New order only shows on entry tabs, so re-arm a fresh projection typed to the current tab -> a new planning
+  // primitive appears at the live price (same seed as opening the dialog).
+  if (c.symbol && (state.active === 'market' || state.active === 'limit' || state.active === 'stop')) {
+    setProjecting(c.broker, c.symbol, true);
+    setLevels(c.broker, c.symbol, { orderType: state.active, qty: state.mktVol });
+  }
   render();
 }
 /** the placed-state bottom block: the ack + a single New Order button in the Buy/Sell row's place. @returns {HTMLElement} */

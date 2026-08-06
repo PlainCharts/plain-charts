@@ -244,14 +244,16 @@ export function createPillView(pane, opts = {}) {
       }
     }
 
-    // PLANNING -- the projection entry (only while flat; armed reads as a live entry) + the stop/target ladder.
+    // PLANNING -- the projection entry + the stop/target ladder. The OVERLAY decides whether a projection exists
+    // (flat, or the user's OWN plan over an open position -- so New order can plan a fresh order without going flat);
+    // here we just draw whatever it passes. Armed reads as a live entry (the ENTRY label).
     // The projection pill is a CONTROLLER, not a dot: [ qty | B/S | type ] so far. The qty cell opens the number
     // picker and edits plan.qty (the dialog's Volume shows the same value); the B/S cell is a click-SWITCH that
     // flips plan.side buy<->sell (what the confirm will place); the type cell is a click-CYCLE through
     // market -> limit -> stop editing plan.orderType (the dialog's Market/Limit/Stop tabs mirror it); the X cell
     // DISMISSES the projection (Project off -- the dialog's checkbox unticks); the V cell PLACES the planned
     // order (the overlay sends the worker `place` and consumes the projection). Config from this primitive's JSON.
-    const proj = entry == null ? num(s.projection) : null;
+    const proj = num(s.projection); // draw whatever the overlay passes; it already gates flat vs over-a-position + owner
     if (proj != null) {
       projQty = num(s.projectionQty) || 1;
       projType = s.projectionType === 'limit' || s.projectionType === 'stop' ? s.projectionType : 'market';
