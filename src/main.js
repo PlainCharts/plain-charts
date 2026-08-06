@@ -8,7 +8,6 @@ import { loadMarketHoursStore } from './market/market-hours-store.js';
 import { initTimeframes } from './workspace/timeframes.js';
 import { initLayout, getActivePane } from './chart/layout.js';
 import { bus } from './bus.js';
-import { isProjecting, setProjecting, subscribe as subscribePlan } from './chart/order-view/plan-store.js';
 import { initSavedLayouts, loadLayouts } from './workspace/saved-layouts.js';
 import { initChartSettings } from './settings/chart-settings.js';
 import { initOptimizationSync } from './settings/sections/optimization.js'; // live cross-window apply of the Optimization knobs
@@ -121,7 +120,6 @@ async function start() {
     initShiftEnd(); // toolbar "Shift end of chart from right border" toggle
     initAutoScroll(); // toolbar auto-scroll (follow latest bar) toggle
     initChartOrderButton(); // toolbar "Order" button -> order ticket on this chart's broker + symbol
-    initChartProjectToggle(); // toolbar "Project order" toggle -> the on-chart controller, no dialog needed
     initStudies(); // indicators button + menu
     initStudyTemplates(); // indicator-templates button + menu
     initToolController(); // active drawing tool + click routing
@@ -185,31 +183,6 @@ function initChartOrderButton() {
     const p = /** @type {any} */ (getActivePane());
     d.openOrderTicket(p && p.symbol ? { symbol: p.symbol, broker: p.broker } : {});
   };
-}
-
-// Toolbar "Project order" TOGGLE: flip the shared projection for THIS chart's instrument -- the on-chart order
-// controller appears/disappears without opening the dialog (same plan state; the dialog's checkbox mirrors it).
-// Lit while the active pane's instrument is being projected; follows pane switches and any plan change.
-function initChartProjectToggle() {
-  const btn = document.getElementById('btnChartProject');
-  if (!btn) return;
-  const ctx = () => {
-    const p = /** @type {any} */ (getActivePane());
-    return p && p.symbol ? { b: p.broker || '', s: p.symbol } : null;
-  };
-  const sync = () => {
-    const c = ctx();
-    btn.classList.toggle('active', !!(c && isProjecting(c.b, c.s)));
-  };
-  btn.onclick = () => {
-    const c = ctx();
-    if (!c) return;
-    setProjecting(c.b, c.s, !isProjecting(c.b, c.s));
-    sync();
-  };
-  bus.on('pane:active', sync);
-  subscribePlan(sync);
-  sync();
 }
 
 start();

@@ -9,7 +9,7 @@ import { state, getCtx, render } from './ticket-state.js';
 import { attachDist } from './ticket-levels.js';
 import { mktRow, buildQtTypeRow, syncLsSltp, seedSpinner } from './ticket-controls.js'; // shared form-control builders (leaf; also used by ticket-modify + ticket-top)
 import { resolveMktInst, applyMktInst, wireStakePreview } from './ticket-quotes.js'; // the ticket's market-data feed: instrument resolve + quote sub + stake preview
-import { syncFields, buildProjectToggle } from './ticket-plan-sync.js';
+import { syncFields } from './ticket-plan-sync.js';
 import { sideForSetup, buildPlaceIntent } from './order-intent.js'; // pure domain rules (direction gate + place-intent) -- no DOM/store
 import { planControl } from './plan-control.js'; // the ONE seam for field -> plan-store writes (owns the flip/snap/pivot + isProjecting guard)
 import { t } from '../i18n/i18n.js'; // vocabulary lookup -- the order ticket is the execution layer; every word here is overridable
@@ -173,15 +173,8 @@ export function buildMarketForm() {
     slDist.recompute();
     tpDist.recompute();
   };
-  // Project order -- ONE checkbox under Target (row 4): it draws the on-chart entry dot, and the Stop/Target fields draw
-  // their own dots (one side or both) as they're set. There is no Bracket toggle: a set Stop/Target IS the bracket, and
-  // it always rides with the order. (The 2-sided auto-projection is now an automation-addon concern, not a dialog control.)
-  const projT = buildProjectToggle();
-  const toggles = document.createElement('div');
-  toggles.className = 'ot-mkt-toggles';
-  toggles.style.gridColumn = '1 / 3';
-  toggles.style.gridRow = '5';
-  toggles.append(projT);
+  // No Project toggle: the planning projection is bound to the dialog now -- an open entry tab IS a planning session
+  // (window.js arms on open, ends on close/place/cancel). A set Stop/Target IS the bracket and rides with the order.
   // Buy/Sell + the order-ack status live in the SHARED bottom block (buildMarketActions), assembled by renderBody the
   // SAME way as the Limit/Stop actions -- so the bottom bar sits in one identical place on every entry tab.
   // Qt type in the Volume row, col 2 -> gutter so its box reaches the content edge (same right edge as the Limit/Stop
@@ -222,7 +215,7 @@ export function buildMarketForm() {
   qt.style.gridColumn = '1 / 2';
   qt.style.gridRow = '1'; // Qt type in col1, ABOVE Volume
   syncStake();
-  grid.append(vol.row, sl.row, tp.row, toggles, qt, stakeRow, slDist.row, tpDist.row);
+  grid.append(vol.row, sl.row, tp.row, qt, stakeRow, slDist.row, tpDist.row);
   // SL/TP are the BRACKET on every account type -- always active (the broker places a server-side OCO from them, hedging
   // attaches them to the position). The red/green chart beads mirror these fields via the plan store (syncFields).
   applyMktInst();

@@ -7,7 +7,7 @@ import { getJSON } from '../api.js';
 import { platform, livePosition } from '../../data_engine/index.js';
 import { listAccounts } from '../connect/accounts.js';
 import { state } from './ticket-state.js';
-import { syncToggle, syncFields } from './ticket-plan-sync.js';
+import { syncFields } from './ticket-plan-sync.js';
 import { syncLsSltp } from './ticket-controls.js';
 import { t } from '../i18n/i18n.js'; // vocabulary lookup
 
@@ -185,7 +185,6 @@ export function populateAccounts(sel) {
   sel.onchange = () => {
     const a = accts[Number(sel.value)];
     if (a) state.selectedAccount = { broker: a.broker, accountId: a.accountId, hedging: !!a.hedging };
-    syncToggle();
     syncFields();
     syncLsSltp();
   };
@@ -250,7 +249,6 @@ function buildSymbolCombo() {
     state.symbolBroker = s.broker;
     input.value = s.symbol;
     close();
-    syncToggle();
   };
   /** @param {string} [filter] */
   const fill = (filter) => {
@@ -304,7 +302,6 @@ function buildSymbolCombo() {
   };
   input.onchange = () => {
     state.symbolValue = input.value;
-    syncToggle();
   };
   return combo;
 }

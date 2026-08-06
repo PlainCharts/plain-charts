@@ -64,8 +64,6 @@ export const state = {
   /** @type {{ vol?: HTMLInputElement, price: HTMLInputElement, sl?: HTMLInputElement, tp?: HTMLInputElement, slDist?: HTMLInputElement, tpDist?: HTMLInputElement }|null} */ lsInputs:
     null,
   /** @type {{ sl: HTMLElement, tp: HTMLElement, slDist?: HTMLElement, tpDist?: HTMLElement }|null} */ lsSltpRows: null, // the SL/TP grid column rows (+ their Dist rows) -- dimmed/disabled on netting accounts
-  // Project checkbox ref (plan-sync reflects the plan store into it)
-  /** @type {HTMLInputElement|null} */ projectCb: null,
   // the universal VISIBILITY / HIDE ON ENTRY frame's re-sync (set ONCE by buildVisibilityFrame; render() calls it on a
   // tab / symbol switch to re-target the toggles to the current ctx). NOT reset by renderBody -- the frame is persistent.
   /** @type {(() => void)|null} */ syncVis: null,

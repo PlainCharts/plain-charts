@@ -6,23 +6,11 @@
 // lives in the store (not this window), it OUTLIVES the dialog -- closing the window
 // leaves the dot on the chart; reopening reflects it. Pure UI: nothing is sent to a broker.
 // Shared state lives in ticket-state.js.
-import {
-  isProjecting,
-  setProjecting,
-  getPlan,
-  setLevels,
-  subscribe as subscribePlan,
-} from '../chart/order-view/plan-store.js';
+import { isProjecting, getPlan, subscribe as subscribePlan } from '../chart/order-view/plan-store.js';
 import { state, getCtx, render } from './ticket-state.js';
 import { snapToTick } from './order-intent.js'; // shared tick-snap (pure) -- keep displayed levels on the instrument grid
 import { t } from '../i18n/i18n.js'; // terminal-state status string
 
-export const syncToggle = () => {
-  if (state.projectCb && state.projectCb.isConnected) {
-    const c = getCtx();
-    state.projectCb.checked = isProjecting(c.broker, c.symbol);
-  }
-};
 // reflect the plan's bracket LEVELS in the Market tab SL/TP fields (a chart bead drag -> the fields), on EVERY account
 // type -- the SL/TP fields and the red/green beads are two views of ONE bracket plan. Only while bracket is on; never
 // overwrites a field the user is actively editing (activeElement guard). The Stop/Limit tabs are NOT part of the bracket.
@@ -113,31 +101,6 @@ subscribePlan(() => {
   }
   lastKey = key;
   wasProjecting = now;
-  syncToggle();
   syncFields();
   syncTab();
-}); // any plan change (drag, another window, snapshot) -> refresh the toggles + fields + tab
-
-/** @returns {HTMLElement} the Project-order checkbox (an inline label, hung on the Stop Loss row) */
-export function buildProjectToggle() {
-  const lab = document.createElement('label');
-  lab.className = 'ot-check';
-  lab.title = 'Draw a gray planning dot on the chart for this symbol (nothing is sent to a broker)';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.className = 'ot-check-box';
-  state.projectCb = cb;
-  const c = getCtx();
-  cb.checked = isProjecting(c.broker, c.symbol);
-  // turning Project ON seeds plan.qty from the current Volume and plan.orderType from this tab (market), so
-  // the pill opens showing the dialog's numbers
-  cb.onchange = () => {
-    const x = getCtx();
-    setProjecting(x.broker, x.symbol, cb.checked);
-    if (cb.checked) setLevels(x.broker, x.symbol, { qty: state.mktVol, orderType: 'market' });
-  };
-  const txt = document.createElement('span');
-  txt.textContent = 'Project order';
-  lab.append(cb, txt);
-  return lab;
-}
+}); // any plan change (drag, another window, snapshot) -> refresh the fields + tab
