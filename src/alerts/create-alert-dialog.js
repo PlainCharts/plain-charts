@@ -19,17 +19,19 @@ import {
   selectOf,
   enableToggle,
   expirationControl,
-  conditionsControl,
+  conditionsListControl,
   actionsControl,
   messageControl,
   intervalControl,
 } from './dialog-controls.js'; // pure DOM form-control builders (view leaf)
+import { openConditionDialog } from './condition-dialog.js'; // the progressive Add/Edit-condition dialog
 import {
   anchorLevel,
   anchorExtent,
   compileConditions,
   isRelativeConds,
   condsUseTf,
+  isMoveOp,
   TIME_TOOLS,
 } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
 import { openCreateTimeAlertDialog } from './create-time-alert-dialog.js'; // a TIME-category drawing (vline) routes there
@@ -341,15 +343,8 @@ function openAlertDialog(ctx) {
       };
     }
   }
-  /** @type {Record<string, { key:string, name:string }[]>} */
-  const plotsByLabel = {};
-  for (const [label, s] of Object.entries(seriesByLabel)) if (s.plots.length > 1) plotsByLabel[label] = s.plots;
-  // Object dropdown options. Drawing alert: Price, the drawing, attached studies, Value. Value alert (from
-  // the manager, no chart object): Price, the active chart's studies, Value.
-  const studyOpts = Object.keys(seriesByLabel);
-  const objects = isValue ? [t('Price'), ...studyOpts, t('Value')] : [t('Price'), objectName, ...studyOpts, t('Value')];
-  // A new Value alert prefills the Value column with the symbol's current price (last bar close on the active
-  // chart), rounded to the instrument's decimals — so the user tweaks a number instead of starting from blank.
+  // Prefills: an edit shows the record's rows; a watchlist alert opens relative (Moving %); a Value alert
+  // opens at the live price; a drawing alert opens with Price Crossing the drawing.
   const initRows =
     editing && existing.conditions
       ? existing.conditions.conditions
@@ -357,22 +352,47 @@ function openAlertDialog(ctx) {
         ? [{ left: t('Price'), op: 'Moving Up %', right: '', value: null, percent: 1, lookback: 1 }]
         : isValue
           ? [{ left: t('Price'), op: 'Crossing', right: t('Value'), value: lastPrice(pane) }]
-          : undefined;
+          : [{ left: t('Price'), op: 'Crossing', right: objectName, value: null }];
   // decimals for rounding the Value: the current chart's for a NEW alert; for an EDIT, the record's own
   // precision (priceDecimalsOf: stamped at creation, legacy fallback to the stored values' precision).
   const dec = editing ? priceDecimalsOf(existing) : pane.priceDecimals;
   const initMatch = editing && existing.conditions ? existing.conditions.match : undefined;
+  // One condition = one SENTENCE in the list ("Price Crossing 7700", "RSI 14 Greater Than 70 · RSI").
+  // The Value side reads as its number; a multi-plot study appends its chosen band's name.
+  const sentence = (/** @type {any} */ r) => {
+    if (!r) return '';
+    if (isMoveOp(r.op)) {
+      const isPct = /%\s*$/.test(String(r.op));
+      const base = t(String(r.op).replace(/\s*%\s*$/, ''));
+      const mag = isPct ? (r.percent != null ? r.percent + '%' : '') : r.amount != null ? String(r.amount) : '';
+      const n = Number(r.lookback);
+      const bars = Number.isFinite(n) ? t('in') + ' ' + n + ' ' + t('bar') : '';
+      return [r.left, base, mag, bars].filter(Boolean).join(' ');
+    }
+    const side = (/** @type {string} */ sd) => (sd === t('Value') && r.value != null ? String(r.value) : sd);
+    let txt = [side(r.left), t(r.op), side(r.right)].filter(Boolean).join(' ');
+    const studySide = seriesByLabel[r.right] ? r.right : seriesByLabel[r.left] ? r.left : null;
+    if (r.plot && studySide && (seriesByLabel[studySide].plots || []).length > 1) {
+      const p = seriesByLabel[studySide].plots.find((/** @type {any} */ x) => x.key === r.plot);
+      txt += ' · ' + ((p && p.name) || r.plot);
+    }
+    return txt;
+  };
   // condition changes drive the watchlist-scope guard, the interval picker's visibility (TF only matters for the
   // Moving family), and the live title. Extended once the interval control exists.
   let onCondsChange = (/** @type {any} */ ui) => applyGuard(ui);
-  const conds = conditionsControl(
-    objects,
-    initRows,
-    dec,
-    initMatch,
-    (/** @type {any} */ ui) => onCondsChange(ui),
-    plotsByLabel,
-  );
+  const conds = conditionsListControl(initRows, initMatch, {
+    sentence,
+    openEditor: (row, done) =>
+      openConditionDialog({
+        row: row || undefined,
+        ctx: { objectName, seriesByLabel, dec },
+        level,
+        extent,
+        onDone: done,
+      }),
+    onChange: (/** @type {any} */ ui) => onCondsChange(ui),
+  });
   // The alert's OWN interval (the bar granularity it watches) -- set here, defaulting to the chart's current tf,
   // never silently bound to it. This is the alert's tf/tfObj; a Moving % window is measured over bars at it.
   // The segment row is a SHORT few; the full list lives under "Other" (never dump every interval as a segment).

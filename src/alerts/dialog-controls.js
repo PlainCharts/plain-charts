@@ -5,7 +5,6 @@
 // openers; nothing here reaches into the engine.
 import { t } from '../i18n/i18n.js';
 import { openDateTimePicker, formatDateTime } from '../ui/datetime-picker.js';
-import { MOVE_OPS, isMoveOp } from './alert-conditions.js'; // the Moving op family (one home: the condition semantics)
 
 /** @param {string} tag @param {string | null} [cls] @param {string} [txt] @returns {HTMLElement} */
 export const el = (tag, cls, txt) => {
@@ -24,10 +23,7 @@ export const roundPrice = (v, dec) => {
 // Expiration presets + the per-control option lists — LABELS ONLY (no sub-text). Trigger cadences
 // live with the dialog (it owns that choice via selectOf); these lists are consumed inside their own controls here.
 const EXPIRATIONS = ['Open-ended', 'End of day', '1 week', '1 month', 'Custom date'];
-// Condition operators between the two objects (left = symbol price, right = the drawing).
-const CONDITIONS = ['Crossing', 'Crossing Up', 'Crossing Down', 'Greater Than', 'Less Than'];
-// Relative (symbol-self) operators -- close moved over N bars; no right Object/Value. The list + the
-// isMoveOp predicate live with the condition semantics (alert-conditions.js), imported at the top.
+// (Condition operators live with the Add-condition dialog now -- conditions here are a sentence LIST.)
 // Message placeholder tokens — clicked into the message text; the engine substitutes them when the
 // alert fires. Kept as literal `#tags` (NOT translated) so a message is portable across languages.
 const PLACEHOLDERS = ['#symbol', '#broker', '#interval', '#timenow', '#price'];
@@ -296,86 +292,19 @@ export function expirationControl(initKind, initMs) {
   return { el: btn, kind: () => kind, ms: () => resolveExpiry(kind, customMs) };
 }
 
-// Conditions table: "If <All> of the following conditions are met" + a 3-column table
-// (Object | Condition | Object). Both Object columns are dropdowns over `objects` — Price, the drawing,
-// and any indicators attached to the chart (SMA, FVG, …); the middle Condition is the operator. Clicking a
-// row selects it; add appends + selects, remove deletes the selection (no edit — dropdowns are inline). Returns { el, get() }.
-/** @param {string[]} objects  option labels: Price first, the drawing second, then attached studies
- *  @param {any[]} [initRows]  existing condition rows (edit mode)
- *  @param {number} [dec]  instrument price decimals (round the Value input)
- *  @param {string} [initMatch]  saved match mode ('All' | 'Any') to restore in edit mode
- *  @param {(ui: any) => void} [onChange]  fired on any value change (op/object/add/remove/value/plot) with the current get()
- *  @param {Record<string, { key:string, name:string }[]>} [plotsByLabel]  a multi-plot study label -> its plot
- *    options; when a row's object side is one, the Value column becomes a PLOT dropdown (Basis/Upper/Lower)
+// Conditions LIST: the alert dialog shows each condition as ONE SENTENCE ("Price Crossing 7700") -- no
+// column grid, so any alert family fits without new columns. Crafting/editing happens in the Add-condition
+// dialog (the caller wires openEditor); this widget lists, adds, edits, removes, and owns the All/Any line.
+/** @param {any[]} [initRows]  existing condition rows (edit mode / entry-flow prefill)
+ *  @param {string} [initMatch]  saved match mode ('All' | 'Any')
+ *  @param {{ sentence: (r: any) => string, openEditor: (row: (any|null), done: (row: any) => void) => void,
+ *    onChange?: (ui: any) => void }} [opts]
  *  @returns {{ el: HTMLElement, get: () => any }} */
-export function conditionsControl(objects, initRows, dec, initMatch, onChange, plotsByLabel) {
-  const OBJ = objects.length ? objects : [t('Price')];
-  const defLeft = OBJ[0],
-    defRight = OBJ[1] || OBJ[0];
-  const valueLabel = t('Value'); // the special "literal price" object — shows a numeric input in the Value column
-  /** @type {{ left: string, op: string, right: string, value: (number|null), percent: (number|null), amount: (number|null), lookback: (number|null), plot: (string|null) }[]} */
-  const rows =
-    initRows && initRows.length
-      ? initRows.map((/** @type {any} */ r) => ({
-          left: r.left,
-          op: r.op,
-          right: r.right,
-          value: r.value != null ? r.value : null,
-          percent: r.percent != null ? r.percent : null,
-          amount: r.amount != null ? r.amount : null,
-          lookback: r.lookback != null ? r.lookback : null,
-          plot: r.plot != null ? r.plot : null,
-        }))
-      : [
-          {
-            left: defLeft,
-            op: 'Crossing',
-            right: defRight,
-            value: null,
-            percent: null,
-            amount: null,
-            lookback: null,
-            plot: null,
-          },
-        ];
-  const usesValue = (/** @type {any} */ r) => r.left === valueLabel || r.right === valueLabel;
-  // the multi-plot study a row targets (either side), or null -- drives the plot dropdown in the Value column
-  const plotsFor = (/** @type {any} */ r) => (plotsByLabel && (plotsByLabel[r.right] || plotsByLabel[r.left])) || null;
-  // the public snapshot of the form -- shared by get() and the onChange notification.
-  const readAll = () => ({
-    match: matchSel.value,
-    conditions: rows.map((r) => ({
-      left: r.left,
-      op: r.op,
-      right: r.right,
-      value: r.value != null ? roundPrice(r.value, dec) : null,
-      percent: r.percent != null ? r.percent : null,
-      amount: r.amount != null ? roundPrice(r.amount, dec) : null,
-      lookback: r.lookback != null ? r.lookback : null,
-      plot: r.plot != null ? r.plot : null,
-    })),
-  });
-  // value/plot edits change what compiles without re-rendering the table -- notify so validation reruns live
-  const notify = () => {
-    if (onChange) onChange(readAll());
-  };
-
+export function conditionsListControl(initRows, initMatch, opts = { sentence: () => '', openEditor: () => {} }) {
+  /** @type {any[]} */
+  const rows = (initRows || []).map((r) => ({ ...r }));
   const wrap = el('div', 'aldlg-cond');
-
-  /** @param {string} val @param {(v: string) => void} onset @returns {HTMLSelectElement} */
-  const objSel = (val, onset) => {
-    const s = /** @type {HTMLSelectElement} */ (el('select', 'aldlg-cond-op'));
-    OBJ.forEach((o) => {
-      const op = /** @type {HTMLOptionElement} */ (el('option', null, o));
-      op.value = o;
-      s.appendChild(op);
-    });
-    s.value = val;
-    s.onchange = () => onset(s.value);
-    return s;
-  };
-
-  // "If [All | Any] of the following conditions are met" -- All = every row must fire, Any = at least one.
+  // "If [All | Any] of the following conditions are met" -- All = every condition must fire, Any = at least one.
   const matchLine = el('div', 'aldlg-cond-match');
   const matchSel = /** @type {HTMLSelectElement} */ (el('select', 'aldlg-cond-msel'));
   ['All', 'Any'].forEach((o) => {
@@ -389,183 +318,51 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange, p
     matchSel,
     document.createTextNode(' ' + t('of the following conditions are met')),
   );
+  const readAll = () => ({ match: matchSel.value, conditions: rows.map((r) => ({ ...r })) });
+  const notify = () => {
+    if (opts.onChange) opts.onChange(readAll());
+  };
+  matchSel.onchange = notify;
 
-  // table (4 columns: Object | Condition | Object | Value — the Value cell holds a number input when a side is "Value")
-  const table = el('div', 'aldlg-cond-table aldlg-cond-4col');
-  const hrow = el('div', 'aldlg-cond-row aldlg-cond-head');
-  hrow.append(
-    el('div', 'aldlg-cond-cell', t('Object')),
-    el('div', 'aldlg-cond-cell', t('Condition')),
-    el('div', 'aldlg-cond-cell', t('Object')),
-    el('div', 'aldlg-cond-cell', t('Value')),
-  );
-  const bodyEl = el('div', 'aldlg-cond-tbody');
-  table.append(hrow, bodyEl);
-
-  // add / remove — remove acts on the SELECTED row (no "edit": the row's dropdowns are inline-editable)
+  const listEl = el('div', 'aldlg-clist');
   const acts = el('div', 'aldlg-cond-acts');
-  const addLink = el('span', 'aldlg-cond-act', t('add'));
-  const removeLink = el('span', 'aldlg-cond-act', t('remove'));
-  acts.append(addLink, removeLink);
-
-  let sel = 0;
-  /** @type {HTMLElement[]} */
-  const rowEls = [];
-  const applySel = () => {
-    rowEls.forEach((rw, i) => rw.classList.toggle('sel', i === sel));
-    const has = sel >= 0 && sel < rows.length;
-    removeLink.classList.toggle('disabled', !has || rows.length <= 1);
-  };
-  const render = () => {
-    bodyEl.innerHTML = '';
-    rowEls.length = 0;
-    rows.forEach((r, i) => {
-      const row = el('div', 'aldlg-cond-row');
-      // changing either Object re-renders so the Value input appears/disappears when "Value" is (de)selected
-      const c1 = el('div', 'aldlg-cond-cell');
-      c1.appendChild(
-        objSel(r.left, (v) => {
-          r.left = v;
-          r.value = null; // a Value belongs to the pairing it was typed for -- a new object gets a fresh 0
-          render();
-        }),
-      );
-      const opSel = /** @type {HTMLSelectElement} */ (el('select', 'aldlg-cond-op'));
-      [...CONDITIONS, ...MOVE_OPS].forEach((o) => {
-        const op = /** @type {HTMLOptionElement} */ (el('option', null, t(o)));
-        op.value = o;
-        opSel.appendChild(op);
-      });
-      opSel.value = r.op;
-      opSel.onchange = () => {
-        r.op = opSel.value;
-        render();
-      }; // re-render: Moving % swaps the right cells
-      const c2 = el('div', 'aldlg-cond-cell');
-      c2.appendChild(opSel);
-      // small numeric input helper (shared by Value + the Moving % percent/lookback fields)
-      /** @param {number|null} v @param {string} step @param {(n:number|null)=>void} set @param {string} [ph] */
-      const numIn = (v, step, set, ph) => {
-        const i = /** @type {HTMLInputElement} */ (el('input', 'aldlg-cond-vinput'));
-        i.type = 'number';
-        i.step = step;
-        i.value = v != null ? String(v) : '';
-        if (ph) i.placeholder = ph;
-        i.oninput = () => set(i.value === '' ? null : parseFloat(i.value));
-        i.onclick = (e) => e.stopPropagation();
-        return i;
-      };
-      /** @type {HTMLElement} */ let c3;
-      /** @type {HTMLElement} */ let c4;
-      if (isMoveOp(r.op)) {
-        // Moving "[magnitude] in [N] bar" -- self-referential, no right Object/Value. N is a count of the alert's
-        // OWN interval bars. The "%" ops take a percent; the base Moving Up/Down take an absolute price amount.
-        const pct = /%\s*$/.test(r.op);
-        if (r.lookback == null) r.lookback = 1;
-        c3 = el('div', 'aldlg-cond-cell aldlg-cond-move');
-        if (pct) {
-          if (r.percent == null) r.percent = 1;
-          c3.append(
-            numIn(r.percent, 'any', (n) => {
-              r.percent = n;
-            }),
-            el('span', 'aldlg-cond-unit', '%'),
-          );
-        } else {
-          c3.append(
-            numIn(
-              r.amount != null ? roundPrice(r.amount, dec) : null,
-              'any',
-              (n) => {
-                r.amount = n;
-              },
-              t('Price'),
-            ),
-          );
-        }
-        c4 = el('div', 'aldlg-cond-cell aldlg-cond-move');
-        c4.append(
-          el('span', 'aldlg-cond-unit', t('in')),
-          numIn(r.lookback, '1', (n) => {
-            r.lookback = n == null ? null : Math.trunc(n);
-          }),
-          el('span', 'aldlg-cond-unit', t('bar')),
-        );
-      } else {
-        c3 = el('div', 'aldlg-cond-cell');
-        c3.appendChild(
-          objSel(r.right, (v) => {
-            r.right = v;
-            r.value = null; // a Value belongs to the pairing it was typed for -- a new object gets a fresh 0
-            render();
-          }),
-        );
-        // Value column, contextual: a PLOT dropdown when a side is a multi-plot study (pick the band), a
-        // number input when a side is "Value" (a plain SCALE-AGNOSTIC number -- a price against Price, an
-        // indicator level against a study; defaults to 0, never a "Price" hint). A multi-plot study AGAINST
-        // a Value shows both: the band picker and its threshold.
-        c4 = el('div', 'aldlg-cond-cell aldlg-cond-valcell');
-        const plots = plotsFor(r);
-        if (plots && plots.length > 1) {
-          if (!r.plot || !plots.some((p) => p.key === r.plot)) r.plot = plots[0].key;
-          const ps = /** @type {HTMLSelectElement} */ (el('select', 'aldlg-cond-op'));
-          plots.forEach((p) => {
-            const o = /** @type {HTMLOptionElement} */ (el('option', null, p.name || p.key));
-            o.value = p.key;
-            ps.appendChild(o);
-          });
-          ps.value = /** @type {string} */ (r.plot);
-          ps.onchange = () => {
-            r.plot = ps.value;
-            notify();
-          };
-          c4.appendChild(ps);
-        }
-        if (usesValue(r)) {
-          if (r.value == null) r.value = 0;
-          c4.appendChild(
-            numIn(roundPrice(r.value, dec), 'any', (n) => {
-              r.value = n;
-              notify();
-            }),
-          );
-        }
-      }
-      row.append(c1, c2, c3, c4);
-      row.onclick = () => {
-        sel = i;
-        applySel();
-      };
-      bodyEl.appendChild(row);
-      rowEls.push(row);
-    });
-    applySel();
-    if (onChange) onChange(readAll()); // let the dialog react (e.g. gate watchlist scope on relative-only rows)
-  };
-  addLink.onclick = () => {
-    rows.push({
-      left: defLeft,
-      op: 'Crossing',
-      right: defRight,
-      value: null,
-      percent: null,
-      amount: null,
-      lookback: null,
-      plot: null,
-    });
-    sel = rows.length - 1;
-    render();
-  };
-  removeLink.onclick = () => {
-    if (sel >= 0 && sel < rows.length && rows.length > 1) {
-      rows.splice(sel, 1);
-      sel = Math.min(sel, rows.length - 1);
+  const addLink = el('span', 'aldlg-cond-act', '+ ' + t('Add condition'));
+  addLink.onclick = () =>
+    opts.openEditor(null, (row) => {
+      rows.push(row);
       render();
-    }
+      notify();
+    });
+  acts.append(addLink);
+
+  const render = () => {
+    listEl.innerHTML = '';
+    if (!rows.length) listEl.appendChild(el('div', 'aldlg-clist-empty', t('No conditions set')));
+    rows.forEach((r, i) => {
+      const rowEl = el('div', 'aldlg-clist-row');
+      rowEl.appendChild(el('span', 'aldlg-clist-txt', opts.sentence(r)));
+      const edit = el('span', 'aldlg-clist-btn', '✎');
+      edit.title = t('Edit condition');
+      edit.onclick = () =>
+        opts.openEditor({ ...r }, (row) => {
+          rows[i] = row;
+          render();
+          notify();
+        });
+      const del = el('span', 'aldlg-clist-btn', '✕');
+      del.title = t('remove');
+      del.onclick = () => {
+        rows.splice(i, 1);
+        render();
+        notify();
+      };
+      rowEl.append(edit, del);
+      listEl.appendChild(rowEl);
+    });
   };
   render();
 
-  wrap.append(matchLine, table, acts);
+  wrap.append(matchLine, listEl, acts);
   return { el: wrap, get: readAll };
 }
 

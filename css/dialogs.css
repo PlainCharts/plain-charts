@@ -141,6 +141,17 @@
 .aldlg-cond-head .aldlg-cond-cell { color: var(--tx-dim); font-weight: 600; }
 .aldlg-cond-op { width: 100%; background: var(--field); color: var(--tx); border: 1px solid var(--bd);
                  border-radius: 5px; padding: 5px 6px; font-size: 13px; }
+/* ---- conditions sentence LIST (the alert dialog): one written-out condition per row ---- */
+.aldlg-clist { display: flex; flex-direction: column; border: 1px solid var(--bd-soft); border-radius: 6px; }
+.aldlg-clist-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: 13px; color: var(--tx); }
+.aldlg-clist-row + .aldlg-clist-row { border-top: 1px solid var(--bd-soft); }
+.aldlg-clist-row:hover { background: var(--hover); }
+.aldlg-clist-txt { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aldlg-clist-btn { cursor: pointer; color: var(--tx-dim); visibility: hidden; }
+.aldlg-clist-row:hover .aldlg-clist-btn { visibility: visible; }
+.aldlg-clist-btn:hover { color: var(--tx); }
+.aldlg-clist-empty { padding: 10px; color: var(--tx-dim); font-size: 13px; }
+
 /* ---- Add/Edit condition dialog: a narrow progressive form (controls appear as the user picks) ---- */
 .acond-dlg { width: 340px; }
 .acond-body { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 4px; }
