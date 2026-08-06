@@ -11,7 +11,16 @@ import { alertLogMirror } from './log-store.js'; // the read-only mirror of the 
 import { lastSeenLogAt, markLogSeen, unseenCount } from './alert-badge.js'; // unseen-fires badge (derived from the Log)
 import { alertCommand } from './funnel.js';
 import { condLines, isAny, restartPatch, sourceOf, alertType } from './alert-record.js'; // pure record accessors (schema's one home)
-import { statusText, timeAlertLine, tfSuffix, descOf, nameOf, cardScope, firedAt } from './alerts-format.js'; // pure display derivations (row descriptor, name, card scope, status, last-fired)
+import {
+  statusText,
+  condUnsupported,
+  timeAlertLine,
+  tfSuffix,
+  descOf,
+  nameOf,
+  cardScope,
+  firedAt,
+} from './alerts-format.js'; // pure display derivations (row descriptor, name, card scope, status, last-fired)
 import { SORT_GROUPS, cmpOf } from './alerts-sort.js'; // the toolbar sort model (comparator groups + key->comparator)
 import { menuRows } from './alerts-menu.js'; // shared dwg-menu row builders (item/check/combo/opt/pref) for the ⋯ menus
 import { createSymTfFilter } from './alerts-filter.js'; // the two-axis symbol/interval filter (one instance per tab)
@@ -282,7 +291,8 @@ export function initAlertsPanel() {
       if (alertShowName()) col.appendChild(el('div', 'al-title', nameOf(a)));
       if (alertShowMessage() && a.message) col.appendChild(el('div', 'al-msg', String(a.message)));
       const sub = el('div', 'al-sub');
-      const dot = el('span', 'al-dot' + (a.enabled ? ' on' : ''));
+      // an unsupported condition shows a warning dot even while "enabled" -- it will never fire
+      const dot = el('span', 'al-dot' + (condUnsupported(a) ? ' warn' : a.enabled ? ' on' : ''));
       const fa = firedAt(a);
       const showLT = alertShowLastTriggered() && fa;
       const line = descOf(a) + ' • ' + statusText(a) + (showLT ? ' • ' + fmtAlertTime(fa) : '');

@@ -4,13 +4,18 @@
 // alert's schedule line, and the "last fired" timestamp. Record shape is read only through alert-record.js
 // (the schema's one home); these turn those reads into user-facing text. DOM-free and testable in Node.
 import { statusOf, sourceOf, applyOf, usesTimeframe } from './alert-record.js';
+import { conditionEvaluable } from './eval.js'; // the can-this-ever-fire predicate (shared with the host's arming)
 import { fmtAlertTime } from './alert-display.js';
 import { t } from '../i18n/i18n.js';
+
+/** a PRICE alert whose compiled condition can never fire (e.g. anchored to a drawing the engine doesn't
+ * support yet) -- the row must say so instead of a lying "Active". @param {any} a @returns {boolean} */
+export const condUnsupported = (a) => sourceOf(a) === 'price' && !conditionEvaluable(a && a.compiled);
 
 // condLines / isAny (record-shape reads) live in alert-record.js. statusText maps the pure status KEY to a label.
 const STATUS_LABEL = { active: 'Active', triggered: 'Triggered', stopped: 'Stopped' };
 /** @param {any} a */
-export const statusText = (a) => t(STATUS_LABEL[statusOf(a)]);
+export const statusText = (a) => (condUnsupported(a) ? t('Unsupported') : t(STATUS_LABEL[statusOf(a)]));
 
 /** a time alert's schedule as a one-line label ("Daily 20:10", "Jul 22 20:10"). @param {any} a */
 export const timeAlertLine = (a) => {

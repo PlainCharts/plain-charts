@@ -26,7 +26,7 @@ import {
 } from './dialog-controls.js'; // pure DOM form-control builders (view leaf)
 import { anchorLevel, compileConditions, isRelativeConds, condsUseTf } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
 import { priceDecimalsOf } from './alert-record.js'; // a record's Value precision (schema's one home)
-import { cadenceOf } from './eval.js'; // compile the Trigger label -> stable cadence key (host reads the field, not the label)
+import { cadenceOf, conditionEvaluable } from './eval.js'; // stable cadence key + the can-this-ever-fire predicate (live validation)
 import { alertForObject } from './alert-drawing-sync.js'; // edit mode: the existing alert on this drawing (drawing<->alert glue lives there)
 import { alertCommand } from './funnel.js'; // the single mutator path to the alert-host
 import { byId as tfById, listIntervals, favTimeframes, firstTf } from '../workspace/timeframes.js'; // the alert's own interval picker + tf id -> {id,unit,n}
@@ -257,6 +257,8 @@ function openAlertDialog(ctx) {
   if (editing && existing.trigger) trigSel.value = existing.trigger;
   const exp = expirationControl(editing ? existing.expiration : undefined, editing ? existing.expiryMs : undefined);
   const objectName = isValue ? '' : /** @type {any} */ (getTool(d.tool) || {}).name || d.tool;
+  // the anchored drawing's fixed price level (hline), null otherwise -- compile input + live validation input
+  const level = d ? anchorLevel(d) : null;
   // Object dropdown options. Drawing alert: Price, the drawing, attached indicators (SMA, FVG, …), Value.
   // Value alert (from the manager, no chart object): just Price and Value.
   let objects;
@@ -321,10 +323,17 @@ function openAlertDialog(ctx) {
     const iv = usesTf() ? interval.get() : '';
     symSpan.textContent = scopeText() + (iv ? ', ' + iv : '');
   };
+  // LIVE validation: compile the current rows exactly as Create would and test the shared can-ever-fire
+  // predicate. An unsupported condition (e.g. anchored to a drawing the engine can't evaluate yet) shows the
+  // warning and disables Create -- the dialog must never save an alert that silently never fires. The real
+  // implementation is bound after the footer exists (it needs the Create button); this stub covers the
+  // construction-time onChange, same idiom as refreshTitle.
+  let validate = (/** @type {any} */ _ui) => {};
   onCondsChange = (/** @type {any} */ ui) => {
     applyGuard(ui);
     syncTf();
     refreshTitle();
+    validate(ui);
   };
   syncTf();
   refreshTitle();
@@ -352,9 +361,11 @@ function openAlertDialog(ctx) {
       b.appendChild(msg.el);
     }),
   );
+  const warn = el('div', 'aldlg-warn', t('This condition is not supported yet, so the alert would never fire.'));
+  warn.style.display = 'none';
   colR.append(
     section(t('Conditions'), (b) => {
-      b.append(interval.el, conds.el);
+      b.append(interval.el, conds.el, warn);
     }),
     section(t('Actions'), (b) => {
       b.appendChild(actions.el);
@@ -367,9 +378,15 @@ function openAlertDialog(ctx) {
   const foot = el('div', 'aldlg-foot');
   const cancel = el('button', null, t('Cancel'));
   cancel.onclick = closeCreateAlertDialog;
-  const create = el('button', 'primary', t(editing ? 'Save' : 'Create'));
+  const create = /** @type {HTMLButtonElement} */ (el('button', 'primary', t(editing ? 'Save' : 'Create')));
   const brokerId = editing ? (existing && existing.broker) || null : /** @type {any} */ (pane).broker || null;
-  const level = d ? anchorLevel(d) : null;
+  // bind the real validation now that the button exists, and run it once so an edit of a dead alert opens honest
+  validate = (ui) => {
+    const ok = conditionEvaluable(compileConditions(ui, t('Price'), objectName, level));
+    warn.style.display = ok ? 'none' : '';
+    create.disabled = !ok;
+  };
+  validate(conds.get());
   create.onclick = () => {
     // gather the form and dispatch; the draft schema itself is buildDraft's (module level, testable)
     const draft = buildDraft({

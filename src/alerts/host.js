@@ -19,7 +19,7 @@ import { createAlertStore } from './store.js';
 import { createAlertLog } from './log-store.js';
 import { registerAlertHandler } from './funnel.js';
 import { subscribeBarFeed, retryIdle } from './feed.js';
-import { conditionFires, cadenceAllows, markFired, isExpired, cadenceOf, isSupportedTerm } from './eval.js';
+import { conditionFires, cadenceAllows, markFired, isExpired, cadenceOf, conditionEvaluable } from './eval.js';
 import { nextFire, scheduleValid } from './schedule.js';
 import { sourceOf, applyOf, rtFor, withRt, listSymbols } from './alert-record.js';
 import { alertTzOffsetMin, alertSoundPath, soundObjectUrl } from './alert-display.js';
@@ -219,11 +219,10 @@ function armed(rec) {
   // TIME alerts arm a timer -- all they need is a valid schedule (no symbol/tf/condition).
   if (sourceOf(rec) === 'time') return scheduleValid(rec.schedule);
   // PRICE alerts arm a bar feed at the alert's OWN interval (rec.tfObj, set in the dialog's interval picker --
-  // NOT the chart's), plus at least one supported term (level or Moving %). A Moving % window is measured over
-  // bars at that interval.
+  // NOT the chart's), plus a condition that can actually fire (conditionEvaluable, the same predicate
+  // conditionFires enforces -- an ALL match with an unsupported term used to hold a feed it could never fire on).
   if (!rec.tfObj || !rec.tfObj.id) return false;
-  const terms = (rec.compiled && rec.compiled.terms) || [];
-  return terms.some(isSupportedTerm);
+  return conditionEvaluable(rec.compiled);
 }
 /** the (broker, symbol) targets a price alert covers: just its own symbol, or every symbol in its watchlist.
  * @param {any} rec @returns {{ broker:(string|null), symbol:string }[]} */

@@ -142,6 +142,8 @@
 .aldlg-cond-op { width: 100%; background: var(--field); color: var(--tx); border: 1px solid var(--bd);
                  border-radius: 5px; padding: 5px 6px; font-size: 13px; }
 .aldlg-cond-acts { display: flex; justify-content: flex-end; gap: 14px; padding: 8px 2px 0; }
+/* unsupported-condition warning under the conditions table (shown while Create is disabled) */
+.aldlg-warn { color: var(--sell, #d66); font-size: 12px; padding: 8px 2px 0; }
 .aldlg-cond-act { font-size: 13px; font-style: italic; color: var(--accent-ui); cursor: pointer; }
 .aldlg-cond-act:hover { text-decoration: underline; }
 .aldlg-cond-act.disabled { color: var(--tx-dim); cursor: default; text-decoration: none; pointer-events: none; }

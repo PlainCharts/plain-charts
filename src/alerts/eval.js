@@ -82,6 +82,21 @@ export function isSupportedTerm(t) {
 }
 
 /**
+ * Can this compiled condition EVER fire? The one predicate the arming loop, the panel's status, and the
+ * dialog's validation all share, mirroring conditionFires exactly: an `any` match needs at least one
+ * supported term; an `all` match refuses if any term is unsupported (an unconfirmable term must not
+ * silently pass an AND). A condition that fails this is a dead alert: it saves fine, shows in the panel,
+ * and never fires -- the honesty gap this predicate closes.
+ * @param {{ match?: string, terms?: any[] } | null | undefined} compiled
+ */
+export function conditionEvaluable(compiled) {
+  const terms = (compiled && compiled.terms) || [];
+  const supported = terms.filter(isSupportedTerm);
+  if (!supported.length) return false;
+  return compiled && compiled.match === 'any' ? true : supported.length === terms.length;
+}
+
+/**
  * Does one compiled term fire on this bar? Level ops (cross/gt/lt) read the bar; the relative Moving % ops
  * read the `tail` (close now vs close `lookback` bars ago). Fires AT the threshold, not below.
  * @param {{ op: string, level?: number, percent?: number, amount?: number, lookback?: number }} term

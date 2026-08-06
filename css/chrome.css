@@ -93,9 +93,10 @@
 .al-sub { font-size: 11px; color: var(--tx-dim); margin-top: 2px; }
 .al-del { color: var(--tx-dim); font-size: 12px; cursor: pointer; }
 .al-del:hover { color: var(--tx); }
-/* status dot: green = Active, dim = Stopped */
+/* status dot: green = Active, dim = Stopped, red = Unsupported (a condition that can never fire) */
 .al-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--tx-dim); margin-right: 6px; vertical-align: middle; }
 .al-dot.on { background: var(--buy, #3a9); }
+.al-dot.warn { background: var(--sell, #d66); }
 /* per-row controls (play/pause + delete), revealed on row hover */
 .al-ctrls { display: flex; gap: 10px; align-items: center; visibility: hidden; }
 .al-row:hover .al-ctrls { visibility: visible; }
