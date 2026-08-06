@@ -11,7 +11,7 @@ import { getTool } from '../tools/registry.js';
 import { alertCommand } from './funnel.js'; // the single mutator path to the alert-host
 import { alertMirror } from './store.js'; // read the alert mirror (find the alert on an object)
 import { withLevel } from './alert-record.js'; // the set-level/re-arm mutation (schema's one home)
-import { compileConditions } from './alert-conditions.js'; // canonical UI-conditions -> compiled terms
+import { compileConditions, LEVEL_TOOLS } from './alert-conditions.js'; // canonical compiler + the level-category membership
 import { confirmDialog } from '../ui/confirm.js'; // confirm before deleting a drawing that has an alert
 import { bus } from '../bus.js'; // drawing-move events (keep alert level in sync)
 import { roundPrice } from './dialog-controls.js'; // round a level to the instrument's decimals
@@ -80,7 +80,8 @@ export function initAlertDrawingSync() {
       for (const a of alertMirror().all()) {
         if (!a || !a.objectId || (a.symbol && a.symbol !== sym)) continue;
         const d = pane.drawings.get(a.objectId);
-        if (!d || d.tool !== 'hline' || !d.points || !d.points.length) continue;
+        // only LEVEL-category tools carry a re-snapshottable fixed price (segments/region follow later)
+        if (!d || LEVEL_TOOLS.indexOf(d.tool) < 0 || !d.points || !d.points.length) continue;
         const objName = /** @type {any} */ (getTool(d.tool) || {}).name || d.tool;
         const rows = (a.conditions && a.conditions.conditions) || [];
         if (!rows.some((/** @type {any} */ c) => c && (c.left === objName || c.right === objName))) continue; // Value alerts don't track

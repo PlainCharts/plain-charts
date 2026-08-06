@@ -2,8 +2,9 @@
 // Pure alert CONDITION compilation -- no DOM, no engine. Turns the create-alert dialog's UI selections
 // (localized object labels + English operators) into the host-friendly form the evaluation loop (eval.js)
 // reads: stable terms of { op, level }. i18n and display strings stay in the UI -- the host never parses a
-// label. The level is SNAPSHOTTED from the anchored drawing now (P3: horizontal line = one price); live
-// drag-follow arrives with the synced drawing store (P5). Kept DOM-free (a leaf) so it's testable in
+// label. The level is SNAPSHOTTED from the anchored LEVEL-category drawing (one constant price) and
+// re-snapshotted on drag by alert-drawing-sync; the segments/region/series categories land next, each
+// compiling to a per-bar extent instead of one number. Kept DOM-free (a leaf) so it's testable in
 // isolation, mirroring eval.js's pure-core philosophy.
 import { t } from '../i18n/i18n.js'; // 'Value' label lookup (a pure string map, no DOM)
 
@@ -36,14 +37,18 @@ export const isRelativeConds = (ui) =>
  * (Crossing / Greater / Less) don't use one. @param {any} ui @returns {boolean} */
 export const condsUseTf = (ui) =>
   !!(ui && ui.conditions && ui.conditions.some((/** @type {any} */ r) => isMoveOp(r.op)));
-/** snapshot the anchored drawing's fixed price level, if it has one (hline). @param {any} d @returns {number|null} */
+// The LEVEL extent category: tools whose data-space extent is ONE constant price, anchored at points[0]
+// (the first of the four categories -- level / segments / region / series). The one membership list, shared
+// by the compiler here (anchorLevel) and the drag-sync (alert-drawing-sync re-snapshots on commit).
+export const LEVEL_TOOLS = ['hline', 'hray'];
+/** snapshot the anchored drawing's fixed price level, if it is a LEVEL-category tool. @param {any} d @returns {number|null} */
 export function anchorLevel(d) {
   if (!d || !Array.isArray(d.points) || !d.points.length) return null;
-  if (d.tool === 'hline') {
+  if (LEVEL_TOOLS.indexOf(d.tool) >= 0) {
     const p = d.points[0];
     return p && Number.isFinite(Number(p.price)) ? Number(p.price) : null;
   }
-  return null; // trendline/rect/etc. -> a moving level; deferred to P5
+  return null; // segments/region tools -> per-bar extents, the next categories to land
 }
 /**
  * @param {{ match: string, conditions: { left:string, op:string, right:string, value?:(number|null), percent?:(number|null), amount?:(number|null), lookback?:(number|null) }[] }} ui
@@ -76,11 +81,11 @@ export function compileConditions(ui, priceLabel, objectLabel, level) {
     const rightPrice = r.right === priceLabel;
     if (leftPrice === rightPrice) return { op: 'unsupported' }; // both or neither Price
     const objSide = leftPrice ? r.right : r.left;
-    // the level is either the typed "Value", or the anchored drawing's (hline) price
+    // the level is either the typed "Value", or the anchored LEVEL-category drawing's price
     let lvl = null;
     if (objSide === valueLabel) lvl = r.value != null && Number.isFinite(Number(r.value)) ? Number(r.value) : null;
     else if (objSide === objectLabel) lvl = level;
-    if (lvl == null) return { op: 'unsupported' }; // non-hline drawing / empty value -> can't fire (yet)
+    if (lvl == null) return { op: 'unsupported' }; // non-level drawing / empty value -> can't fire (yet)
     let op = /** @type {any} */ (OP_MAP[/** @type {keyof typeof OP_MAP} */ (r.op)]) || 'unsupported';
     if (!leftPrice && OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)])
       op = OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)]; // Price on the right -> invert sense
