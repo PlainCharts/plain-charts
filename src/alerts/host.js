@@ -235,6 +235,25 @@ function targetsOf(rec) {
 /** @param {string|null} broker @param {string} symbol @param {any} tfObj */
 const sigOf = (broker, symbol, tfObj) => (broker || '*') + '|' + symbol + '|' + (tfObj && tfObj.id);
 
+/** the deepest history (epoch ms) this alert's extent terms need: the oldest anchor time (drawing anchors
+ * are epoch SECONDS, the tool-layer unit) with a day of slack, so the feed's bar grid reaches every anchor
+ * and the eval interpolates on real bars. null = no extent terms (the default span is enough).
+ * @param {any} rec @returns {number|null} */
+function sinceMsOf(rec) {
+  const terms = (rec && rec.compiled && rec.compiled.terms) || [];
+  /** @type {number|null} */
+  let min = null;
+  for (const t of terms) {
+    const pts = t && t.extent && t.extent.points;
+    if (!Array.isArray(pts)) continue;
+    for (const p of pts) {
+      const ms = Number(p && p.time) * 1000;
+      if (Number.isFinite(ms) && (min == null || ms < min)) min = ms;
+    }
+  }
+  return min == null ? null : min - 86400000;
+}
+
 // keyed by `alertId|symbol` -- a watchlist alert holds ONE entry per list symbol; a single-symbol alert holds one.
 /** @type {Map<string, { unsub: () => void, sig: string }>} */
 const subs = new Map();
@@ -458,14 +477,23 @@ function reconcile() {
     for (const tgt of targetsOf(rec)) {
       const key = rec.id + '|' + tgt.symbol;
       liveFeeds.add(key);
-      const sig = sigOf(tgt.broker, tgt.symbol, rec.tfObj);
+      // the depth requirement rides the signature (day-quantized so a drag inside one day doesn't churn):
+      // dragging an anchor further into the past re-registers the listener, which deepens the shared feed.
+      const since = sinceMsOf(rec);
+      const sig = sigOf(tgt.broker, tgt.symbol, rec.tfObj) + '|' + (since == null ? '' : Math.floor(since / 86400000));
       const ex = subs.get(key);
       if (ex && ex.sig !== sig) {
         ex.unsub();
         subs.delete(key);
       }
       if (!subs.has(key)) {
-        const unsub = subscribeBarFeed(tgt.broker, tgt.symbol, rec.tfObj, (ev) => onFeed(rec.id, tgt.symbol, ev));
+        const unsub = subscribeBarFeed(
+          tgt.broker,
+          tgt.symbol,
+          rec.tfObj,
+          (ev) => onFeed(rec.id, tgt.symbol, ev),
+          since == null ? undefined : since,
+        );
         subs.set(key, { unsub, sig });
       }
     }

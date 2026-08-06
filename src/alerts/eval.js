@@ -20,6 +20,14 @@
 // The bar-tail ring size the feed keeps -- at least the largest lookback any relative condition may ask for.
 export const BAR_TAIL_CAP = 300;
 
+/** the tail-ring size covering `spanMs` of history at `perMs` per bar (with slack), never below the base
+ * cap -- so an extent-anchored alert's bar grid reaches its oldest anchor. Pure (the feed binds barMs).
+ * @param {number} perMs @param {number} spanMs */
+export function capForSpan(perMs, spanMs) {
+  if (!(perMs > 0) || !(spanMs > 0)) return BAR_TAIL_CAP;
+  return Math.max(BAR_TAIL_CAP, Math.ceil(spanMs / perMs) + 50);
+}
+
 /**
  * Fold a report's bars into the tail ring: dedup by bar time (a re-reported forming bar overwrites in place),
  * keep time order, and cap to the last `cap`. Pure, so relative conditions (Moving %) get a clean recent-bars
