@@ -17,12 +17,15 @@ const OP_MAP = {
 };
 const OP_FLIP = { 'cross-up': 'cross-down', 'cross-down': 'cross-up', gt: 'lt', lt: 'gt' };
 
-/** a SERIES extent from a seriesByLabel entry + the row's chosen plot (or the study's first).
- * @param {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[] }} s
+/** a SERIES extent from a seriesByLabel entry + the row's chosen plot (or the study's first). Refuses a
+ * study the headless runner cannot compute (`headless:false`: inline-only, intrabar, viewport-reactive) --
+ * the ONE gate both term families (price-vs-study and study-vs-Value) pass through, so the dialog warns
+ * instead of minting a dead alert.
+ * @param {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], headless?:boolean }} s
  * @param {string|null|undefined} rowPlot
  * @returns {{ kind:'series', studyId:string, studyUrl:string, params:any, plot:string }|null} */
 function seriesExtentOf(s, rowPlot) {
-  if (!s || !s.studyUrl) return null;
+  if (!s || !s.studyUrl || s.headless === false) return null;
   const plots = s.plots || [];
   const plot = rowPlot && plots.some((p) => p.key === rowPlot) ? rowPlot : plots.length ? plots[0].key : null;
   return plot ? { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, plot } : null;

@@ -30,7 +30,7 @@ import {
 } from './eval.js';
 import { resolveSeries, runnerKeyOf, gcRunners } from './study-runner.js'; // headless study compute for SERIES terms
 import { nextFire, scheduleValid } from './schedule.js';
-import { sourceOf, applyOf, rtFor, withRt, listSymbols, fillPlaceholders } from './alert-record.js';
+import { sourceOf, applyOf, rtFor, withRt, listSymbols, fillPlaceholders, priceDecimalsOf } from './alert-record.js';
 import { alertTzOffsetMin, alertSoundPath, soundObjectUrl, fmtAlertTime } from './alert-display.js';
 import { loadSettings } from '../settings/settings.js';
 import { IPC } from '../ipc-contract.js';
@@ -432,7 +432,7 @@ function runActions(rec, bar) {
         symbol: rec.symbol || '',
         broker: rec.broker || '',
         interval: rec.tf || '',
-        price: bar && bar.close != null ? String(bar.close) : '',
+        price: bar && bar.close != null ? Number(bar.close).toFixed(priceDecimalsOf(rec)) : '', // instrument decimals (7732.00, not 7732)
         timenow: fmtAlertTime(Date.now()),
       })
     : '';

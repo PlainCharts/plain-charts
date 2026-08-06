@@ -303,7 +303,7 @@ function openAlertDialog(ctx) {
   // Attached studies become condition OBJECTS (the SERIES category). Each entry snapshots everything the
   // headless runner needs (id / module URL / merged params / plots); duplicate labels dedupe with a #N
   // suffix. Multi-plot studies drive the plot dropdown in the Value column.
-  /** @type {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean }>} */
+  /** @type {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean }>} */
   const seriesByLabel = {};
   {
     const attached = (pane.studies && /** @type {any} */ (pane.studies).attached) || [];
@@ -324,6 +324,11 @@ function openAlertDialog(ctx) {
       const metaPlots =
         (a.plotMeta && a.plotMeta.length ? a.plotMeta : typeof a.study.plots === 'function' ? a.study.plots() : []) ||
         [];
+      // headless: can the alert-host's study runner actually compute this? Inline-only studies
+      // (worker:false / frame-clock), intrabar studies (need sub-bar feeds), and viewport-reactive ones
+      // (no viewport exists headless) cannot -- the compiler refuses them so no dead alert is ever created.
+      const st = /** @type {any} */ (a.study);
+      const headless = !(st.worker === false || st.requestFrames || st.intrabar || st.lowerTimeframe || st.viewport);
       seriesByLabel[label] = {
         studyId: a.study.id,
         studyUrl: studyUrlFor(a.study.id),
@@ -332,6 +337,7 @@ function openAlertDialog(ctx) {
           .filter((/** @type {any} */ p) => p && p.legend !== false)
           .map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key })),
         overlay: a.study.overlay !== false,
+        headless,
       };
     }
   }
