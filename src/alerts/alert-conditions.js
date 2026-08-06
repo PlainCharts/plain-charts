@@ -76,14 +76,18 @@ export function anchorExtent(d) {
   return { kind, points, extend: (d.style && d.style.extend) || 'none' };
 }
 /**
- * @param {{ match: string, conditions: { left:string, op:string, right:string, value?:(number|null), percent?:(number|null), amount?:(number|null), lookback?:(number|null) }[] }} ui
+ * @param {{ match: string, conditions: { left:string, op:string, right:string, value?:(number|null), percent?:(number|null), amount?:(number|null), lookback?:(number|null), plot?:(string|null) }[] }} ui
  * @param {string} priceLabel  the localized "Price" label the dropdowns stored
  * @param {string} objectLabel the anchored drawing's label
  * @param {number|null} level  the drawing's snapshotted price level (LEVEL category), null otherwise
  * @param {{ kind:'segments'|'region', points:{time:number,price:number}[], extend?:string }|null} [extent]  the drawing's extent snapshot (SEGMENTS/REGION category), null otherwise
+ * @param {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean }>|null} [seriesByLabel]
+ *   attached studies by their dropdown label (the SERIES category). The row's chosen plot (or the only one)
+ *   snapshots into a series extent. Sub-pane (non-overlay) studies stay unsupported here until
+ *   study-vs-Value lands -- price never reaches a different scale.
  * @returns {{ match: 'all'|'any', terms: { op: string, level?: number, extent?: any, percent?: number, amount?: number, lookback?: number }[] }}
  */
-export function compileConditions(ui, priceLabel, objectLabel, level, extent) {
+export function compileConditions(ui, priceLabel, objectLabel, level, extent, seriesByLabel) {
   const rows = (ui && ui.conditions) || [];
   const valueLabel = t('Value');
   const match = /any/i.test((ui && ui.match) || 'all') ? 'any' : 'all';
@@ -107,18 +111,32 @@ export function compileConditions(ui, priceLabel, objectLabel, level, extent) {
     const rightPrice = r.right === priceLabel;
     if (leftPrice === rightPrice) return { op: 'unsupported' }; // both or neither Price
     const objSide = leftPrice ? r.right : r.left;
-    // the object side resolves to the typed "Value", the anchored LEVEL drawing's price, or the anchored
-    // SEGMENTS drawing's polyline extent -- in that order; nothing resolvable = unsupported.
+    // the object side resolves to the typed "Value", the anchored LEVEL drawing's price, the anchored
+    // SEGMENTS/REGION drawing's extent, or an attached study's plot (SERIES) -- nothing resolvable = unsupported.
     let lvl = null;
-    if (objSide === valueLabel) lvl = r.value != null && Number.isFinite(Number(r.value)) ? Number(r.value) : null;
-    else if (objSide === objectLabel) lvl = level;
-    const seg = lvl == null && objSide === objectLabel && objSide !== valueLabel ? extent : null;
-    if (lvl == null && !seg) return { op: 'unsupported' }; // non-reducible drawing / empty value -> can't fire (yet)
+    /** @type {any} */
+    let ext = null;
+    if (objSide === valueLabel) {
+      lvl = r.value != null && Number.isFinite(Number(r.value)) ? Number(r.value) : null;
+    } else if (objSide === objectLabel) {
+      lvl = level;
+      if (lvl == null) ext = extent;
+    } else if (seriesByLabel && seriesByLabel[objSide]) {
+      const s = seriesByLabel[objSide];
+      // price vs a study only makes sense on the SAME scale: overlay studies. A sub-pane study (RSI, CVD)
+      // compares against a Value, which is the study-vs-Value term family (not built yet).
+      if (s.overlay && s.studyUrl) {
+        const plots = s.plots || [];
+        const plot = r.plot && plots.some((p) => p.key === r.plot) ? r.plot : plots.length ? plots[0].key : null;
+        if (plot) ext = { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, plot };
+      }
+    }
+    if (lvl == null && !ext) return { op: 'unsupported' }; // non-reducible object / empty value -> can't fire (yet)
     let op = /** @type {any} */ (OP_MAP[/** @type {keyof typeof OP_MAP} */ (r.op)]) || 'unsupported';
     if (!leftPrice && OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)])
       op = OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)]; // Price on the right -> invert sense
     if (op === 'unsupported') return { op };
-    return lvl != null ? { op, level: lvl } : { op, extent: seg };
+    return lvl != null ? { op, level: lvl } : { op, extent: ext };
   });
   return { match, terms };
 }

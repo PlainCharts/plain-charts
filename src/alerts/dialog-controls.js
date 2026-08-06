@@ -304,14 +304,16 @@ export function expirationControl(initKind, initMs) {
  *  @param {any[]} [initRows]  existing condition rows (edit mode)
  *  @param {number} [dec]  instrument price decimals (round the Value input)
  *  @param {string} [initMatch]  saved match mode ('All' | 'Any') to restore in edit mode
- *  @param {(ui: any) => void} [onChange]  fired on any structural change (op/object/add/remove) with the current get()
+ *  @param {(ui: any) => void} [onChange]  fired on any value change (op/object/add/remove/value/plot) with the current get()
+ *  @param {Record<string, { key:string, name:string }[]>} [plotsByLabel]  a multi-plot study label -> its plot
+ *    options; when a row's object side is one, the Value column becomes a PLOT dropdown (Basis/Upper/Lower)
  *  @returns {{ el: HTMLElement, get: () => any }} */
-export function conditionsControl(objects, initRows, dec, initMatch, onChange) {
+export function conditionsControl(objects, initRows, dec, initMatch, onChange, plotsByLabel) {
   const OBJ = objects.length ? objects : [t('Price')];
   const defLeft = OBJ[0],
     defRight = OBJ[1] || OBJ[0];
   const valueLabel = t('Value'); // the special "literal price" object — shows a numeric input in the Value column
-  /** @type {{ left: string, op: string, right: string, value: (number|null), percent: (number|null), amount: (number|null), lookback: (number|null) }[]} */
+  /** @type {{ left: string, op: string, right: string, value: (number|null), percent: (number|null), amount: (number|null), lookback: (number|null), plot: (string|null) }[]} */
   const rows =
     initRows && initRows.length
       ? initRows.map((/** @type {any} */ r) => ({
@@ -322,9 +324,23 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange) {
           percent: r.percent != null ? r.percent : null,
           amount: r.amount != null ? r.amount : null,
           lookback: r.lookback != null ? r.lookback : null,
+          plot: r.plot != null ? r.plot : null,
         }))
-      : [{ left: defLeft, op: 'Crossing', right: defRight, value: null, percent: null, amount: null, lookback: null }];
+      : [
+          {
+            left: defLeft,
+            op: 'Crossing',
+            right: defRight,
+            value: null,
+            percent: null,
+            amount: null,
+            lookback: null,
+            plot: null,
+          },
+        ];
   const usesValue = (/** @type {any} */ r) => r.left === valueLabel || r.right === valueLabel;
+  // the multi-plot study a row targets (either side), or null -- drives the plot dropdown in the Value column
+  const plotsFor = (/** @type {any} */ r) => (plotsByLabel && (plotsByLabel[r.right] || plotsByLabel[r.left])) || null;
   // the public snapshot of the form -- shared by get() and the onChange notification.
   const readAll = () => ({
     match: matchSel.value,
@@ -336,8 +352,13 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange) {
       percent: r.percent != null ? r.percent : null,
       amount: r.amount != null ? roundPrice(r.amount, dec) : null,
       lookback: r.lookback != null ? r.lookback : null,
+      plot: r.plot != null ? r.plot : null,
     })),
   });
+  // value/plot edits change what compiles without re-rendering the table -- notify so validation reruns live
+  const notify = () => {
+    if (onChange) onChange(readAll());
+  };
 
   const wrap = el('div', 'aldlg-cond');
 
@@ -477,19 +498,34 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange) {
             render();
           }),
         );
-        // Value column: a number input, only when a side is "Value" (an alert on a literal price, no drawing needed)
+        // Value column, contextual: a number input when a side is "Value" (a plain SCALE-AGNOSTIC number --
+        // a price against Price, an indicator level against a study; defaults to 0, never a "Price" hint);
+        // a PLOT dropdown when a side is a multi-plot study (pick the band price interacts with); else empty.
         c4 = el('div', 'aldlg-cond-cell aldlg-cond-valcell');
-        if (usesValue(r))
+        const plots = plotsFor(r);
+        if (usesValue(r)) {
+          if (r.value == null) r.value = 0;
           c4.appendChild(
-            numIn(
-              r.value != null ? roundPrice(r.value, dec) : null,
-              'any',
-              (n) => {
-                r.value = n;
-              },
-              t('Price'),
-            ),
+            numIn(roundPrice(r.value, dec), 'any', (n) => {
+              r.value = n;
+              notify();
+            }),
           );
+        } else if (plots && plots.length > 1) {
+          if (!r.plot || !plots.some((p) => p.key === r.plot)) r.plot = plots[0].key;
+          const ps = /** @type {HTMLSelectElement} */ (el('select', 'aldlg-cond-op'));
+          plots.forEach((p) => {
+            const o = /** @type {HTMLOptionElement} */ (el('option', null, p.name || p.key));
+            o.value = p.key;
+            ps.appendChild(o);
+          });
+          ps.value = /** @type {string} */ (r.plot);
+          ps.onchange = () => {
+            r.plot = ps.value;
+            notify();
+          };
+          c4.appendChild(ps);
+        }
       }
       row.append(c1, c2, c3, c4);
       row.onclick = () => {
@@ -511,6 +547,7 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange) {
       percent: null,
       amount: null,
       lookback: null,
+      plot: null,
     });
     sel = rows.length - 1;
     render();

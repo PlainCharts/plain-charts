@@ -11,6 +11,8 @@
 //            | { op: 'unsupported', ... }                                           (nothing to evaluate)
 //   Extent   = { kind: 'segments', points: [{time,price}...], extend: 'none'|'left'|'right'|'both' }
 //            | { kind: 'region',   points: [corner, corner] }
+//            | { kind: 'series',   studyId, studyUrl, params, plot }   (a study's plot; the host resolves
+//              its per-bar value with the study runner and substitutes a plain level before eval)
 // An extent is the anchored drawing's data-space reduction. SEGMENTS (trend-line family, path): the polyline's
 // price value(s) at the CURRENT bar on the alert-interval bar grid -- the level ops run against those values
 // exactly as against a fixed level. REGION (rect): a time x price zone -- within its drawn time span,
@@ -88,15 +90,18 @@ export function moveAbs(tail, bar, lookback) {
   return bar.close - ref.close;
 }
 
-/** a well-formed extent (segments or region): at least two anchors with finite time+price. @param {any} e */
-export const validExtent = (e) =>
-  !!(
-    e &&
+/** a well-formed extent: segments/region need two finite anchors; a series extent (a study's plot,
+ * resolved per bar by the host's study runner) needs the full compute snapshot. @param {any} e */
+export const validExtent = (e) => {
+  if (!e) return false;
+  if (e.kind === 'series') return !!(e.studyId && e.studyUrl && e.plot && e.params);
+  return (
     (e.kind === 'segments' || e.kind === 'region') &&
     Array.isArray(e.points) &&
     e.points.filter((/** @type {any} */ p) => p && Number.isFinite(Number(p.time)) && Number.isFinite(Number(p.price)))
       .length >= 2
   );
+};
 
 /**
  * Fractional logical index of `time` against the ordered bar times -- the same interpolation the chart's

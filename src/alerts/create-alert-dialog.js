@@ -33,6 +33,7 @@ import {
   TIME_TOOLS,
 } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
 import { openCreateTimeAlertDialog } from './create-time-alert-dialog.js'; // a TIME-category drawing (vline) routes there
+import { studyUrlFor } from '../studies/user-loader.js'; // a study's module URL, snapshotted for the headless runner
 import { priceDecimalsOf } from './alert-record.js'; // a record's Value precision (schema's one home)
 import { cadenceOf, conditionEvaluable } from './eval.js'; // stable cadence key + the can-this-ever-fire predicate (live validation)
 import { alertForObject } from './alert-drawing-sync.js'; // edit mode: the existing alert on this drawing (drawing<->alert glue lives there)
@@ -99,7 +100,7 @@ function onCreate(draft) {
  * rule across a list; the list NAME rides on the scope so the panel/log display "List, tf" without a store
  * lookup), the anchored-geometry snapshot, and the compiled host terms.
  * @param {{ symbol: string, applyVal: string, applyText: string, chosenTf: string, brokerId: string|null,
- *   dec: any, drawing: any|null, level: number|null, extent?: any, objectName: string, name: string, enabled: boolean,
+ *   dec: any, drawing: any|null, level: number|null, extent?: any, seriesByLabel?: any, objectName: string, name: string, enabled: boolean,
  *   trigger: string, expiration: string, expiryMs: number|null, uiConds: any, message: string, actions: string[] }} f
  * @returns {AlertDraft & { cadence: any, priceDecimals: any }}
  */
@@ -134,7 +135,14 @@ export function buildDraft(f) {
     expiration: f.expiration,
     expiryMs: f.expiryMs,
     conditions: f.uiConds,
-    compiled: compileConditions(f.uiConds, t('Price'), f.objectName, f.level, f.extent || null),
+    compiled: compileConditions(
+      f.uiConds,
+      t('Price'),
+      f.objectName,
+      f.level,
+      f.extent || null,
+      f.seriesByLabel || null,
+    ),
     message: f.message,
     actions: f.actions,
   };
@@ -292,22 +300,44 @@ function openAlertDialog(ctx) {
   // (LEVEL category) or a polyline snapshot (SEGMENTS category); both null for other tools / Value alerts
   const level = d ? anchorLevel(d) : null;
   const extent = d ? anchorExtent(d) : null;
-  // Object dropdown options. Drawing alert: Price, the drawing, attached indicators (SMA, FVG, …), Value.
-  // Value alert (from the manager, no chart object): just Price and Value.
-  let objects;
-  if (isValue) {
-    objects = [t('Price'), t('Value')];
-  } else {
+  // Attached studies become condition OBJECTS (the SERIES category). Each entry snapshots everything the
+  // headless runner needs (id / module URL / merged params / plots); duplicate labels dedupe with a #N
+  // suffix. Multi-plot studies drive the plot dropdown in the Value column.
+  /** @type {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean }>} */
+  const seriesByLabel = {};
+  {
     const attached = (pane.studies && /** @type {any} */ (pane.studies).attached) || [];
-    const studyLabels = attached.map((/** @type {any} */ a) => {
+    /** @type {Record<string, number>} */
+    const seen = {};
+    for (const a of attached) {
+      let label;
       try {
-        return studyLabel(a);
+        label = studyLabel(a);
       } catch (_) {
-        return (a.study && a.study.name) || 'Study';
+        label = (a.study && a.study.name) || 'Study';
       }
-    });
-    objects = [t('Price'), objectName, ...studyLabels, t('Value')];
+      seen[label] = (seen[label] || 0) + 1;
+      if (seen[label] > 1) label += ' #' + seen[label];
+      // live plot meta when the study has computed; a step study's static plots() declaration otherwise
+      const metaPlots =
+        (a.plotMeta && a.plotMeta.length ? a.plotMeta : typeof a.study.plots === 'function' ? a.study.plots() : []) ||
+        [];
+      seriesByLabel[label] = {
+        studyId: a.study.id,
+        studyUrl: studyUrlFor(a.study.id),
+        params: { ...a.params },
+        plots: metaPlots.map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key })),
+        overlay: a.study.overlay !== false,
+      };
+    }
   }
+  /** @type {Record<string, { key:string, name:string }[]>} */
+  const plotsByLabel = {};
+  for (const [label, s] of Object.entries(seriesByLabel)) if (s.plots.length > 1) plotsByLabel[label] = s.plots;
+  // Object dropdown options. Drawing alert: Price, the drawing, attached studies, Value. Value alert (from
+  // the manager, no chart object): Price, the active chart's studies, Value.
+  const studyOpts = Object.keys(seriesByLabel);
+  const objects = isValue ? [t('Price'), ...studyOpts, t('Value')] : [t('Price'), objectName, ...studyOpts, t('Value')];
   // A new Value alert prefills the Value column with the symbol's current price (last bar close on the active
   // chart), rounded to the instrument's decimals — so the user tweaks a number instead of starting from blank.
   const initRows =
@@ -325,7 +355,14 @@ function openAlertDialog(ctx) {
   // condition changes drive the watchlist-scope guard, the interval picker's visibility (TF only matters for the
   // Moving family), and the live title. Extended once the interval control exists.
   let onCondsChange = (/** @type {any} */ ui) => applyGuard(ui);
-  const conds = conditionsControl(objects, initRows, dec, initMatch, (/** @type {any} */ ui) => onCondsChange(ui));
+  const conds = conditionsControl(
+    objects,
+    initRows,
+    dec,
+    initMatch,
+    (/** @type {any} */ ui) => onCondsChange(ui),
+    plotsByLabel,
+  );
   // The alert's OWN interval (the bar granularity it watches) -- set here, defaulting to the chart's current tf,
   // never silently bound to it. This is the alert's tf/tfObj; a Moving % window is measured over bars at it.
   // The segment row is a SHORT few; the full list lives under "Other" (never dump every interval as a segment).
@@ -337,9 +374,19 @@ function openAlertDialog(ctx) {
     listIntervals(),
     () => refreshTitle(),
   );
-  // TF matters for the Moving family (condsUseTf, beside the compiler) AND for a segments-anchored drawing
-  // (its line evaluates on the alert-interval bar grid). Pure fixed-level conditions hide the picker.
-  const usesTf = () => condsUseTf(conds.get()) || !!extent;
+  // TF matters for the Moving family (condsUseTf, beside the compiler), for a segments-anchored drawing
+  // (its line evaluates on the alert-interval bar grid), and for any row targeting a STUDY (it computes on
+  // the alert's own bars). Pure fixed-level conditions hide the picker.
+  const rowsUseSeries = (/** @type {any} */ ui) =>
+    !!(
+      ui &&
+      ui.conditions &&
+      ui.conditions.some((/** @type {any} */ r) => seriesByLabel[r.left] || seriesByLabel[r.right])
+    );
+  const usesTf = () => {
+    const ui = conds.get();
+    return condsUseTf(ui) || !!extent || rowsUseSeries(ui);
+  };
   const syncTf = () => {
     interval.el.style.display = usesTf() ? '' : 'none';
   };
@@ -415,7 +462,7 @@ function openAlertDialog(ctx) {
   const brokerId = editing ? (existing && existing.broker) || null : /** @type {any} */ (pane).broker || null;
   // bind the real validation now that the button exists, and run it once so an edit of a dead alert opens honest
   validate = (ui) => {
-    const ok = conditionEvaluable(compileConditions(ui, t('Price'), objectName, level, extent));
+    const ok = conditionEvaluable(compileConditions(ui, t('Price'), objectName, level, extent, seriesByLabel));
     warn.style.display = ok ? 'none' : '';
     create.disabled = !ok;
   };
@@ -432,6 +479,7 @@ function openAlertDialog(ctx) {
       drawing: d,
       level,
       extent,
+      seriesByLabel,
       objectName,
       name: nameIn.value,
       enabled: enable.get(),

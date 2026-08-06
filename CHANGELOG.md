@@ -29,6 +29,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Drawing alerts: "Create alert on" is offered only on drawings that can carry an alert. Annotations and measurement tools (text, symbol, callout, arrow, the ranges, fib, position) no longer offer it, in the right-click menu or the price-scale quick editor
 
 ### Fixed
+- Alert dialog: picking Value in a condition now shows a plain number defaulting to 0 (a Value is scale-agnostic: a price against Price, an indicator level against a study), instead of an empty box hinting "Price"
 - Alerts: an alert whose condition can never be evaluated now shows an Unsupported status with a red dot in the panel, and the create/edit dialog refuses to save it with a clear warning. Before, such alerts (e.g. anchored to a trend line or a horizontal ray) saved fine, showed Active, and silently never fired
 - Planning pill: a Market projection can no longer be dragged off the live price. The pill refuses the drag until you cycle its type to Limit or Stop; switch back to Market and it locks to the live price again
 - Order dialog: placing an order now clears the on-chart planning projection, so the gray planning primitive no longer lingers on top of the order you just placed. Placement ends the planning session, the same way the pill's cancel and confirm already did
