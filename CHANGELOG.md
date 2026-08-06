@@ -8,6 +8,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Alerts on indicators: price crossing an overlay study's line fires for real. Pick an attached study as a condition Object (a multi-plot study offers a band picker: Upper/Basis/Lower), and the alert engine computes the study headless on its own bar feed, so it fires with every chart closed. Many alerts on one study share a single computation
 - Alerts on a Vertical Line: "Create alert" on a vline opens the time-alert dialog pre-set to a one-shot at the line's instant. The alert is bound to the line: dragging the line re-schedules it, the bell rides the line, and deleting either removes both. A one-shot pointed at the past refuses to save
 - Time alerts: a Name field in the dialog (default: the date only). Left empty, the panel titles the row from the live schedule, so a dragged line can never leave a stale time in the title
 - Alerts on a Rectangle: the zone fires only within its drawn time span. Crossing = a bar touches the box (a gap straight through counts), Crossing Up/Down = entering through the bottom/top edge, Greater/Less Than = closing beyond it. Moving or resizing the box updates its alert, and the bell sits on the box's right edge

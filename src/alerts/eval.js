@@ -205,6 +205,44 @@ export function regionFires(op, extent, bar) {
 }
 
 /**
+ * A study result's plot value AT a bar time (exact match; a study that has no point on that bar -- warmup,
+ * gaps -- yields null and the term must not fire). Pure read of the worker's full output shape.
+ * @param {{ plots?: { key:string, data?: { time:number, value:number }[] }[] } | null | undefined} out
+ * @param {string} plotKey @param {number} barTime @returns {number|null}
+ */
+export function plotValueAt(out, plotKey, barTime) {
+  const plots = (out && out.plots) || [];
+  const p = plots.find((x) => x && x.key === plotKey);
+  const d = (p && p.data) || [];
+  for (let i = d.length - 1; i >= 0; i--) {
+    const pt = d[i];
+    if (!pt) continue;
+    if (pt.time === barTime) return Number.isFinite(Number(pt.value)) ? Number(pt.value) : null;
+    if (pt.time < barTime) return null; // walked past the bar: no point AT it
+  }
+  return null;
+}
+
+/**
+ * Substitute resolved SERIES-term values into a compiled condition: each series term becomes a plain level
+ * term carrying its study's value at the tested bar, so the eval core never learns about studies. An
+ * unresolved value (study error / no point at the bar) becomes 'unsupported', which correctly refuses an
+ * ALL match and is skipped by an ANY. Pure; returns the original object when nothing was substituted.
+ * @param {{ match?:string, terms?:any[] }} compiled @param {(number|null)[]} values  by term index
+ */
+export function substituteSeries(compiled, values) {
+  const terms = (compiled && compiled.terms) || [];
+  let changed = false;
+  const out = terms.map((t, i) => {
+    if (!t || !t.extent || t.extent.kind !== 'series') return t;
+    changed = true;
+    const v = values && values[i];
+    return v != null && Number.isFinite(Number(v)) ? { op: t.op, level: Number(v) } : { op: 'unsupported' };
+  });
+  return changed ? { ...compiled, terms: out } : compiled;
+}
+
+/**
  * Resolve a level-op term to the price value(s) it tests on this bar: a fixed level as-is, a segments
  * extent via the bar grid. Empty = nothing to test (out of span / malformed) -- the term cannot fire.
  * @param {{ level?:number, extent?:any }} term @param {{ time?:number }} bar @param {any[]} [tail]

@@ -19,7 +19,16 @@ import { createAlertStore } from './store.js';
 import { createAlertLog } from './log-store.js';
 import { registerAlertHandler } from './funnel.js';
 import { subscribeBarFeed, retryIdle } from './feed.js';
-import { conditionFires, cadenceAllows, markFired, isExpired, cadenceOf, conditionEvaluable } from './eval.js';
+import {
+  conditionFires,
+  cadenceAllows,
+  markFired,
+  isExpired,
+  cadenceOf,
+  conditionEvaluable,
+  substituteSeries,
+} from './eval.js';
+import { resolveSeries, runnerKeyOf, gcRunners } from './study-runner.js'; // headless study compute for SERIES terms
 import { nextFire, scheduleValid } from './schedule.js';
 import { sourceOf, applyOf, rtFor, withRt, listSymbols } from './alert-record.js';
 import { alertTzOffsetMin, alertSoundPath, soundObjectUrl } from './alert-display.js';
@@ -306,6 +315,12 @@ function onTimer(id) {
   runActions(rec, null);
 }
 
+/** does this record carry a SERIES (study) term? @param {any} rec */
+const hasSeriesTerms = (rec) =>
+  ((rec && rec.compiled && rec.compiled.terms) || []).some(
+    (/** @type {any} */ t) => t && t.extent && t.extent.kind === 'series',
+  );
+
 /** @param {string} id @param {string} symbol  the symbol this feed carries (=rec.symbol for a single-symbol
  * alert; one of the list members for a watchlist alert) @param {{ last: any, closed: any, tail?: any[] }} ev */
 function onFeed(id, symbol, ev) {
@@ -320,7 +335,40 @@ function onFeed(id, symbol, ev) {
   const onClosed = cadence === 'per-bar-close';
   const bar = onClosed ? ev.closed : ev.last;
   if (!bar) return;
-  if (!conditionFires(rec.compiled, bar, ev.tail)) return; // ev.tail feeds the relative Moving % terms
+  if (hasSeriesTerms(rec)) {
+    // SERIES terms resolve through the study runner (an async worker roundtrip), then the same fire path
+    // runs with a values-substituted condition. The bar is captured WITH its values, so a late arrival
+    // still tests a consistent (bar, level) pair; the cadence latch dedupes. The broker is the target's
+    // own (a watchlist member may live on another broker), never the active adapter.
+    const tgt = targetsOf(rec).find((x) => x.symbol === symbol);
+    resolveSeries(
+      tgt ? tgt.broker : rec.broker || null,
+      symbol,
+      rec.tfObj,
+      ev,
+      rec.compiled,
+      bar.time,
+      rec.priceDecimals,
+    )
+      .then((vals) => {
+        const cur = store.get(id); // re-read: the alert may have been edited/disabled during the roundtrip
+        if (!cur || !cur.enabled || isExpired(cur.expiryMs, Date.now())) return;
+        tryFire(cur, symbol, ev, bar, substituteSeries(rec.compiled, vals));
+      })
+      .catch((err) => console.error('[alert-host] series resolve failed', errStr(err)));
+    return;
+  }
+  tryFire(rec, symbol, ev, bar, rec.compiled);
+}
+
+/** The fire path: test the (possibly series-substituted) condition on the captured bar, gate the cadence,
+ * latch + persist + notify. @param {any} rec @param {string} symbol @param {{ tail?: any[] }} ev
+ * @param {any} bar @param {any} compiled */
+function tryFire(rec, symbol, ev, bar, compiled) {
+  const now = Date.now();
+  const cadence = /** @type {any} */ (rec.cadence);
+  const onClosed = cadence === 'per-bar-close';
+  if (!conditionFires(compiled, bar, ev.tail)) return; // ev.tail feeds the relative Moving % terms
   const isWatch = applyOf(rec).kind === 'watchlist';
   // the latch is per-symbol for a watchlist alert (one symbol firing must not latch another) and flat otherwise.
   if (!cadenceAllows(cadence, rtFor(rec, symbol), bar.time, now, onClosed)) return;
@@ -333,9 +381,9 @@ function onFeed(id, symbol, ev) {
   // alert "once" is once-PER-SYMBOL: the per-symbol latch above spends that symbol; the rule stays armed for the
   // rest of the list. Recurring cadences stay armed either way. Disabling disarms the feeds on the next reconcile.
   if (cadence === 'once' && !isWatch) next.enabled = false;
-  store.set(id, next);
+  store.set(rec.id, next);
   scheduleSave();
-  console.info(`[alert-host] FIRE "${rec.name || id}" ${symbol} @ ${bar.close} (${rec.trigger})`);
+  console.info(`[alert-host] FIRE "${rec.name || rec.id}" ${symbol} @ ${bar.close} (${rec.trigger})`);
   logFire(rec, bar, now, isWatch ? symbol : undefined); // watchlist fires tag the symbol; single-symbol reads the alert's own
   runActions(rec, bar);
 }
@@ -464,6 +512,8 @@ async function telegramAction(rec, title, body) {
 function reconcile() {
   const liveFeeds = new Set();
   const liveTimers = new Set();
+  /** @type {Set<string>} feeds whose alerts carry SERIES terms -- their study workers stay alive */
+  const liveRunners = new Set();
   for (const rec of store.all()) {
     if (!armed(rec)) continue;
     // TIME alerts branch to a timer; PRICE alerts branch to a bar feed. That is the ONLY divergence.
@@ -477,6 +527,7 @@ function reconcile() {
     for (const tgt of targetsOf(rec)) {
       const key = rec.id + '|' + tgt.symbol;
       liveFeeds.add(key);
+      if (hasSeriesTerms(rec)) liveRunners.add(runnerKeyOf(tgt.broker, tgt.symbol, rec.tfObj));
       // the depth requirement rides the signature (day-quantized so a drag inside one day doesn't churn):
       // dragging an anchor further into the past re-registers the listener, which deepens the shared feed.
       const since = sinceMsOf(rec);
@@ -504,6 +555,7 @@ function reconcile() {
       subs.delete(id);
     }
   for (const [id] of timers) if (!liveTimers.has(id)) clearTimer(id); // drop timers for disarmed/removed time alerts
+  gcRunners(liveRunners); // drop study workers whose series alerts disarmed
 }
 
 store.subscribe(() => reconcile()); // any create/update/toggle/remove re-arms the loop
