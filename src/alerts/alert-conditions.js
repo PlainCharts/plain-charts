@@ -16,6 +16,17 @@ const OP_MAP = {
   'Less Than': 'lt',
 };
 const OP_FLIP = { 'cross-up': 'cross-down', 'cross-down': 'cross-up', gt: 'lt', lt: 'gt' };
+
+/** a SERIES extent from a seriesByLabel entry + the row's chosen plot (or the study's first).
+ * @param {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[] }} s
+ * @param {string|null|undefined} rowPlot
+ * @returns {{ kind:'series', studyId:string, studyUrl:string, params:any, plot:string }|null} */
+function seriesExtentOf(s, rowPlot) {
+  if (!s || !s.studyUrl) return null;
+  const plots = s.plots || [];
+  const plot = rowPlot && plots.some((p) => p.key === rowPlot) ? rowPlot : plots.length ? plots[0].key : null;
+  return plot ? { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, plot } : null;
+}
 // Relative (symbol-self) operators: close moved X% over N bars. No Price/Value/level -- percent + lookback.
 // Moving Up/Down = absolute price move over N bars (the base); Moving Up/Down % = the same as a percent (derived).
 const MOVE_MAP = {
@@ -109,7 +120,23 @@ export function compileConditions(ui, priceLabel, objectLabel, level, extent, se
     }
     const leftPrice = r.left === priceLabel;
     const rightPrice = r.right === priceLabel;
-    if (leftPrice === rightPrice) return { op: 'unsupported' }; // both or neither Price
+    if (leftPrice && rightPrice) return { op: 'unsupported' }; // Price vs Price is nothing
+    if (!leftPrice && !rightPrice) {
+      // STUDY vs VALUE: the study's OWN value against a literal (RSI Crossing Up 35). Overlay or sub-pane,
+      // the comparison lives on the study's scale, never price's. The subject is the STUDY side; a row
+      // written "Value op Study" inverts the op so the term always reads study-op-level.
+      const sLeft = seriesByLabel && r.right === valueLabel ? seriesByLabel[r.left] : null;
+      const sRight = seriesByLabel && r.left === valueLabel ? seriesByLabel[r.right] : null;
+      const s = sLeft || sRight;
+      if (!s) return { op: 'unsupported' }; // both Value, study vs study, unknown labels: nothing to compile
+      const lvl = r.value != null && Number.isFinite(Number(r.value)) ? Number(r.value) : null;
+      const ext = seriesExtentOf(s, r.plot);
+      if (lvl == null || !ext) return { op: 'unsupported' };
+      let op = /** @type {any} */ (OP_MAP[/** @type {keyof typeof OP_MAP} */ (r.op)]) || 'unsupported';
+      if (sRight && OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)])
+        op = OP_FLIP[/** @type {keyof typeof OP_FLIP} */ (op)];
+      return op === 'unsupported' ? { op } : { op, extent: ext, level: lvl };
+    }
     const objSide = leftPrice ? r.right : r.left;
     // the object side resolves to the typed "Value", the anchored LEVEL drawing's price, the anchored
     // SEGMENTS/REGION drawing's extent, or an attached study's plot (SERIES) -- nothing resolvable = unsupported.
@@ -124,12 +151,8 @@ export function compileConditions(ui, priceLabel, objectLabel, level, extent, se
     } else if (seriesByLabel && seriesByLabel[objSide]) {
       const s = seriesByLabel[objSide];
       // price vs a study only makes sense on the SAME scale: overlay studies. A sub-pane study (RSI, CVD)
-      // compares against a Value, which is the study-vs-Value term family (not built yet).
-      if (s.overlay && s.studyUrl) {
-        const plots = s.plots || [];
-        const plot = r.plot && plots.some((p) => p.key === r.plot) ? r.plot : plots.length ? plots[0].key : null;
-        if (plot) ext = { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, plot };
-      }
+      // compares against a Value -- the study-vs-Value family above.
+      if (s.overlay) ext = seriesExtentOf(s, r.plot);
     }
     if (lvl == null && !ext) return { op: 'unsupported' }; // non-reducible object / empty value -> can't fire (yet)
     let op = /** @type {any} */ (OP_MAP[/** @type {keyof typeof OP_MAP} */ (r.op)]) || 'unsupported';

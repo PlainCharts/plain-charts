@@ -318,7 +318,9 @@ function openAlertDialog(ctx) {
       }
       seen[label] = (seen[label] || 0) + 1;
       if (seen[label] > 1) label += ' #' + seen[label];
-      // live plot meta when the study has computed; a step study's static plots() declaration otherwise
+      // live plot meta when the study has computed; a step study's static plots() declaration otherwise.
+      // legend:false plots are DECORATION (RSI's 70/30 guides, band edges a study grays out) -- not curves
+      // anyone alerts on; filtering them also keeps a single-curve study picker-free.
       const metaPlots =
         (a.plotMeta && a.plotMeta.length ? a.plotMeta : typeof a.study.plots === 'function' ? a.study.plots() : []) ||
         [];
@@ -326,7 +328,9 @@ function openAlertDialog(ctx) {
         studyId: a.study.id,
         studyUrl: studyUrlFor(a.study.id),
         params: { ...a.params },
-        plots: metaPlots.map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key })),
+        plots: metaPlots
+          .filter((/** @type {any} */ p) => p && p.legend !== false)
+          .map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key })),
         overlay: a.study.overlay !== false,
       };
     }

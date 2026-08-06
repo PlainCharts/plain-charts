@@ -426,6 +426,7 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange, p
       c1.appendChild(
         objSel(r.left, (v) => {
           r.left = v;
+          r.value = null; // a Value belongs to the pairing it was typed for -- a new object gets a fresh 0
           render();
         }),
       );
@@ -495,23 +496,17 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange, p
         c3.appendChild(
           objSel(r.right, (v) => {
             r.right = v;
+            r.value = null; // a Value belongs to the pairing it was typed for -- a new object gets a fresh 0
             render();
           }),
         );
-        // Value column, contextual: a number input when a side is "Value" (a plain SCALE-AGNOSTIC number --
-        // a price against Price, an indicator level against a study; defaults to 0, never a "Price" hint);
-        // a PLOT dropdown when a side is a multi-plot study (pick the band price interacts with); else empty.
+        // Value column, contextual: a PLOT dropdown when a side is a multi-plot study (pick the band), a
+        // number input when a side is "Value" (a plain SCALE-AGNOSTIC number -- a price against Price, an
+        // indicator level against a study; defaults to 0, never a "Price" hint). A multi-plot study AGAINST
+        // a Value shows both: the band picker and its threshold.
         c4 = el('div', 'aldlg-cond-cell aldlg-cond-valcell');
         const plots = plotsFor(r);
-        if (usesValue(r)) {
-          if (r.value == null) r.value = 0;
-          c4.appendChild(
-            numIn(roundPrice(r.value, dec), 'any', (n) => {
-              r.value = n;
-              notify();
-            }),
-          );
-        } else if (plots && plots.length > 1) {
+        if (plots && plots.length > 1) {
           if (!r.plot || !plots.some((p) => p.key === r.plot)) r.plot = plots[0].key;
           const ps = /** @type {HTMLSelectElement} */ (el('select', 'aldlg-cond-op'));
           plots.forEach((p) => {
@@ -525,6 +520,15 @@ export function conditionsControl(objects, initRows, dec, initMatch, onChange, p
             notify();
           };
           c4.appendChild(ps);
+        }
+        if (usesValue(r)) {
+          if (r.value == null) r.value = 0;
+          c4.appendChild(
+            numIn(roundPrice(r.value, dec), 'any', (n) => {
+              r.value = n;
+              notify();
+            }),
+          );
         }
       }
       row.append(c1, c2, c3, c4);

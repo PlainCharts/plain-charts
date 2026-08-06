@@ -224,11 +224,33 @@ export function plotValueAt(out, plotKey, barTime) {
 }
 
 /**
- * Substitute resolved SERIES-term values into a compiled condition: each series term becomes a plain level
- * term carrying its study's value at the tested bar, so the eval core never learns about studies. An
- * unresolved value (study error / no point at the bar) becomes 'unsupported', which correctly refuses an
- * ALL match and is skipped by an ANY. Pure; returns the original object when nothing was substituted.
- * @param {{ match?:string, terms?:any[] }} compiled @param {(number|null)[]} values  by term index
+ * Does a STUDY'S OWN VALUE fire against a literal level (the study-vs-Value family: RSI Crossing Up 35)?
+ * Study values are per-bar samples, so a crossing is a sign change between CONSECUTIVE samples -- there is
+ * no wick to gap-proof. Fires AT the threshold, like every level op. No current sample = no fire.
+ * @param {string} op @param {number|null|undefined} prev  the study's value at the bar BEFORE the tested one
+ * @param {number|null|undefined} cur @param {number|null|undefined} level
+ */
+export function seriesValueFires(op, prev, cur, level) {
+  if (cur == null || !Number.isFinite(cur) || level == null || !Number.isFinite(level)) return false;
+  if (op === 'gt') return cur > level;
+  if (op === 'lt') return cur < level;
+  if (prev == null || !Number.isFinite(prev)) return false; // the crossing family needs the prior sample
+  if (op === 'cross-up') return prev < level && cur >= level;
+  if (op === 'cross-down') return prev > level && cur <= level;
+  if (op === 'cross') return (prev < level && cur >= level) || (prev > level && cur <= level);
+  return false;
+}
+
+/**
+ * Substitute resolved SERIES-term values into a compiled condition, so the eval core never learns about
+ * studies. Two families:
+ *   - price vs study ({op, extent}): becomes a plain level term carrying the study's value at the bar.
+ *   - study vs Value ({op, extent, level}): becomes {op, sv:{prev,cur}, level} -- the study's own samples
+ *     against the literal, routed to seriesValueFires by termFires.
+ * An unresolved current value (study error / no point at the bar) becomes 'unsupported', which correctly
+ * refuses an ALL match and is skipped by an ANY. Pure; returns the original object when nothing changed.
+ * @param {{ match?:string, terms?:any[] }} compiled
+ * @param {({ cur:(number|null), prev:(number|null) }|null)[]} values  by term index
  */
 export function substituteSeries(compiled, values) {
   const terms = (compiled && compiled.terms) || [];
@@ -237,7 +259,10 @@ export function substituteSeries(compiled, values) {
     if (!t || !t.extent || t.extent.kind !== 'series') return t;
     changed = true;
     const v = values && values[i];
-    return v != null && Number.isFinite(Number(v)) ? { op: t.op, level: Number(v) } : { op: 'unsupported' };
+    const cur = v && v.cur != null && Number.isFinite(Number(v.cur)) ? Number(v.cur) : null;
+    if (cur == null) return { op: 'unsupported' };
+    if (t.level != null) return { op: t.op, sv: { prev: v ? v.prev : null, cur }, level: t.level }; // study vs Value
+    return { op: t.op, level: cur }; // price vs study
   });
   return changed ? { ...compiled, terms: out } : compiled;
 }
@@ -282,7 +307,7 @@ export function conditionEvaluable(compiled) {
 /**
  * Does one compiled term fire on this bar? Level ops (cross/gt/lt) read the bar; the relative Moving % ops
  * read the `tail` (close now vs close `lookback` bars ago). Fires AT the threshold, not below.
- * @param {{ op: string, level?: number, extent?: any, percent?: number, amount?: number, lookback?: number }} term
+ * @param {{ op: string, level?: number, extent?: any, sv?: { prev:(number|null), cur:(number|null) }, percent?: number, amount?: number, lookback?: number }} term
  * @param {{ open:number, high:number, low:number, close:number, time?:number }} bar
  * @param {any[]} [tail]
  */
@@ -290,6 +315,8 @@ export function termFires(term, bar, tail) {
   if (!term || !bar) return false;
   // a REGION extent has its own zone semantics per op; segments/level fall through to termLevels below
   if (term.extent && term.extent.kind === 'region') return regionFires(term.op, term.extent, bar);
+  // a RESOLVED study-vs-Value term (substituteSeries): the study's own samples against the literal level
+  if (term.sv) return seriesValueFires(term.op, term.sv.prev, term.sv.cur, term.level);
   switch (term.op) {
     // level ops resolve their value(s) first: one fixed level, or the anchored line's value(s) at this bar
     // (termLevels). Any resolved value firing fires the term -- a zigzag strand behaves like its own line.

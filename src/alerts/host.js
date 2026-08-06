@@ -339,8 +339,17 @@ function onFeed(id, symbol, ev) {
     // SERIES terms resolve through the study runner (an async worker roundtrip), then the same fire path
     // runs with a values-substituted condition. The bar is captured WITH its values, so a late arrival
     // still tests a consistent (bar, level) pair; the cadence latch dedupes. The broker is the target's
-    // own (a watchlist member may live on another broker), never the active adapter.
+    // own (a watchlist member may live on another broker), never the active adapter. The bar BEFORE the
+    // tested one feeds the study-vs-Value crossing family (consecutive samples).
     const tgt = targetsOf(rec).find((x) => x.symbol === symbol);
+    const tail = ev.tail || [];
+    let prevBarTime = null;
+    for (let i = tail.length - 1; i >= 0; i--) {
+      if (tail[i] && tail[i].time < bar.time) {
+        prevBarTime = tail[i].time;
+        break;
+      }
+    }
     resolveSeries(
       tgt ? tgt.broker : rec.broker || null,
       symbol,
@@ -348,6 +357,7 @@ function onFeed(id, symbol, ev) {
       ev,
       rec.compiled,
       bar.time,
+      prevBarTime,
       rec.priceDecimals,
     )
       .then((vals) => {

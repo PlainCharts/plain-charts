@@ -100,15 +100,17 @@ function execStudy(r, ext, decimals) {
 }
 
 /**
- * Resolve every SERIES term of a compiled condition to its plot value at `barTime`, by term index
- * (null = unresolvable; the substitution turns it 'unsupported'). Syncs the feed report into the worker
- * first (idempotent per report). A study error logs once per exec and resolves null -- a broken study must
- * not wedge the eval loop.
+ * Resolve every SERIES term of a compiled condition to its plot samples at the tested bar -- {cur, prev}
+ * by term index (null = unresolvable; the substitution turns it 'unsupported'). `prev` (the value one bar
+ * earlier, for the study-vs-Value crossing family) resolves null when no earlier bar exists. Syncs the
+ * feed report into the worker first (idempotent per report). A study error logs once per exec and resolves
+ * null -- a broken study must not wedge the eval loop.
  * @param {string|null} broker @param {string} symbol @param {any} tfObj @param {any} ev
- * @param {{ terms?: any[] }} compiled @param {number} barTime @param {number} [decimals]
- * @returns {Promise<(number|null)[]>}
+ * @param {{ terms?: any[] }} compiled @param {number} barTime @param {number|null} prevBarTime
+ * @param {number} [decimals]
+ * @returns {Promise<({ cur:(number|null), prev:(number|null) }|null)[]>}
  */
-export function resolveSeries(broker, symbol, tfObj, ev, compiled, barTime, decimals) {
+export function resolveSeries(broker, symbol, tfObj, ev, compiled, barTime, prevBarTime, decimals) {
   const r = ensure(runnerKeyOf(broker, symbol, tfObj), tfObj || null);
   sync(r, ev);
   const terms = (compiled && compiled.terms) || [];
@@ -117,7 +119,10 @@ export function resolveSeries(broker, symbol, tfObj, ev, compiled, barTime, deci
       const e = t && t.extent;
       if (!e || e.kind !== 'series') return Promise.resolve(null);
       return execStudy(r, e, decimals)
-        .then((out) => plotValueAt(out, e.plot, barTime))
+        .then((out) => ({
+          cur: plotValueAt(out, e.plot, barTime),
+          prev: prevBarTime != null ? plotValueAt(out, e.plot, prevBarTime) : null,
+        }))
         .catch((err) => {
           console.error('[alert-studies]', e.studyId, (err && /** @type {any} */ (err).message) || err);
           return null;

@@ -141,6 +141,9 @@
 .aldlg-cond-head .aldlg-cond-cell { color: var(--tx-dim); font-weight: 600; }
 .aldlg-cond-op { width: 100%; background: var(--field); color: var(--tx); border: 1px solid var(--bd);
                  border-radius: 5px; padding: 5px 6px; font-size: 13px; }
+/* the Value cell can hold a band picker AND its threshold (multi-plot study vs Value): share the width */
+.aldlg-cond-valcell { gap: 4px; }
+.aldlg-cond-valcell .aldlg-cond-op, .aldlg-cond-valcell .aldlg-cond-vinput { flex: 1 1 0; min-width: 0; }
 .aldlg-cond-acts { display: flex; justify-content: flex-end; gap: 14px; padding: 8px 2px 0; }
 /* unsupported-condition warning under the conditions table (shown while Create is disabled) */
 .aldlg-warn { color: var(--sell, #d66); font-size: 12px; padding: 8px 2px 0; }
