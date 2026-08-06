@@ -1,14 +1,11 @@
 // @ts-check
-// Shared PLAN state for on-chart order planning (the gray projection dot today; bracket levels next). UI-only -- it is
-// NOT the order book and never touches a broker; it just records "the user is planning on this instrument". Held in
-// memory and synced across windows over the ORDER_PLAN BroadcastChannel, so a plan set by a CONTROL window (the Order
-// dialog) is drawn by every chart of that (broker, symbol) and OUTLIVES the control window: closing the Order dialog
-// does NOT erase a plan the chart is showing. A window that opens late QUERIES for a snapshot so its UI reflects
-// reality. PERSISTED to settings/trading/order-plan.json (via /api/order-plan): a toggle survives an app restart --
-// it stays until you untoggle it. Keyed by broker:symbol; an empty broker is a broker-agnostic plan (matches any pane
-// of the symbol).
+// Shared PLAN state for on-chart order planning (the gray projection + bracket levels). UI-only -- it is NOT the order
+// book and never touches a broker; it just records "the user is planning on this instrument". Held in memory and synced
+// across windows over the ORDER_PLAN BroadcastChannel, so a plan set by the Order dialog is drawn by every chart of that
+// (broker, symbol). A window that opens late QUERIES for a snapshot so its UI reflects the in-session plan. NEVER
+// persisted: planning is BOUND to the dialog (an open entry tab is a planning session) and ends when the dialog closes,
+// so nothing survives an app restart. Keyed by broker:symbol; an empty broker is a broker-agnostic plan (any pane of the symbol).
 import { IPC } from '../../ipc-contract.js';
-import { getJSON, postJSON } from '../../api.js';
 import { stopDragFlip } from './plan-rules.js';
 
 /** @param {string} broker @param {string} symbol */
@@ -43,10 +40,9 @@ const keyOf = (broker, symbol) => (broker || '') + ':' + symbol;
  *  the projection. */
 /** @type {Map<string, Plan>} */
 const state = new Map();
-// Keys with a SESSION-LIVE value: written by this window (set) or received as another window's real-time
-// edit (op 'set'). Disk hydration is NOT live: the file persists only the Project flag, so a freshly opened
-// window's disk copy is a stub. A late snapshot (the full in-session plan: levels, side, type) must OVERWRITE
-// that stub, but must never regress a live edit.
+// Keys with a SESSION-LIVE value: written by this window (set) or received as another window's real-time edit
+// (op 'set'). A late snapshot from another window (the full in-session plan: levels, side, type) may fill a gap
+// here, but must never regress a live edit -- so a locally-live key wins over an incoming snapshot.
 /** @type {Set<string>} */
 const liveKeys = new Set();
 /** @type {Set<() => void>} */
@@ -72,7 +68,7 @@ ch.onmessage = (/** @type {MessageEvent} */ e) => {
       ch.postMessage({ op: 'snapshot', entries: [...state.entries()] });
     } catch (_) {}
   } else if (m.op === 'snapshot' && Array.isArray(m.entries)) {
-    // fill gaps AND replace disk-hydrated stubs; only a session-live key (a real edit) wins over a snapshot.
+    // fill gaps from another window's in-session plan; only a session-live key (a real edit) wins over a snapshot.
     // Deliberately NOT marking these keys live: a later reply (multi-window) may carry a fuller state.
     let changed = false;
     for (const [k, v] of m.entries) {
@@ -84,42 +80,14 @@ ch.onmessage = (/** @type {MessageEvent} */ e) => {
     if (changed) notify();
   }
 };
-// HYDRATE from disk (the persisted plan), then ask any already-open window for in-session changes. Disk load lets a
-// projection survive an app restart; the snapshot query catches a mid-session window up to unsaved-but-live changes.
-getJSON('/api/order-plan')
-  .then((saved) => {
-    let changed = false;
-    if (saved && typeof saved === 'object')
-      for (const k of Object.keys(saved)) {
-        if (!state.has(k)) {
-          state.set(k, saved[k]);
-          changed = true;
-        }
-      }
-    if (changed) notify();
-  })
-  .catch(() => {});
+// On load, ask any already-open window for the in-session plan (cross-window catch-up). NOTHING is read from disk:
+// a projection is bound to its dialog and never survives an app restart -- planning lives only while the dialog is open.
 try {
   ch.postMessage({ op: 'query' });
 } catch (_) {}
 
-// SAVE the plan to disk (only the ACTIVE entries -- an untoggled instrument is dropped, so the file stays clean).
-// Written immediately on a local change so a toggle isn't lost if the window closes right after (no debounce race).
-// ONLY the Project flag persists -- Bracket is deliberately session-only, so it RESETS to off on every app restart
-// (levels re-seed anyway). bracket => project, so a saved entry always means a projection.
-function persist() {
-  /** @type {Record<string, { project?: boolean }>} */
-  const obj = {};
-  for (const [k, v] of state) {
-    if (v && v.project) obj[k] = { project: true };
-  }
-  try {
-    postJSON('/api/order-plan', obj);
-  } catch (_) {}
-}
-
-/** local write + broadcast, optionally persist @param {string} broker @param {string} symbol @param {Plan} patch @param {boolean} [doPersist] */
-function set(broker, symbol, patch, doPersist) {
+/** local write + broadcast (in-memory + cross-window only; never persisted) @param {string} broker @param {string} symbol @param {Plan} patch */
+function set(broker, symbol, patch) {
   if (!symbol) return;
   const key = keyOf(broker, symbol);
   const cur = state.get(key) || {};
@@ -129,7 +97,6 @@ function set(broker, symbol, patch, doPersist) {
   try {
     ch.postMessage({ op: 'set', key, patch });
   } catch (_) {}
-  if (doPersist) persist(); // only flag changes hit disk; level drags just sync in memory
 }
 
 /** @param {Plan|undefined} v @param {'project'|'bracket'|'armed'} flag */
@@ -183,7 +150,6 @@ export function setProjecting(broker, symbol, on) {
           owner: null,
           sizing: null,
         },
-    true,
   );
 }
 /** turning Bracket ON implies Project ON; turning it OFF clears the armed flag + the seeded levels (Project stays). @param {string} broker @param {string} symbol @param {boolean} on */
@@ -194,16 +160,15 @@ export function setBracket(broker, symbol, on) {
     on
       ? { project: true, bracket: true }
       : { bracket: false, armed: false, ref: null, levels: [], dir: null, activeIdx: null },
-    true,
   );
 }
 /** ARM/disarm the projected bracket (session-only): flips the plan LIVE without touching the levels. @param {string} broker @param {string} symbol @param {boolean} on */
 export function setArmed(broker, symbol, on) {
-  set(broker, symbol, { armed: !!on }, false);
+  set(broker, symbol, { armed: !!on });
 }
 /** update the plan's non-rung fields (ref / dir / anchor) -- in-memory + synced, NOT persisted. @param {string} broker @param {string} symbol @param {Plan} patch */
 export function setLevels(broker, symbol, patch) {
-  set(broker, symbol, patch, false);
+  set(broker, symbol, patch);
 }
 /** set ONE ladder rung's stop/target by index (grows the ladder as needed). @param {string} broker @param {string} symbol @param {number} i @param {PlanLevel} patch */
 export function setLevel(broker, symbol, i, patch) {
@@ -212,18 +177,18 @@ export function setLevel(broker, symbol, i, patch) {
   const levels = Array.isArray(cur.levels) ? cur.levels.slice() : [];
   while (levels.length <= i) levels.push({});
   levels[i] = { ...levels[i], ...patch };
-  set(broker, symbol, { levels }, false);
+  set(broker, symbol, { levels });
 }
 /** REPLACE the whole ladder (all rungs at once) -- for a multi-level caller pushing its N levels. @param {string} broker @param {string} symbol @param {PlanLevel[]} levels */
 export function setLadder(broker, symbol, levels) {
-  set(broker, symbol, { levels: Array.isArray(levels) ? levels.slice() : [] }, false);
+  set(broker, symbol, { levels: Array.isArray(levels) ? levels.slice() : [] });
 }
 /** merge a per-category dot VISIBILITY patch (session-only, synced): { entry?, stop?, target? } booleans.
  *  @param {string} broker @param {string} symbol @param {PlanVis} patch */
 export function setVis(broker, symbol, patch) {
   if (!symbol || !patch) return;
   const cur = state.get(keyOf(broker, symbol)) || {};
-  set(broker, symbol, { vis: { ...(cur.vis || {}), ...patch } }, false);
+  set(broker, symbol, { vis: { ...(cur.vis || {}), ...patch } });
 }
 /** Commit a STOP price (drag or typed) -- THE one writer for stop edits, shared by every input surface (chart drag,
  *  levels table). Rung 0 with flip allowed (caller asserts pre-fill): the stop's side vs the entry pivot sets the

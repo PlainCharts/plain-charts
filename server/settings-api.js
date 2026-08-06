@@ -36,7 +36,6 @@ const API_FILES = {
   '/api/colors': 'appearance/colors.json',
   '/api/palettes': 'appearance/palettes.json',
   '/api/order-buttons': 'trading/order-buttons.json', // user-authored quick-action buttons for the order ticket
-  '/api/order-plan': 'trading/order-plan.json', // persisted on-chart PLAN state (gray projection etc.) per broker:symbol
   '/api/order-primitives': 'trading/order-primitives.json', // on-chart order primitives: the GLOBAL active primitive + per-primitive config namespaces
   '/api/watchlist': 'market/watchlist.json',
   '/api/alert-rules': 'market/alert-rules.json', // the Alert engine's authoritative rule set (owned by the alert-host)
