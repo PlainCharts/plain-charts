@@ -4,7 +4,7 @@
 // sync / Clone / Copy / Lock / Hide / Remove apply to all); single-only items
 // (Template, Slice, Extend, Settings) are omitted for a multi-selection.
 import { openSettingsDialog } from './settings-dialog.js';
-import { openCreateAlertDialog } from '../../alerts/create-alert-dialog.js';
+import { openDrawingAlertDialog } from '../../alerts/create-alert-dialog.js'; // routes vline -> time dialog, others -> price dialog
 import { alertForObject, removeDrawingsWithAlerts } from '../../alerts/alert-drawing-sync.js';
 import { getTool } from '../registry.js';
 import { intervalPreset, matchesPreset } from './visibility.js';
@@ -109,7 +109,7 @@ export function openDrawingMenu(engine, id, clientX, clientY) {
     al.onclick = () => {
       closeDrawingMenu();
       engine.select(id);
-      openCreateAlertDialog(engine, id);
+      openDrawingAlertDialog(engine, id);
     };
     menu.appendChild(al);
     menu.appendChild(el('div', 'dwg-div'));

@@ -8,6 +8,8 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Alerts on a Vertical Line: "Create alert" on a vline opens the time-alert dialog pre-set to a one-shot at the line's instant. The alert is bound to the line: dragging the line re-schedules it, the bell rides the line, and deleting either removes both. A one-shot pointed at the past refuses to save
+- Time alerts: a Name field in the dialog (default: the date only). Left empty, the panel titles the row from the live schedule, so a dragged line can never leave a stale time in the title
 - Alerts on a Rectangle: the zone fires only within its drawn time span. Crossing = a bar touches the box (a gap straight through counts), Crossing Up/Down = entering through the bottom/top edge, Greater/Less Than = closing beyond it. Moving or resizing the box updates its alert, and the bell sits on the box's right edge
 - Alerts on drawn lines: the trend-line family (trend line, ray, extended line), the level ray, and the multi-point path can now carry alerts. Price is tested against the line exactly as drawn, at every slope and strand, on the alert's own interval; rays extrapolate, a finite line past its end simply never fires. Dragging the line updates its alert, and the on-chart bell badge sits on the line where it meets the price scale
 - Alerts on a Horizontal Ray: right-click a horizontal ray, Create alert, and it evaluates like a horizontal line (fixed price level, follows the line when dragged)

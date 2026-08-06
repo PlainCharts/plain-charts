@@ -59,6 +59,9 @@ export const SEGMENT_TOOLS = ['trendline', 'ray', 'extendedline', 'levelray', 'p
 // The REGION extent category: tools whose data-space extent is a time x price ZONE spanned by two corner
 // anchors (eval.js regionFires: touch / enter-from-below / enter-from-above / beyond, only inside its span).
 export const REGION_TOOLS = ['rect'];
+// The TIME category: tools that are a pure time marker -- "Create alert on" routes to the TIME-alert engine
+// (a one-shot schedule at the line's instant), not a price condition. No extent, no bar feed.
+export const TIME_TOOLS = ['vline'];
 /** snapshot the anchored drawing's extent, if it is a SEGMENTS- or REGION-category tool.
  * @param {any} d @returns {{ kind:'segments'|'region', points:{time:number,price:number}[], extend?:string }|null} */
 export function anchorExtent(d) {

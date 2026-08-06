@@ -24,7 +24,7 @@ import {
   fmtDateField,
   parseDateField,
 } from '../tools/engine/coord-inputs.js';
-import { openCreateAlertDialog } from '../alerts/create-alert-dialog.js';
+import { openDrawingAlertDialog } from '../alerts/create-alert-dialog.js'; // routes vline -> time dialog, others -> price dialog
 
 // small calendar glyph (plain SVG, currentColor so it follows the theme)
 const SVG_CAL =
@@ -439,7 +439,7 @@ function build(pane, eng, id, d, kind) {
     alertBtn.className = 'bb-qc-alert';
     alertBtn.title = 'Create alert…';
     alertBtn.innerHTML = SVG_BELL;
-    alertBtn.onclick = () => openCreateAlertDialog(eng, id);
+    alertBtn.onclick = () => openDrawingAlertDialog(eng, id);
     host.append(alertBtn);
   }
 }

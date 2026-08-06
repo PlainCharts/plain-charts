@@ -24,7 +24,15 @@ import {
   messageControl,
   intervalControl,
 } from './dialog-controls.js'; // pure DOM form-control builders (view leaf)
-import { anchorLevel, anchorExtent, compileConditions, isRelativeConds, condsUseTf } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
+import {
+  anchorLevel,
+  anchorExtent,
+  compileConditions,
+  isRelativeConds,
+  condsUseTf,
+  TIME_TOOLS,
+} from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
+import { openCreateTimeAlertDialog } from './create-time-alert-dialog.js'; // a TIME-category drawing (vline) routes there
 import { priceDecimalsOf } from './alert-record.js'; // a record's Value precision (schema's one home)
 import { cadenceOf, conditionEvaluable } from './eval.js'; // stable cadence key + the can-this-ever-fire predicate (live validation)
 import { alertForObject } from './alert-drawing-sync.js'; // edit mode: the existing alert on this drawing (drawing<->alert glue lives there)
@@ -142,6 +150,29 @@ export function openCreateAlertDialog(engine, id) {
   if (!d) return;
   const pane = engine.pane || {};
   openAlertDialog({ pane, drawing: d, existing: alertForObject(pane.symbol || '', id) });
+}
+
+/**
+ * Route a drawing's Create/Edit-alert action to the RIGHT dialog -- the one entry both the right-click menu
+ * and the price-scale quick editor call. A TIME-category drawing (vline: a pure time marker) opens the
+ * time-alert dialog, prefilled to a one-shot at the line's instant and anchored to the drawing (so the
+ * badge, the drag re-schedule, and the delete cascade all bind); an existing alert opens in edit mode.
+ * Every other drawing opens the price dialog. @param {any} engine @param {string} id
+ */
+export function openDrawingAlertDialog(engine, id) {
+  const d = engine.get(id);
+  if (!d) return;
+  const pane = engine.pane || {};
+  if (TIME_TOOLS.indexOf(d.tool) >= 0) {
+    const existing = alertForObject(pane.symbol || '', id);
+    const atMs = Math.round(Number(d.points && d.points[0] && d.points[0].time) * 1000); // anchors are epoch SECONDS
+    openCreateTimeAlertDialog(
+      existing,
+      existing ? undefined : { atMs, objectId: id, tool: d.tool, symbol: pane.symbol || '' },
+    );
+    return;
+  }
+  openCreateAlertDialog(engine, id);
 }
 
 /**

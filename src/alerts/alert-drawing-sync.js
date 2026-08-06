@@ -10,8 +10,8 @@ import { t } from '../i18n/i18n.js';
 import { getTool } from '../tools/registry.js';
 import { alertCommand } from './funnel.js'; // the single mutator path to the alert-host
 import { alertMirror } from './store.js'; // read the alert mirror (find the alert on an object)
-import { withLevel } from './alert-record.js'; // the set-level/re-arm mutation (schema's one home)
-import { compileConditions, LEVEL_TOOLS, anchorExtent } from './alert-conditions.js'; // canonical compiler + the extent-category reductions
+import { withLevel, sourceOf } from './alert-record.js'; // the set-level/re-arm mutation + the producer read (schema's one home)
+import { compileConditions, LEVEL_TOOLS, TIME_TOOLS, anchorExtent } from './alert-conditions.js'; // canonical compiler + the category reductions
 import { confirmDialog } from '../ui/confirm.js'; // confirm before deleting a drawing that has an alert
 import { bus } from '../bus.js'; // drawing-move events (keep alert level in sync)
 import { roundPrice } from './dialog-controls.js'; // round a level to the instrument's decimals
@@ -81,6 +81,16 @@ export function initAlertDrawingSync() {
         if (!a || !a.objectId || (a.symbol && a.symbol !== sym)) continue;
         const d = pane.drawings.get(a.objectId);
         if (!d || !d.points || !d.points.length) continue;
+        // TIME-category (vline): the alert is a one-shot at the line's instant -- a drag re-schedules it.
+        // A user who edited it to daily/weekly took the bond over; only a 'once' schedule follows the line.
+        if (TIME_TOOLS.indexOf(d.tool) >= 0) {
+          if (sourceOf(a) !== 'time') continue;
+          const sch = a.schedule || {};
+          const atMs = Math.round(Number(d.points[0].time) * 1000); // anchors are epoch SECONDS
+          if (sch.kind !== 'once' || !Number.isFinite(atMs) || sch.at === atMs) continue;
+          alertCommand('update', { id: a.id, patch: { schedule: { kind: 'once', at: atMs }, rt: {} } }).catch(() => {});
+          continue;
+        }
         const objName = /** @type {any} */ (getTool(d.tool) || {}).name || d.tool;
         const rows = (a.conditions && a.conditions.conditions) || [];
         if (!rows.some((/** @type {any} */ c) => c && (c.left === objName || c.right === objName))) continue; // Value alerts don't track

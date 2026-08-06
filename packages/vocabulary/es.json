@@ -575,6 +575,7 @@
   "Remove alert": "Eliminar alerta",
   "Remove drawing and its alert?": "¿Eliminar el dibujo y su alerta?",
   "This drawing has an alert. Removing it deletes the alert too.": "Este dibujo tiene una alerta. Al eliminarlo también se elimina la alerta.",
+  "This time is already in the past.": "Esta hora ya pasó.",
   "Enable / disable this hotkey": "Activar / desactivar este atajo",
   "Full hotkey reference": "Referencia completa de atajos",
   "GESTURES": "GESTOS",

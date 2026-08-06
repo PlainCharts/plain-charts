@@ -23,10 +23,14 @@ export function closeCreateTimeAlertDialog() {
 
 /**
  * Open the small time-alert dialog. Pass an existing time alert to EDIT it (prefilled, saves an update);
- * pass nothing to CREATE a new one. A time alert is self-contained -- no chart, no symbol.
+ * pass nothing to CREATE a new one. A time alert is normally self-contained -- no chart, no symbol -- but a
+ * TIME-category drawing (vline) creates one ANCHORED to itself: `init` prefills a one-shot at the line's
+ * instant and stamps objectId/tool/symbol on the record, binding the badge, the drag re-schedule, and the
+ * delete cascade.
  * @param {any} [existing]
+ * @param {{ atMs:number, objectId:string, tool:string, symbol:string }} [init]
  */
-export function openCreateTimeAlertDialog(existing) {
+export function openCreateTimeAlertDialog(existing, init) {
   closeCreateTimeAlertDialog();
   const editing = !!(existing && existing.id);
   const tzOff = alertTzOffsetMin();
@@ -35,12 +39,22 @@ export function openCreateTimeAlertDialog(existing) {
   const hhmm = (/** @type {Date} */ d) => p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes());
   const ymd = (/** @type {Date} */ d) => d.getUTCFullYear() + '-' + p2(d.getUTCMonth() + 1) + '-' + p2(d.getUTCDate());
   const nowTz = wall(Date.now());
-  // Prefill from the existing schedule when editing; sensible defaults (daily, now) when creating.
+  // Prefill from the existing schedule when editing, from the drawing's instant when anchoring (one-shot),
+  // else sensible defaults (daily, now).
   const sch = editing ? existing.schedule || {} : {};
-  const onceAt = sch.kind === 'once' && typeof sch.at === 'number' ? wall(sch.at) : null;
+  const initAt = init && Number.isFinite(init.atMs) ? wall(init.atMs) : null;
+  const onceAt = sch.kind === 'once' && typeof sch.at === 'number' ? wall(sch.at) : initAt;
   const initTime = sch.time ? sch.time : onceAt ? hhmm(onceAt) : hhmm(nowTz);
   const initDate = onceAt ? ymd(onceAt) : ymd(nowTz);
-  const initFreq = editing ? (sch.kind === 'once' ? 'once' : sch.kind === 'weekly' ? 'weekly' : 'daily') : 'daily';
+  const initFreq = editing
+    ? sch.kind === 'once'
+      ? 'once'
+      : sch.kind === 'weekly'
+        ? 'weekly'
+        : 'daily'
+    : initAt
+      ? 'once'
+      : 'daily';
 
   const dlg = el('div', 'dialog alert-dlg alert-dlg-time');
   panel = dlg;
@@ -59,11 +73,14 @@ export function openCreateTimeAlertDialog(existing) {
   // The Freq. row below drives whether the date matters.
   const [ih, imi] = initTime.split(':').map(Number);
   const cur = { h: ih || 0, mi: imi || 0 };
+  // validation is bound after the footer exists (it disables the submit button); stub for early callbacks
+  let validate = () => {};
   const timeWidget = segTime(
     alertHours24(),
     (p) => {
       cur.h = p.h;
       cur.mi = p.mi;
+      validate();
     },
     { seconds: false },
   );
@@ -84,6 +101,7 @@ export function openCreateTimeAlertDialog(existing) {
     cur.mi = m;
     cur.h = h;
     timeWidget.set({ h, mi: m, s: 0 });
+    validate();
   };
   const spin = el('span', 'aldlg-time-spin');
   const spinBtn = (/** @type {string} */ glyph, /** @type {number} */ d) => {
@@ -109,6 +127,7 @@ export function openCreateTimeAlertDialog(existing) {
       onSet: (ms) => {
         const dt = new Date(ms);
         dateIn.value = dt.getFullYear() + '-' + p2(dt.getMonth() + 1) + '-' + p2(dt.getDate());
+        validate();
       },
     });
   };
@@ -133,8 +152,18 @@ export function openCreateTimeAlertDialog(existing) {
   const syncDateEnabled = () => {
     dateIn.disabled = freqSel.value === 'daily';
   };
-  freqSel.onchange = syncDateEnabled;
+  freqSel.onchange = () => {
+    syncDateEnabled();
+    validate();
+  };
   syncDateEnabled();
+
+  // ---- Name: the row title in the panel. Defaults to the DATE only -- never a time, which would freeze a
+  // timestamp into the name and go stale when the anchored line is dragged (the schedule is the live truth).
+  // Cleared empty, the panel derives the title from the live schedule instead.
+  const nameIn = /** @type {HTMLInputElement} */ (el('input', 'aldlg-in'));
+  nameIn.type = 'text';
+  nameIn.value = editing ? existing.name || '' : initDate;
 
   // ---- Message (plain reminder text -- no price/symbol placeholders; a time alert has none)
   const msgIn = /** @type {HTMLTextAreaElement} */ (el('textarea', 'aldlg-in aldlg-msg-short'));
@@ -147,37 +176,53 @@ export function openCreateTimeAlertDialog(existing) {
   const actions = actionsControl(editing ? existing.actions : undefined);
 
   const body = el('div', 'aldlg-body');
+  // a one-shot pointed at the past can never fire -- the same honesty rule the price dialog enforces
+  const warn = el('div', 'aldlg-warn', t('This time is already in the past.'));
+  warn.style.display = 'none';
   // Actions has no label -- the widget spans the full dialog width (its own "Action" header carries the name).
-  body.append(field(t('When'), whenRow), field(t('Freq.'), freqSel), field(t('Message'), msgIn), actions.el);
+  body.append(
+    field(t('Name'), nameIn),
+    field(t('When'), whenRow),
+    field(t('Freq.'), freqSel),
+    warn,
+    field(t('Message'), msgIn),
+    actions.el,
+  );
   dlg.appendChild(body);
 
   // ---- footer: Cancel · Create/Save
   const foot = el('div', 'aldlg-foot');
   const cancel = el('button', null, t('Cancel'));
   cancel.onclick = closeCreateTimeAlertDialog;
-  const submit = el('button', 'primary', t(editing ? 'Save' : 'Create'));
+  const submit = /** @type {HTMLButtonElement} */ (el('button', 'primary', t(editing ? 'Save' : 'Create')));
+  // the chosen one-shot instant (epoch ms, alert tz) -- shared by validation and submit
+  const onceAtMs = () => {
+    const [Y, M, D] = (dateIn.value || initDate).split('-').map(Number);
+    return Date.UTC(Y, (M || 1) - 1, D || 1, cur.h || 0, cur.mi || 0) - tzOff * 60000;
+  };
+  validate = () => {
+    const dead = freqSel.value === 'once' && onceAtMs() <= Date.now();
+    warn.style.display = dead ? '' : 'none';
+    submit.disabled = dead;
+  };
+  validate();
   submit.onclick = () => {
     const time = p2(cur.h) + ':' + p2(cur.mi); // segmented field -> "HH:MM" (24h) for the schedule
     const freq = freqSel.value;
     /** @type {any} */ let schedule;
-    let label;
     if (freq === 'daily') {
       schedule = { kind: 'daily', time };
-      label = t('Daily') + ' ' + time;
     } else if (freq === 'weekly') {
       const [Y, M, D] = (dateIn.value || initDate).split('-').map(Number);
       const wd = new Date(Y, (M || 1) - 1, D || 1).getDay(); // 0=Sun..6=Sat, the weekday of the chosen date
       schedule = { kind: 'weekly', days: [wd], time };
-      label = t('Weekly') + ' ' + time;
     } else {
-      const [Y, M, D] = (dateIn.value || initDate).split('-').map(Number);
-      const [H, Mi] = time.split(':').map(Number);
-      const at = Date.UTC(Y, (M || 1) - 1, D || 1, H || 0, Mi || 0) - tzOff * 60000; // the instant, in the alert tz
-      schedule = { kind: 'once', at };
-      label = (dateIn.value || initDate) + ' ' + time;
+      schedule = { kind: 'once', at: onceAtMs() };
     }
     const message = msgIn.value.trim();
-    const fields = { source: 'time', name: message || label, schedule, message, actions: actions.get() };
+    // name is the USER'S field (default: the date only -- no time, so a dragged anchor can't make it lie);
+    // empty means the panel derives the row title from the live schedule.
+    const fields = { source: 'time', name: nameIn.value.trim(), schedule, message, actions: actions.get() };
     if (editing) {
       // UPDATE: patch the record and reset the fired latch (rt) so the new schedule re-arms cleanly. `enabled`
       // is left untouched (the merge preserves it) -- the row's play/pause owns that.
@@ -185,7 +230,9 @@ export function openCreateTimeAlertDialog(existing) {
         console.error('[alert] update time alert failed', err),
       );
     } else {
-      alertCommand('create', { ...fields, enabled: true }).catch((err) =>
+      // a drawing-anchored create (vline) stamps its anchor so the badge / drag / delete cascade bind
+      const anchorFields = init ? { objectId: init.objectId, tool: init.tool, symbol: init.symbol || '' } : {};
+      alertCommand('create', { ...fields, ...anchorFields, enabled: true }).catch((err) =>
         console.error('[alert] create time alert failed', err),
       );
     }

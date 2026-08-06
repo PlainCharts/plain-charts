@@ -194,6 +194,9 @@ export function createDrawingPrimitive(engine) {
               }
             } else {
               y = pts[0].y;
+              // a time-only drawing (vline) is vertical: the bell rides the LINE at its anchor, not the scale
+              const tl = /** @type {any} */ (getTool(d.tool));
+              if (tl && tl.timeOnly) x = pts[0].x;
             }
             const cx = Math.max(12, Math.min(bx, x));
             const by = Math.max(12, Math.min(view.height - 12, y));
