@@ -164,6 +164,16 @@ export function withLevel(a, lvl) {
   return patch;
 }
 
+/** Substitute `#token` placeholders in an alert MESSAGE with fire-time values. Generic and pure: the caller
+ * supplies the token map (symbol/broker/interval/price/timenow -- preformatted strings; this leaf stays
+ * import-free). An unknown token passes through untouched; a token with no value becomes empty.
+ * @param {any} text @param {Record<string, any>} subs @returns {string} */
+export function fillPlaceholders(text, subs) {
+  let out = String(text == null ? '' : text);
+  for (const [k, v] of Object.entries(subs || {})) out = out.split('#' + k).join(v == null ? '' : String(v));
+  return out;
+}
+
 /** the update PATCH to RESTART a stopped/triggered alert: re-enable it AND clear the fired latch (rt) so a spent
  * "Once only" (or any recurring) alert re-arms fresh -- the same reset-to-rearm rule withLevel applies on a move.
  * The rt-schema knowledge lives HERE, not in the view. @returns {{ enabled: true, rt: {} }} */

@@ -30,8 +30,8 @@ import {
 } from './eval.js';
 import { resolveSeries, runnerKeyOf, gcRunners } from './study-runner.js'; // headless study compute for SERIES terms
 import { nextFire, scheduleValid } from './schedule.js';
-import { sourceOf, applyOf, rtFor, withRt, listSymbols } from './alert-record.js';
-import { alertTzOffsetMin, alertSoundPath, soundObjectUrl } from './alert-display.js';
+import { sourceOf, applyOf, rtFor, withRt, listSymbols, fillPlaceholders } from './alert-record.js';
+import { alertTzOffsetMin, alertSoundPath, soundObjectUrl, fmtAlertTime } from './alert-display.js';
 import { loadSettings } from '../settings/settings.js';
 import { IPC } from '../ipc-contract.js';
 
@@ -424,14 +424,18 @@ function logFire(rec, bar, at, symbol) {
 /** @param {any} rec @param {{ close?: number } | null} [bar]  a price fire carries the bar; a time fire has none */
 function runActions(rec, bar) {
   const acts = (rec && rec.actions) || [];
-  const title = (rec.name && String(rec.name)) || 'Alert';
-  // Price fire -> "SYMBOL @ price — message"; time fire (no bar) -> just the message, or the name.
-  const body =
-    bar && bar.close != null
-      ? `${rec.symbol || ''} @ ${bar.close}` + (rec.message ? ` — ${rec.message}` : '')
-      : rec.message
-        ? String(rec.message)
-        : title;
+  // Title = the alert's Name; body = the alert's Message with #placeholders substituted at fire time.
+  // NOTHING is invented: no message means no body, and an action only decides WHERE that content goes.
+  const title = (rec.name && String(rec.name)) || 'Untitled';
+  const body = rec.message
+    ? fillPlaceholders(String(rec.message), {
+        symbol: rec.symbol || '',
+        broker: rec.broker || '',
+        interval: rec.tf || '',
+        price: bar && bar.close != null ? String(bar.close) : '',
+        timenow: fmtAlertTime(Date.now()),
+      })
+    : '';
   if (acts.includes('System notification')) osNotify(title, body);
   if (acts.includes('Toast notification')) emitFired('toast', rec, title, body);
   if (acts.includes('Popup window')) emitFired('popup', rec, title, body);
@@ -510,7 +514,7 @@ async function telegramAction(rec, title, body) {
       return;
     }
     const { sendTelegram } = await import('./telegram.js');
-    await sendTelegram(cfg, title + '\n' + body, { markdown: false });
+    await sendTelegram(cfg, body ? title + '\n' + body : title, { markdown: false });
     console.info('[alert-host] telegram sent for', rec.id);
   } catch (err) {
     console.error('[alert-host] telegram send failed for', rec.id, '-', errStr(err));

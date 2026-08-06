@@ -45,10 +45,13 @@ function showToast(msg) {
   const title = document.createElement('div');
   title.className = 'alert-toast-title';
   title.textContent = msg.title || 'Alert';
-  const body = document.createElement('div');
-  body.className = 'alert-toast-body';
-  body.textContent = msg.body || '';
-  txt.append(title, body);
+  txt.append(title);
+  if (msg.body) {
+    const body = document.createElement('div');
+    body.className = 'alert-toast-body';
+    body.textContent = msg.body;
+    txt.append(body); // no message = no body element -- the title alone is the toast
+  }
   const x = document.createElement('span');
   x.className = 'alert-toast-x';
   x.textContent = '✕';
@@ -83,16 +86,20 @@ function showPopup(msg) {
   title.className = 'alert-popup-title';
   title.textContent = msg.title || 'Alert';
   head.append(bell, title);
-  const body = document.createElement('div');
-  body.className = 'alert-popup-body';
-  body.textContent = msg.body || '';
   const foot = document.createElement('div');
   foot.className = 'alert-popup-foot';
   const ok = document.createElement('button');
   ok.className = 'primary';
   ok.textContent = 'Dismiss';
   foot.appendChild(ok);
-  card.append(head, body, foot);
+  if (msg.body) {
+    const body = document.createElement('div');
+    body.className = 'alert-popup-body';
+    body.textContent = msg.body;
+    card.append(head, body, foot); // no message = no body block -- the title alone is the popup
+  } else {
+    card.append(head, foot);
+  }
   wrap.appendChild(card);
   document.body.appendChild(wrap);
   ok.onclick = () => {
