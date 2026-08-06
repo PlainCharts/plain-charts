@@ -7,12 +7,15 @@
 // display labels + i18n live in the UI; the host only ever sees stable terms.
 //   compiled = { match: 'all' | 'any', terms: Term[] }
 //   Term     = { op: 'cross'|'cross-up'|'cross-down'|'gt'|'lt', level: number }    (price vs a fixed level)
-//            | { op: <same level ops>, extent: SegExtent }                          (price vs a drawn line)
+//            | { op: <same level ops>, extent: Extent }                             (price vs a drawn object)
 //            | { op: 'unsupported', ... }                                           (nothing to evaluate)
-//   SegExtent = { kind: 'segments', points: [{time,price}...], extend: 'none'|'left'|'right'|'both' }
-// A segments extent is the SEGMENTS data-space category: the anchored drawing's polyline (trend-line family,
-// path), resolved to its price value(s) at the CURRENT bar on the alert-interval bar grid -- the level ops
-// then run against those values exactly as they run against a fixed level.
+//   Extent   = { kind: 'segments', points: [{time,price}...], extend: 'none'|'left'|'right'|'both' }
+//            | { kind: 'region',   points: [corner, corner] }
+// An extent is the anchored drawing's data-space reduction. SEGMENTS (trend-line family, path): the polyline's
+// price value(s) at the CURRENT bar on the alert-interval bar grid -- the level ops run against those values
+// exactly as against a fixed level. REGION (rect): a time x price zone -- within its drawn time span,
+// Crossing = the bar touches the zone, Crossing Up/Down = the bar enters through the bottom/top edge,
+// Greater/Less Than = close beyond the zone; outside the span nothing fires.
 
 // The bar-tail ring size the feed keeps -- at least the largest lookback any relative condition may ask for.
 export const BAR_TAIL_CAP = 300;
@@ -77,11 +80,11 @@ export function moveAbs(tail, bar, lookback) {
   return bar.close - ref.close;
 }
 
-/** a well-formed segments extent: at least two anchors with finite time+price. @param {any} e */
-export const validSegExtent = (e) =>
+/** a well-formed extent (segments or region): at least two anchors with finite time+price. @param {any} e */
+export const validExtent = (e) =>
   !!(
     e &&
-    e.kind === 'segments' &&
+    (e.kind === 'segments' || e.kind === 'region') &&
     Array.isArray(e.points) &&
     e.points.filter((/** @type {any} */ p) => p && Number.isFinite(Number(p.time)) && Number.isFinite(Number(p.price)))
       .length >= 2
@@ -152,6 +155,43 @@ export function segLevelsAt(tail, points, extend, barTime) {
 }
 
 /**
+ * Does a level op fire against a REGION extent (a time x price zone) on this bar? The zone is the box the
+ * two corner anchors span; it exists only over its drawn TIME span (a bar outside it never fires -- the
+ * zone is where it is drawn). Within the span: 'cross' = the bar's range touches the zone (a gap straight
+ * through still touched it), 'cross-up' = the bar enters through the BOTTOM edge, 'cross-down' through the
+ * TOP edge, 'gt'/'lt' = close beyond the zone.
+ * @param {string} op @param {{ points:{time:any,price:any}[] }} extent
+ * @param {{ time?:number, open:number, high:number, low:number, close:number }} bar
+ */
+export function regionFires(op, extent, bar) {
+  const pts = (extent && extent.points) || [];
+  if (pts.length < 2 || !bar) return false;
+  const t0 = Number(pts[0].time),
+    t1 = Number(pts[1].time),
+    p0 = Number(pts[0].price),
+    p1 = Number(pts[1].price);
+  if (![t0, t1, p0, p1].every(Number.isFinite)) return false;
+  const t = Number(bar.time);
+  if (!(t >= Math.min(t0, t1) && t <= Math.max(t0, t1))) return false;
+  const lo = Math.min(p0, p1),
+    hi = Math.max(p0, p1);
+  switch (op) {
+    case 'cross':
+      return bar.low <= hi && bar.high >= lo;
+    case 'cross-up':
+      return crossed(bar, lo, 'up');
+    case 'cross-down':
+      return crossed(bar, hi, 'down');
+    case 'gt':
+      return bar.close > hi;
+    case 'lt':
+      return bar.close < lo;
+    default:
+      return false;
+  }
+}
+
+/**
  * Resolve a level-op term to the price value(s) it tests on this bar: a fixed level as-is, a segments
  * extent via the bar grid. Empty = nothing to test (out of span / malformed) -- the term cannot fire.
  * @param {{ level?:number, extent?:any }} term @param {{ time?:number }} bar @param {any[]} [tail]
@@ -170,7 +210,7 @@ export function isSupportedTerm(t) {
   if (!t || t.op === 'unsupported') return false;
   if (t.op === 'move-up-pct' || t.op === 'move-down-pct') return Number(t.percent) > 0 && Number(t.lookback) > 0;
   if (t.op === 'move-up' || t.op === 'move-down') return Number(t.amount) > 0 && Number(t.lookback) > 0;
-  return t.level != null || validSegExtent(t.extent); // level ops (cross / gt / lt): a fixed level or a drawn line
+  return t.level != null || validExtent(t.extent); // level ops (cross / gt / lt): a fixed level or a drawn object
 }
 
 /**
@@ -191,12 +231,14 @@ export function conditionEvaluable(compiled) {
 /**
  * Does one compiled term fire on this bar? Level ops (cross/gt/lt) read the bar; the relative Moving % ops
  * read the `tail` (close now vs close `lookback` bars ago). Fires AT the threshold, not below.
- * @param {{ op: string, level?: number, percent?: number, amount?: number, lookback?: number }} term
+ * @param {{ op: string, level?: number, extent?: any, percent?: number, amount?: number, lookback?: number }} term
  * @param {{ open:number, high:number, low:number, close:number, time?:number }} bar
  * @param {any[]} [tail]
  */
 export function termFires(term, bar, tail) {
   if (!term || !bar) return false;
+  // a REGION extent has its own zone semantics per op; segments/level fall through to termLevels below
+  if (term.extent && term.extent.kind === 'region') return regionFires(term.op, term.extent, bar);
   switch (term.op) {
     // level ops resolve their value(s) first: one fixed level, or the anchored line's value(s) at this bar
     // (termLevels). Any resolved value firing fires the term -- a zigzag strand behaves like its own line.

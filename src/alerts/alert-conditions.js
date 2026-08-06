@@ -56,22 +56,28 @@ export function anchorLevel(d) {
 // the level ray (a finite 2-point line), and the multi-point path. The eval resolves the polyline's price
 // value(s) at each bar on the alert-interval bar grid (eval.js segLevelsAt).
 export const SEGMENT_TOOLS = ['trendline', 'ray', 'extendedline', 'levelray', 'path'];
-/** snapshot the anchored drawing's polyline extent, if it is a SEGMENTS-category tool.
- * @param {any} d @returns {{ kind:'segments', points:{time:number,price:number}[], extend:string }|null} */
+// The REGION extent category: tools whose data-space extent is a time x price ZONE spanned by two corner
+// anchors (eval.js regionFires: touch / enter-from-below / enter-from-above / beyond, only inside its span).
+export const REGION_TOOLS = ['rect'];
+/** snapshot the anchored drawing's extent, if it is a SEGMENTS- or REGION-category tool.
+ * @param {any} d @returns {{ kind:'segments'|'region', points:{time:number,price:number}[], extend?:string }|null} */
 export function anchorExtent(d) {
-  if (!d || SEGMENT_TOOLS.indexOf(d.tool) < 0 || !Array.isArray(d.points) || d.points.length < 2) return null;
+  const kind =
+    d && SEGMENT_TOOLS.indexOf(d.tool) >= 0 ? 'segments' : d && REGION_TOOLS.indexOf(d.tool) >= 0 ? 'region' : null;
+  if (!kind || !Array.isArray(d.points) || d.points.length < 2) return null;
   const points = d.points
     .map((/** @type {any} */ p) => p && { time: Number(p.time), price: Number(p.price) })
     .filter((/** @type {any} */ p) => p && Number.isFinite(p.time) && Number.isFinite(p.price));
   if (points.length < 2) return null;
-  return { kind: 'segments', points, extend: (d.style && d.style.extend) || 'none' };
+  if (kind === 'region') return { kind, points };
+  return { kind, points, extend: (d.style && d.style.extend) || 'none' };
 }
 /**
  * @param {{ match: string, conditions: { left:string, op:string, right:string, value?:(number|null), percent?:(number|null), amount?:(number|null), lookback?:(number|null) }[] }} ui
  * @param {string} priceLabel  the localized "Price" label the dropdowns stored
  * @param {string} objectLabel the anchored drawing's label
  * @param {number|null} level  the drawing's snapshotted price level (LEVEL category), null otherwise
- * @param {{ kind:'segments', points:{time:number,price:number}[], extend:string }|null} [extent]  the drawing's polyline snapshot (SEGMENTS category), null otherwise
+ * @param {{ kind:'segments'|'region', points:{time:number,price:number}[], extend?:string }|null} [extent]  the drawing's extent snapshot (SEGMENTS/REGION category), null otherwise
  * @returns {{ match: 'all'|'any', terms: { op: string, level?: number, extent?: any, percent?: number, amount?: number, lookback?: number }[] }}
  */
 export function compileConditions(ui, priceLabel, objectLabel, level, extent) {

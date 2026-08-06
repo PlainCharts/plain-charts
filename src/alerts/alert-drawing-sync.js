@@ -11,7 +11,7 @@ import { getTool } from '../tools/registry.js';
 import { alertCommand } from './funnel.js'; // the single mutator path to the alert-host
 import { alertMirror } from './store.js'; // read the alert mirror (find the alert on an object)
 import { withLevel } from './alert-record.js'; // the set-level/re-arm mutation (schema's one home)
-import { compileConditions, LEVEL_TOOLS, SEGMENT_TOOLS, anchorExtent } from './alert-conditions.js'; // canonical compiler + the extent-category memberships
+import { compileConditions, LEVEL_TOOLS, anchorExtent } from './alert-conditions.js'; // canonical compiler + the extent-category reductions
 import { confirmDialog } from '../ui/confirm.js'; // confirm before deleting a drawing that has an alert
 import { bus } from '../bus.js'; // drawing-move events (keep alert level in sync)
 import { roundPrice } from './dialog-controls.js'; // round a level to the instrument's decimals
@@ -95,10 +95,10 @@ export function initAlertDrawingSync() {
             points: [{ time: d.points[0].time, price: newLevel }],
           };
           alertCommand('update', { id: a.id, patch: { ...withLevel(a, newLevel), anchor } }).catch(() => {});
-        } else if (SEGMENT_TOOLS.indexOf(d.tool) >= 0) {
-          // SEGMENTS: geometry moved -> re-snapshot the polyline and RECOMPILE the stored rows with it
+        } else {
+          // SEGMENTS/REGION: geometry moved -> re-snapshot the extent and RECOMPILE the stored rows with it
           // (there is no single level to patch; the compiler is the one home for row -> term). rt resets so
-          // the moved line re-arms, same rule as a level move.
+          // the moved drawing re-arms, same rule as a level move. anchorExtent is null for any other tool.
           const ext = anchorExtent(d);
           if (!ext) continue;
           const prev = a.anchor || {};

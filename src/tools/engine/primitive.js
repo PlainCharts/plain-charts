@@ -12,6 +12,7 @@ import { getTool } from '../registry.js';
 import { toScreen, snapXToBar, timeToX } from './geometry.js';
 import { paintMarks } from '../../../lib/kapelka/studies/primitives/marks.js'; // the shared ether renderer
 import { alertMirror } from '../../alerts/store.js'; // which drawings have an alert attached (on-chart badge)
+import { REGION_TOOLS } from '../../alerts/alert-conditions.js'; // region-category drawings badge at their box, not a line y
 
 /** @typedef {import('./geometry.js').ScreenPoint} ScreenPoint */
 /** @typedef {import('./engine.js').Drawing} Drawing */
@@ -144,20 +145,33 @@ export function createDrawingPrimitive(engine) {
 
           if (!overlay) return;
 
-          // alert badges (top overlay, always on top): a bell on each drawing that has an alert. PINNED to the
-          // right edge (by the price scale) at the drawing's OWN y there -- a one-point drawing at its anchor
-          // price, a polyline (trend family / path) where the line meets the badge column, interpolated in
-          // screen space with the drawing's extend rule (so the bell rides the line, not the first anchor).
-          // A line that ends short of the column pins to its endpoint nearest it.
+          // alert badges (top overlay, always on top): a bell on each drawing that has an alert, sitting ON
+          // the drawing. A one-point drawing (hline/hray: spans to the scale) pins at the badge column at its
+          // price. A polyline rides the line where it meets the column (screen-space interpolation with the
+          // drawing's extend rule); a line that stops short carries the bell on its nearest endpoint instead
+          // of floating detached at the scale. A region (rect) carries it at the middle of its right edge,
+          // or at the column when the box spans that far.
           engine.canvasItems().forEach((/** @type {Drawing} */ d) => {
             if (!d.points || !d.points.length || d.hidden || !hasAlert(d)) return;
-            const bx = view.width - 14; // fixed to the right of the plot (next to the price scale)
+            const bx = view.width - 14; // the badge column (next to the price scale)
             const pts = /** @type {{ x:number, y:number }[]} */ (
               d.points.map((/** @type {any} */ p) => toScreen(engine.pane, p, engine.series)).filter(Boolean)
             );
             if (!pts.length) return;
-            let y = null;
-            if (pts.length > 1) {
+            let x = bx;
+            /** @type {number|null} */ let y = null;
+            if (pts.length > 1 && REGION_TOOLS.indexOf(d.tool) >= 0) {
+              let maxX = -Infinity,
+                lo = Infinity,
+                hi = -Infinity;
+              for (const p of pts) {
+                maxX = Math.max(maxX, p.x);
+                lo = Math.min(lo, p.y);
+                hi = Math.max(hi, p.y);
+              }
+              x = Math.min(bx, maxX);
+              y = (lo + hi) / 2;
+            } else if (pts.length > 1) {
               const ext = (d.style && d.style.extend) || 'none';
               const extL = ext === 'left' || ext === 'both';
               const extR = ext === 'right' || ext === 'both';
@@ -171,14 +185,19 @@ export function createDrawingPrimitive(engine) {
                 if (s > 1 && !(extR && j === last)) continue;
                 y = a.y + (b.y - a.y) * s;
               }
+              if (y == null) {
+                // the line stops short of the column: the bell rides its endpoint, not the scale
+                let np = pts[0];
+                for (const p of pts) if (Math.abs(bx - p.x) < Math.abs(bx - np.x)) np = p;
+                x = np.x;
+                y = np.y;
+              }
+            } else {
+              y = pts[0].y;
             }
-            if (y == null) {
-              let np = pts[0];
-              for (const p of pts) if (Math.abs(bx - p.x) < Math.abs(bx - np.x)) np = p;
-              y = np.y;
-            }
+            const cx = Math.max(12, Math.min(bx, x));
             const by = Math.max(12, Math.min(view.height - 12, y));
-            drawAlertBadge(c, bx, by);
+            drawAlertBadge(c, cx, by);
           });
 
           // Vertical lines pierce every pane: paint the OTHER surfaces' span-pane drawings
