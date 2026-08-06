@@ -141,6 +141,16 @@
 .aldlg-cond-head .aldlg-cond-cell { color: var(--tx-dim); font-weight: 600; }
 .aldlg-cond-op { width: 100%; background: var(--field); color: var(--tx); border: 1px solid var(--bd);
                  border-radius: 5px; padding: 5px 6px; font-size: 13px; }
+/* ---- Add/Edit condition dialog: a narrow progressive form (controls appear as the user picks) ---- */
+.acond-dlg { width: 340px; }
+.acond-body { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 4px; }
+.acond-sel { width: 100%; }
+.acond-pair { display: flex; align-items: center; gap: 6px; }
+.acond-pair .acond-sel, .acond-pair .acond-num { flex: 1 1 0; min-width: 0; }
+.acond-num { width: 100%; }
+.acond-lbl { color: var(--tx-dim); font-size: 13px; }
+.acond-dlg .aldlg-warn { padding: 8px 16px 0; }
+
 /* the Value cell can hold a band picker AND its threshold (multi-plot study vs Value): share the width */
 .aldlg-cond-valcell { gap: 4px; }
 .aldlg-cond-valcell .aldlg-cond-op, .aldlg-cond-valcell .aldlg-cond-vinput { flex: 1 1 0; min-width: 0; }
