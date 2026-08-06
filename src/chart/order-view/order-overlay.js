@@ -589,7 +589,9 @@ export function createOrderOverlay(pane) {
       hedgeStopQty: a.hedgeStopQty,
       hedgeTarget: show('target') ? a.hedgeTarget : null,
       hedgeTargetQty: a.hedgeTargetQty,
-      orders: a.orders,
+      // a stop-type working order IS a stop (netting's separate SL order) -- hide it with the Stop toggle, exactly
+      // like the hedging position's embedded stop. By type only; a limit order (entry vs target) is handled later.
+      orders: a.orders.filter((o) => o.type !== 'stop' || show('stop')),
       projection: show('entry') ? projection : null,
       projectionQty,
       projectionType,
