@@ -75,6 +75,7 @@ export function createPillView(pane, opts = {}) {
         })),
         onClick: d.onClick,
         onCommit: d.onCommit,
+        canDrag: d.canDrag,
       });
       if (h) pills.set(key, { h });
     }
@@ -308,6 +309,9 @@ export function createPillView(pane, opts = {}) {
         ],
         onClick: opts.onProjection && (() => /** @type {any} */ (opts.onProjection)({ price: proj })),
         onCommit: opts.onProjectionMove,
+        // a MARKET entry fills at the live price -- its pill must not drag; LMT/STP pin a level, so they do.
+        // Read the live projType (handlers bind once): cycling the type cell flips draggability in place.
+        canDrag: () => projType !== 'market',
       });
     }
     // rung pills read like working orders: [ qty | STP/TGT | X ]. Qty is DISPLAY-only. A TARGET shows its rung's

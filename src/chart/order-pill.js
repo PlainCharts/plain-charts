@@ -14,10 +14,13 @@
  *           sides?: { left?: PillSide, right?: PillSide },
  *           layout?: { extend?: boolean, side?: 'left'|'right', offset?: number },
  *           line?: { width?: number, style?: string, color?: string },
- *           onClick?: () => void, onDrag?: (price: number) => void, onCommit?: (price: number) => void }} [opts]
+ *           onClick?: () => void, onDrag?: (price: number) => void, onCommit?: (price: number) => void,
+ *           canDrag?: () => boolean }} [opts]
  *   segments = clickable CELLS in the pill (each fires its own onClick with its cell element -- anchor a picker
  *   to it / update its text); falls back to a single non-clickable `label`. onClick (pill-level) fires on a tap
  *   anywhere without a cell handler; onDrag/onCommit make the whole pill draggable (commit on release).
+ *   canDrag gates each gesture at mousedown: the pill is reconciled in place (never rebuilt), so a pill whose
+ *   draggability depends on live state (a MARKET projection must not drag; LMT/STP must) answers per-drag.
  *   sides = the kebab pieces: left sits before the pill, right after it (on the connector).
  * @returns {{ update: (o?: { price?: number|string, label?: string, color?: string, segments?: (string|null)[], sides?: { left?: boolean, right?: boolean } }) => void, remove: () => void } | null}
  */
@@ -31,6 +34,8 @@ export function createOrderPill(pane, opts = {}) {
 
   const state = { price: Number(opts.price) || 0, label: opts.label || '', color: opts.color || '#2962ff' };
   const draggable = !!(opts.onDrag || opts.onCommit);
+  // effective per-gesture draggability: the static capability AND the caller's live gate (if any)
+  const dragOn = () => draggable && (!opts.canDrag || opts.canDrag() !== false);
 
   // PLACEMENT (caller/layout config): which chart side the pill sits on, its offset from the price scale
   // (0 = flush; on the left side, from the left edge), and whether the price line EXTENDS across the chart.
@@ -62,7 +67,7 @@ export function createOrderPill(pane, opts = {}) {
     (Number(opts.width) > 0 ? Number(opts.width) : 140) +
     'px;text-align:center;white-space:nowrap;overflow:hidden;' +
     'border-radius:14px;font:600 14px system-ui,sans-serif;color:#fff;pointer-events:auto;' +
-    (draggable ? 'cursor:ns-resize;' : opts.onClick ? 'cursor:pointer;' : '');
+    (dragOn() ? 'cursor:ns-resize;' : opts.onClick ? 'cursor:pointer;' : '');
   layer.append(line, pill);
 
   /** @type {HTMLElement[]} */
@@ -297,12 +302,13 @@ export function createOrderPill(pane, opts = {}) {
     } catch (_) {}
   };
   pill.addEventListener('mousedown', (e) => {
-    if (!draggable && !opts.onClick) return;
+    const drag = dragOn(); // one answer per gesture -- the gate must not flip mid-drag
+    if (!drag && !opts.onClick) return;
     e.preventDefault();
     const sx = e.clientX,
       sy = e.clientY;
     let moved = false;
-    if (draggable) lock(true);
+    if (drag) lock(true);
     /** @param {MouseEvent} ev @returns {number|null} */
     const apply = (ev) => {
       const pr = y2p(ev.clientY - host.getBoundingClientRect().top);
@@ -317,7 +323,7 @@ export function createOrderPill(pane, opts = {}) {
     /** @param {MouseEvent} ev */
     const move = (ev) => {
       if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 4) moved = true;
-      if (moved && draggable) {
+      if (moved && drag) {
         dragging = true;
         const pr = apply(ev);
         if (pr != null)
@@ -330,9 +336,9 @@ export function createOrderPill(pane, opts = {}) {
     const up = (ev) => {
       document.removeEventListener('mousemove', move, true);
       document.removeEventListener('mouseup', up, true);
-      if (draggable) lock(false);
+      if (drag) lock(false);
       dragging = false;
-      if (moved && draggable) {
+      if (moved && drag) {
         justDragged = true;
         setTimeout(() => {
           justDragged = false;
@@ -380,6 +386,8 @@ export function createOrderPill(pane, opts = {}) {
           const v = /** @type {any} */ (o.sides)[s.pos];
           if (v !== undefined) s.side.visible = !!v;
         });
+      // a live drag gate can flip between updates (MKT <-> LMT on the same pill): keep the cursor honest
+      if (opts.canDrag) pill.style.cursor = dragOn() ? 'ns-resize' : opts.onClick ? 'pointer' : '';
       layout();
     },
     remove: () => {

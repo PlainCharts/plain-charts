@@ -324,11 +324,16 @@ export function createOrderOverlay(pane) {
   const onPlanTargetClear = (i) => {
     setLevel(pane.broker, pane.symbol, i, { target: null });
   };
-  // drag the gray PROJECTION dot -> pick the pending ENTRY level (plan ref). Persisted in the store, so the dot stays
-  // where the user put it and stops riding the live price (the market projection rides only until it is pinned).
+  // drag the gray PROJECTION dot -> pick the pending ENTRY level (plan ref), which stops it riding the live price.
+  // MARKET has no resting price (it fills at the market), so a market drag is IGNORED -- the dot snaps back to the live
+  // price on the next render. Only a limit/stop entry can be pinned; switch the type cell to drag it.
   /** @param {number} price */
   const onProjectionMove = (price) => {
-    if (pane.symbol) setLevels(pane.broker, pane.symbol, { ref: snap(price) });
+    if (!pane.symbol) return;
+    const t = getPlan(pane.broker, pane.symbol).orderType;
+    if (t === 'limit' || t === 'stop')
+      setLevels(pane.broker, pane.symbol, { ref: snap(price) }); // pin the resting entry (this re-renders via the plan subscription)
+    else schedule(); // market never pins (the built-in pill refuses the drag; this backstops other primitives): drop the price, re-render to the live dot
   };
   // edit the planned ENTRY volume (the pill's qty cell) -> plan.qty, the ONE shared value the dialog's Volume
   // field also edits/mirrors. Pure plan state; nothing is sent anywhere.
@@ -537,9 +542,10 @@ export function createOrderOverlay(pane) {
       projectionQty = Number(p.qty) > 0 ? Number(p.qty) : 1; // the planned entry volume (shared with the dialog's Volume; 1 until set)
       projectionType = p.orderType === 'limit' || p.orderType === 'stop' ? p.orderType : 'market'; // the planned type (shared with the dialog's tabs)
       projectionSide = p.side === 'sell' ? 'sell' : 'buy'; // the planned side (the pill's B/S cell; default buy)
-      // a PINNED entry level (plan ref, e.g. set by the automation's pending setup or dragged here) anchors the dot and
-      // stops it riding; an unpinned market projection rides the live price. Either can be null -> no dot.
-      const projPx = p.ref != null && Number.isFinite(Number(p.ref)) ? Number(p.ref) : px;
+      // MARKET always rides the live price -- a market order fills at the market, so its dot is never pinned (any
+      // leftover ref from a limit/stop is ignored). A limit/stop dot anchors to its ref (dragged or seeded); null -> no dot.
+      const projPx =
+        projectionType === 'market' ? px : p.ref != null && Number.isFinite(Number(p.ref)) ? Number(p.ref) : px;
       if (projPx != null) {
         projection = snap(projPx); // gray entry projection (rides the live price unless pinned to a ref)
         // render EVERY rung (level 0 = app bracket, 1+ = extra ladder from a multi-level caller), snapped to the
