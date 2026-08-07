@@ -74,6 +74,10 @@ export const appearanceMethods = {
       },
       timeAxis: {
         timezone: off / 3600, // hours east of UTC -> kapelka anchors day/month/year ticks to LOCAL time
+        // same trade-day roll the label formatters use, so on daily+ TFs the engine places the
+        // month/year tick on the bar that TRADES the 1st (session-open stamps sit the evening before).
+        // Passed always (ms); the engine applies it only on daily+ timeframes.
+        dayRoll: TRADE_ROLL * 1000,
         labelGap: s.tsLabelGap > 0 ? s.tsLabelGap : 48, // min px between time labels before one is dropped
         tickFormatter: (/** @type {number} */ t, /** @type {number} */ type) => {
           const isD = daily();

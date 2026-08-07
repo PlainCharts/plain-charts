@@ -29,6 +29,10 @@ What stayed is the rendering core; what left is everything that assumed a partic
 
 ## [Unreleased]
 
+### Added
+
+- Session day-roll for tick classification (`timeAxis.dayRoll`, ms) — on daily+ timeframes, bars stamped at the session open are rolled into their trade day before day/month/year boundary tests, so the month tick lands on the first bar trading the new month. Unset = raw-UTC behavior unchanged.
+
 ## [0.1.0] - 2026-07-28
 
 ### Added

@@ -39,6 +39,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - "Create alert on" is offered only on drawings that can carry an alert
 
 ### Fixed
+- Daily charts: month labels sit on the first bar that trades the new month, not one session late
 - Object tree: dragging a selection near the list's edge now scrolls smoothly toward it, instead of the browser's on-and-off native scroll
 - Object tree: the Clone button shows its icon again
 - Undo/redo keeps drawings in their layers and folders instead of dumping them into the active layer
