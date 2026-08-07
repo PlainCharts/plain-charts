@@ -7,13 +7,18 @@ interface StudyInput { key: string; name?: string; type?: string; default?: any;
 interface StudyPlotPoint { time: number; value: number; [k: string]: any }
 interface StudyPlot { key: string; name?: string; type?: string; color?: string; lineWidth?: number; lineStyle?: number; data: StudyPlotPoint[]; [k: string]: any }
 interface StudyFill { top: string; bottom: string; color?: string; [k: string]: any }
-interface StudyResult { plots?: StudyPlot[]; fills?: StudyFill[]; [k: string]: any }
+/** One alertable condition a study declares (its own named moment, e.g. "Bullish FVG"). */
+interface StudyAlertCondition { key: string; name: string }
+/** One occurrence of a declared condition, emitted from calc() at the bar where it becomes knowable. */
+interface StudyEvent { key: string; time: number; [k: string]: any }
+interface StudyResult { plots?: StudyPlot[]; fills?: StudyFill[]; events?: StudyEvent[]; [k: string]: any }
 /** A study descriptor. Open/author-defined -- known fields typed, the rest (draw/marks/meta hooks) left open. */
 interface StudySpec {
   id: string;
   name: string;
   overlay?: boolean;
   inputs?: StudyInput[];
+  alertConditions?: StudyAlertCondition[];
   calc?(bars: StudyBar[], p: Record<string, any>, ctx?: any): StudyResult;
   [k: string]: any;
 }

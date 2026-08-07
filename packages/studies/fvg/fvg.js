@@ -13,6 +13,10 @@
 // limits detection to the last N bars. Built on the study `shapes` channel (box + raw marks) plus
 // `plots`/`fills` for Dynamic. The original's higher-timeframe input is covered by the engine's universal
 // Timeframe control (every study gets it), so it is not re-declared here; the dashboard is omitted.
+//
+// Declares alert conditions (Bullish FVG, Bearish FVG, FVG mitigated) and emits matching `events` from
+// calc, each stamped with the bar time where it becomes knowable: formation at the DETECTION bar (one bar
+// later under Confirmed bars only), mitigation at the bar that closes through the gap's far edge.
 
 // ---- option lists / helpers ----
 const LSTYLES = [
@@ -95,6 +99,11 @@ const inputs = [
 Studies.register({
   id: 'fvg',
   overlay: true,
+  alertConditions: [
+    { key: 'bull', name: 'Bullish FVG' },
+    { key: 'bear', name: 'Bearish FVG' },
+    { key: 'mitigated', name: 'FVG mitigated' },
+  ],
   inputs,
   /**
    * @param {StudyBar[]} bars
@@ -107,7 +116,9 @@ Studies.register({
     const plots = [];
     /** @type {any[]} */
     const fills = [];
-    if (!bars || bars.length < 3) return { plots, shapes };
+    /** @type {StudyEvent[]} */
+    const events = [];
+    if (!bars || bars.length < 3) return { plots, shapes, events };
 
     const bull = p.bullCss || 'rgba(8,153,129,0.3)';
     const bear = p.bearCss || 'rgba(242,54,69,0.3)';
@@ -163,7 +174,10 @@ Studies.register({
           lastT = nw.time;
         }
       }
-      if (rec) records.push(rec);
+      if (rec) {
+        records.push(rec);
+        events.push({ key: rec.isbull ? 'bull' : 'bear', time: b.time });
+      }
 
       if (dynamic) {
         // bull band: top (maxBull) shrinks toward the fixed base (minBull) as price falls into it
@@ -202,6 +216,10 @@ Studies.register({
         }
       }
     }
+    for (const r of records) {
+      if (r.mitigated && r.mitTime != null) events.push({ key: 'mitigated', time: r.mitTime });
+    }
+    events.sort((a, b) => a.time - b.time);
 
     // ---- boxes / mid line / label (unmitigated, non-dynamic) + mitigation lines (both modes) ----
     for (const r of records) {
@@ -338,7 +356,7 @@ Studies.register({
       }
     }
 
-    return { plots, fills, shapes };
+    return { plots, fills, shapes, events };
   },
 });
 

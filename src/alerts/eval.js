@@ -8,11 +8,14 @@
 //   compiled = { match: 'all' | 'any', terms: Term[] }
 //   Term     = { op: 'cross'|'cross-up'|'cross-down'|'gt'|'lt', level: number }    (price vs a fixed level)
 //            | { op: <same level ops>, extent: Extent }                             (price vs a drawn object)
+//            | { op: 'event', extent: Extent }                                      (a study-declared condition)
 //            | { op: 'unsupported', ... }                                           (nothing to evaluate)
 //   Extent   = { kind: 'segments', points: [{time,price}...], extend: 'none'|'left'|'right'|'both' }
 //            | { kind: 'region',   points: [corner, corner] }
 //            | { kind: 'series',   studyId, studyUrl, params, plot }   (a study's plot; the host resolves
 //              its per-bar value with the study runner and substitutes a plain level before eval)
+//            | { kind: 'series',   studyId, studyUrl, params, event }  (a study's own declared condition --
+//              "Bullish FVG" -- resolved against the output's `events` channel via eventAdvance's watermark)
 // An extent is the anchored drawing's data-space reduction. SEGMENTS (trend-line family, path): the polyline's
 // price value(s) at the CURRENT bar on the alert-interval bar grid -- the level ops run against those values
 // exactly as against a fixed level. REGION (rect): a time x price zone -- within its drawn time span,
@@ -90,11 +93,11 @@ export function moveAbs(tail, bar, lookback) {
   return bar.close - ref.close;
 }
 
-/** a well-formed extent: segments/region need two finite anchors; a series extent (a study's plot,
- * resolved per bar by the host's study runner) needs the full compute snapshot. @param {any} e */
+/** a well-formed extent: segments/region need two finite anchors; a series extent (a study's plot or a
+ * study-declared condition, resolved by the host's study runner) needs the full compute snapshot. @param {any} e */
 export const validExtent = (e) => {
   if (!e) return false;
-  if (e.kind === 'series') return !!(e.studyId && e.studyUrl && e.plot && e.params);
+  if (e.kind === 'series') return !!(e.studyId && e.studyUrl && (e.plot || e.event) && e.params);
   return (
     (e.kind === 'segments' || e.kind === 'region') &&
     Array.isArray(e.points) &&
@@ -242,15 +245,45 @@ export function seriesValueFires(op, prev, cur, level) {
 }
 
 /**
+ * Advance an EVENT term's watermark against a study output's `events` channel and decide whether the term
+ * hits. A study recomputes its FULL history every exec, so its events list always contains every past
+ * occurrence -- the watermark (the newest event time already accounted for) is what makes firing edge-
+ * triggered: only an event STRICTLY newer than the watermark hits. First sight (wm null) ARMS instead of
+ * firing: the watermark starts at the current bar, so pre-existing history never fires, and a later deeper
+ * feed restart surfacing OLDER events cannot fire them either (they land below the watermark). The
+ * watermark only ever moves forward. Pure -- the host persists the returned wm in the alert's rt.
+ * @param {{ key?:string, time?:number }[]|null|undefined} events
+ * @param {string} key  the declared condition's stable key
+ * @param {number|null|undefined} wm  the persisted watermark; null/undefined = not yet armed
+ * @param {number} barTime  the report's current bar time (seeds the watermark on arm)
+ * @returns {{ hit: boolean, wm: number }}
+ */
+export function eventAdvance(events, key, wm, barTime) {
+  const armed = wm != null && Number.isFinite(Number(wm));
+  const base = armed ? Number(wm) : Number(barTime) || 0;
+  let hit = false;
+  let maxT = base;
+  for (const e of events || []) {
+    if (!e || e.key !== key) continue;
+    const t = Number(e.time);
+    if (!Number.isFinite(t)) continue;
+    if (t > maxT) maxT = t;
+    if (armed && t > base) hit = true;
+  }
+  return { hit, wm: maxT };
+}
+
+/**
  * Substitute resolved SERIES-term values into a compiled condition, so the eval core never learns about
- * studies. Two families:
+ * studies. Three families:
+ *   - study event ({op:'event', extent}): becomes {op:'event', hit} -- the host's eventAdvance verdict.
  *   - price vs study ({op, extent}): becomes a plain level term carrying the study's value at the bar.
  *   - study vs Value ({op, extent, level}): becomes {op, sv:{prev,cur}, level} -- the study's own samples
  *     against the literal, routed to seriesValueFires by termFires.
- * An unresolved current value (study error / no point at the bar) becomes 'unsupported', which correctly
- * refuses an ALL match and is skipped by an ANY. Pure; returns the original object when nothing changed.
+ * An unresolved term (study error / no point at the bar / no event verdict) becomes 'unsupported', which
+ * correctly refuses an ALL match and is skipped by an ANY. Pure; returns the original object when nothing changed.
  * @param {{ match?:string, terms?:any[] }} compiled
- * @param {({ cur:(number|null), prev:(number|null) }|null)[]} values  by term index
+ * @param {({ cur?:(number|null), prev?:(number|null), hit?:boolean }|null)[]} values  by term index
  */
 export function substituteSeries(compiled, values) {
   const terms = (compiled && compiled.terms) || [];
@@ -259,6 +292,7 @@ export function substituteSeries(compiled, values) {
     if (!t || !t.extent || t.extent.kind !== 'series') return t;
     changed = true;
     const v = values && values[i];
+    if (t.op === 'event') return v && typeof v.hit === 'boolean' ? { op: 'event', hit: v.hit } : { op: 'unsupported' };
     const cur = v && v.cur != null && Number.isFinite(Number(v.cur)) ? Number(v.cur) : null;
     if (cur == null) return { op: 'unsupported' };
     if (t.level != null) return { op: t.op, sv: { prev: v ? v.prev : null, cur }, level: t.level }; // study vs Value
@@ -281,11 +315,13 @@ export function termLevels(term, bar, tail) {
 }
 
 /** Is a compiled term well-formed enough to arm / evaluate (not the drawing/indicator 'unsupported')?
- * @param {{ op:string, level?:number, extent?:any, percent?:number, amount?:number, lookback?:number }} t */
+ * @param {{ op:string, level?:number, extent?:any, hit?:boolean, percent?:number, amount?:number, lookback?:number }} t */
 export function isSupportedTerm(t) {
   if (!t || t.op === 'unsupported') return false;
   if (t.op === 'move-up-pct' || t.op === 'move-down-pct') return Number(t.percent) > 0 && Number(t.lookback) > 0;
   if (t.op === 'move-up' || t.op === 'move-down') return Number(t.amount) > 0 && Number(t.lookback) > 0;
+  // a study event term: the compute snapshot pre-substitution, the host's {hit} verdict after
+  if (t.op === 'event') return typeof t.hit === 'boolean' || (validExtent(t.extent) && !!t.extent.event);
   return t.level != null || validExtent(t.extent); // level ops (cross / gt / lt): a fixed level or a drawn object
 }
 
@@ -307,12 +343,14 @@ export function conditionEvaluable(compiled) {
 /**
  * Does one compiled term fire on this bar? Level ops (cross/gt/lt) read the bar; the relative Moving % ops
  * read the `tail` (close now vs close `lookback` bars ago). Fires AT the threshold, not below.
- * @param {{ op: string, level?: number, extent?: any, sv?: { prev:(number|null), cur:(number|null) }, percent?: number, amount?: number, lookback?: number }} term
+ * @param {{ op: string, level?: number, extent?: any, hit?: boolean, sv?: { prev:(number|null), cur:(number|null) }, percent?: number, amount?: number, lookback?: number }} term
  * @param {{ open:number, high:number, low:number, close:number, time?:number }} bar
  * @param {any[]} [tail]
  */
 export function termFires(term, bar, tail) {
   if (!term || !bar) return false;
+  // a resolved STUDY-EVENT term: the host's eventAdvance verdict (an unsubstituted event term never fires)
+  if (term.op === 'event') return term.hit === true;
   // a REGION extent has its own zone semantics per op; segments/level fall through to termLevels below
   if (term.extent && term.extent.kind === 'region') return regionFires(term.op, term.extent, bar);
   // a RESOLVED study-vs-Value term (substituteSeries): the study's own samples against the literal level

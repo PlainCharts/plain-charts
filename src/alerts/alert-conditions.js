@@ -25,6 +25,14 @@ export const alertablePlots = (metaPlots) =>
     .filter((/** @type {any} */ p) => p && p.legend !== false)
     .map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key }));
 
+/** a study's DECLARED alert conditions (its `alertConditions` contract field), well-formed entries only.
+ * One normalizer, shared by the dialog context and the study sync.
+ * @param {any} list @returns {{ key:string, name:string }[]} */
+export const declaredConditions = (list) =>
+  (Array.isArray(list) ? list : [])
+    .filter((/** @type {any} */ c) => c && c.key && c.name)
+    .map((/** @type {any} */ c) => ({ key: String(c.key), name: String(c.name) }));
+
 /** a SERIES extent from a seriesByLabel entry + the row's chosen plot (or the study's first). Refuses a
  * study the headless runner cannot compute (`headless:false`: inline-only, intrabar, viewport-reactive) --
  * the ONE gate both term families (price-vs-study and study-vs-Value) pass through, so the dialog warns
@@ -40,6 +48,20 @@ function seriesExtentOf(s, rowPlot) {
   /** @type {any} */
   const ext = { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, plot };
   if (s.uid) ext.studyUid = s.uid; // instance binding: the live-follow sync re-snapshots by this
+  return ext;
+}
+
+/** an EVENT extent -- the compute snapshot for a STUDY-DECLARED condition (the study's alertConditions
+ * key, e.g. FVG's 'bull'). Same headless gate as seriesExtentOf; no plot -- the host resolves it against
+ * the output's `events` channel.
+ * @param {{ studyId:string, studyUrl:(string|null), params:any, headless?:boolean, uid?:(string|null) }|null|undefined} s
+ * @param {string|null|undefined} key
+ * @returns {{ kind:'series', studyId:string, studyUrl:string, params:any, event:string }|null} */
+function eventExtentOf(s, key) {
+  if (!s || !s.studyUrl || s.headless === false || !key) return null;
+  /** @type {any} */
+  const ext = { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, event: String(key) };
+  if (s.uid) ext.studyUid = s.uid;
   return ext;
 }
 // Relative (symbol-self) operators: close moved X% over N bars. No Price/Value/level -- percent + lookback.
@@ -102,7 +124,7 @@ export function anchorExtent(d) {
   return { kind, points, extend: (d.style && d.style.extend) || 'none' };
 }
 /**
- * @param {{ match: string, conditions: { left:string, op:string, right:string, value?:(number|null), percent?:(number|null), amount?:(number|null), lookback?:(number|null), plot?:(string|null) }[] }} ui
+ * @param {{ match: string, conditions: { left:string, op:string, right:string, value?:(number|null), percent?:(number|null), amount?:(number|null), lookback?:(number|null), plot?:(string|null), event?:(string|null) }[] }} ui
  * @param {string} priceLabel  the localized "Price" label the dropdowns stored
  * @param {string} objectLabel the anchored drawing's label
  * @param {number|null} level  the drawing's snapshotted price level (LEVEL category), null otherwise
@@ -118,6 +140,13 @@ export function compileConditions(ui, priceLabel, objectLabel, level, extent, se
   const valueLabel = t('Value');
   const match = /any/i.test((ui && ui.match) || 'all') ? 'any' : 'all';
   const terms = rows.map((r) => {
+    // A STUDY-DECLARED condition (row.event = the declared key; row.op carries its display name for the
+    // sentence, never parsed). Subject-only -- no second object, no value; the study is always r.left.
+    if (/** @type {any} */ (r).event) {
+      const s = seriesByLabel ? seriesByLabel[r.left] : null;
+      const ext = eventExtentOf(s, /** @type {any} */ (r).event);
+      return ext ? { op: 'event', extent: ext } : { op: 'unsupported' };
+    }
     // Moving is self-referential -- no Price/Value sides. A bar count (of the alert's interval) plus a magnitude:
     // a percent for the "%" ops, an absolute price amount for the base Moving Up/Down.
     const moveOp = /** @type {any} */ (MOVE_MAP[/** @type {keyof typeof MOVE_MAP} */ (r.op)]);

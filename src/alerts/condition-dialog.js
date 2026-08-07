@@ -16,15 +16,16 @@ import { conditionEvaluable } from './eval.js';
 // Level operators between two objects (the Moving family is Price-only and self-referential).
 const LEVEL_OPS = ['Crossing', 'Crossing Up', 'Crossing Down', 'Greater Than', 'Less Than'];
 
-/** @typedef {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean, uid?:(string|null) }} SeriesEntry */
+/** @typedef {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], conditions?:{key:string,name:string}[], overlay:boolean, headless:boolean, uid?:(string|null) }} SeriesEntry */
 /** @typedef {{ objectName:string, seriesByLabel:Record<string, SeriesEntry>, dec?:number }} CondCtx */
-/** @typedef {{ left:string, op:string, right:string, value:(number|null), percent:(number|null), amount:(number|null), lookback:(number|null), plot:(string|null), suid?:(string|null) }} CondRow */
-/** @typedef {{ subject:string, op:string, obj2:(string|null), value:(number|null), plot:(string|null), percent:(number|null), amount:(number|null), lookback:(number|null) }} CondState */
+/** @typedef {{ left:string, op:string, right:string, value:(number|null), percent:(number|null), amount:(number|null), lookback:(number|null), plot:(string|null), event?:(string|null), suid?:(string|null) }} CondRow */
+/** @typedef {{ subject:string, op:string, obj2:(string|null), value:(number|null), plot:(string|null), event:(string|null), percent:(number|null), amount:(number|null), lookback:(number|null) }} CondState */
 
-/** the study labels usable as a SUBJECT (their own value vs Value): any headless study. @param {CondCtx} ctx */
+/** the study labels usable as a SUBJECT: any headless study with something to watch -- an alertable plot
+ * (its own value vs Value) or a declared condition ("Bullish FVG"). @param {CondCtx} ctx */
 export const subjectStudies = (ctx) =>
   Object.entries(ctx.seriesByLabel || {})
-    .filter(([, s]) => s.headless !== false)
+    .filter(([, s]) => s.headless !== false && ((s.plots || []).length > 0 || (s.conditions || []).length > 0))
     .map(([label]) => label);
 
 /** the labels usable as the SECOND object under a Price subject: Value, the anchored drawing, overlay
@@ -46,6 +47,7 @@ export const freshState = (value = null) =>
     obj2: 'value',
     value,
     plot: null,
+    event: null,
     percent: null,
     amount: null,
     lookback: null,
@@ -67,6 +69,12 @@ export function parseRow(r, ctx, priceLabel, valueLabel) {
   s.lookback = r.lookback != null ? r.lookback : null;
   const leftPrice = r.left === priceLabel;
   s.subject = leftPrice ? 'price' : r.left || 'price';
+  if (r.event) {
+    // a study-declared condition: subject-only (op carries the declared name for display)
+    s.event = String(r.event);
+    s.obj2 = null;
+    return s;
+  }
   if (isMoveOp(s.op)) {
     s.obj2 = null;
     return s;
@@ -102,7 +110,11 @@ export function buildRow(s, ctx, priceLabel, valueLabel) {
     row.lookback = s.lookback != null ? s.lookback : null;
     return row;
   }
-  if (s.subject !== 'price' || s.obj2 === 'value') {
+  if (s.event && s.subject !== 'price') {
+    // a study-declared condition: the stable key rides the row; no second object, no value, no plot
+    row.event = s.event;
+    row.plot = null;
+  } else if (s.subject !== 'price' || s.obj2 === 'value') {
     row.right = valueLabel;
     row.value = s.value != null ? roundPrice(s.value, ctx.dec) : null;
   } else if (s.obj2 === 'drawing') {
@@ -216,13 +228,19 @@ export function openConditionDialog(opts) {
         state.obj2 = v === 'price' ? 'value' : null;
         state.value = null;
         state.plot = null;
+        state.event = null; // a declared condition belongs to ITS study; re-derived below per subject
         if (v !== 'price' && isMoveOp(state.op)) state.op = 'Crossing'; // Moving is Price-only
         render();
       }),
     );
 
-    // a multi-plot study SUBJECT picks its band right under the subject
-    if (state.subject !== 'price') {
+    // the subject study's declared conditions (its own named moments) join the Condition dropdown
+    const subjEntry = state.subject !== 'price' ? ctx.seriesByLabel[state.subject] : null;
+    const declared = (subjEntry && subjEntry.conditions) || [];
+
+    // a multi-plot study SUBJECT picks its band right under the subject (a declared condition is
+    // study-wide -- no band)
+    if (state.subject !== 'price' && !state.event) {
       const entry = ctx.seriesByLabel[state.subject];
       const plots = (entry && entry.plots) || [];
       if (plots.length > 1) {
@@ -240,13 +258,43 @@ export function openConditionDialog(opts) {
       }
     }
 
-    // 2 -- the CONDITION: level ops for everything; the Moving family only for Price
-    const ops = state.subject === 'price' ? [...LEVEL_OPS, ...MOVE_OPS] : LEVEL_OPS;
+    // 2 -- the CONDITION: the subject study's declared conditions first (author-named, shown as-is),
+    // then the level ops (only where a value exists to compare: Price, or a study with alertable plots);
+    // the Moving family only for Price.
+    /** @type {{label:string,value:string}[]} */
+    const opOptions = [];
+    for (const c of declared) opOptions.push({ label: c.name, value: 'ev:' + c.key });
+    if (state.subject === 'price')
+      opOptions.push(...[...LEVEL_OPS, ...MOVE_OPS].map((o) => ({ label: t(o), value: o })));
+    else if (((subjEntry && subjEntry.plots) || []).length)
+      opOptions.push(...LEVEL_OPS.map((o) => ({ label: t(o), value: o })));
+    // coerce a pick that no longer exists for this subject (subject switch, a study whose declared key
+    // changed) to the FIRST offered condition -- the select can never sit on a phantom
+    let opValue = state.event ? 'ev:' + state.event : state.op;
+    if (!opOptions.some((o) => o.value === opValue) && opOptions.length) {
+      opValue = opOptions[0].value;
+      if (opValue.indexOf('ev:') === 0) {
+        const c = declared.find((x) => 'ev:' + x.key === opValue);
+        state.event = c ? c.key : null;
+        state.op = c ? c.name : '';
+        state.obj2 = null;
+      } else {
+        state.event = null;
+        state.op = opValue;
+        if (state.obj2 == null && !isMoveOp(opValue)) state.obj2 = 'value';
+      }
+    }
     body.appendChild(
-      sel(
-        ops.map((o) => ({ label: t(o), value: o })),
-        state.op,
-        (v) => {
+      sel(opOptions, opValue, (v) => {
+        if (v.indexOf('ev:') === 0) {
+          const c = declared.find((x) => 'ev:' + x.key === v);
+          state.event = c ? c.key : null;
+          state.op = c ? c.name : '';
+          state.obj2 = null;
+          state.value = null;
+          state.plot = null;
+        } else {
+          state.event = null;
           state.op = v;
           if (isMoveOp(v)) {
             state.obj2 = null;
@@ -254,13 +302,15 @@ export function openConditionDialog(opts) {
           } else if (state.obj2 == null) {
             state.obj2 = 'value';
           }
-          render();
-        },
-      ),
+        }
+        render();
+      }),
     );
 
-    // 3 -- what the condition compares against
-    if (isMoveOp(state.op)) {
+    // 3 -- what the condition compares against (a declared condition is self-contained: nothing to add)
+    if (state.event) {
+      // subject + its own condition -- the sentence is complete
+    } else if (isMoveOp(state.op)) {
       // Moving: a magnitude (percent or absolute price move) over N bars of the alert's interval
       const pct = /%\s*$/.test(state.op);
       const rowEl = el('div', 'acond-pair');

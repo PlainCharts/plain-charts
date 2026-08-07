@@ -119,6 +119,8 @@ export function condLines(a) {
         const bars = Number.isFinite(n) ? 'in ' + n + ' ' + (n === 1 ? 'bar' : 'bars') : '';
         return [r.left, base, mag, bars].filter(Boolean).join(' ');
       }
+      // a study-declared condition is subject-only: the declared name IS the condition
+      if (r.event) return [r.left, r.op].filter(Boolean).join(': ');
       return [r.left, r.op, r.right].filter(Boolean).join(' ');
     })
     .filter(Boolean);

@@ -12,7 +12,8 @@ import { subscribeBarFeed } from './feed.js';
  * snapshot the attachment's already-merged params, so the probe takes the same shape).
  * @param {{ broker?: (string|null), symbol: string, tf: { id:string, unit:string, n:number },
  *   folder: string, studyId: string, params: Record<string, any>, decimals?: number }} spec
- * @returns {Promise<{ bars: number, lastBarTime: number, values: Record<string, number|null> }>}
+ * @returns {Promise<{ bars: number, lastBarTime: number, values: Record<string, number|null>,
+ *   events: { key: string, time: number }[] }>}
  */
 export function probe(spec) {
   return new Promise((resolve, reject) => {
@@ -58,7 +59,12 @@ export function probe(spec) {
           values[p.key] = last && last.value != null ? last.value : null;
         }
         clearTimeout(timer);
-        finish(resolve, { bars: bars.length, lastBarTime: bars[bars.length - 1].time, values });
+        finish(resolve, {
+          bars: bars.length,
+          lastBarTime: bars[bars.length - 1].time,
+          values,
+          events: (r.out && r.out.events) || [],
+        });
       } catch (err) {
         clearTimeout(timer);
         finish(reject, err);
