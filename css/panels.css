@@ -131,6 +131,10 @@
 .obj-ltab:hover { background: var(--btn-h); }
 .obj-ltab.active { border-color: var(--accent-ui); background: var(--active); }
 .obj-ltab.drop-layer { border-color: var(--accent-ui); box-shadow: inset 0 0 0 2px var(--accent-ui); background: var(--btn-h); }
+/* tab-reorder drag: where the dragged layer tab will land (edge line above/below the hovered tab) */
+.obj-ltab.drag { opacity: .45; }
+.obj-ltab.drop-above { box-shadow: 0 -2px 0 0 var(--accent-ui); }
+.obj-ltab.drop-below { box-shadow: 0 2px 0 0 var(--accent-ui); }
 .obj-ltab.hidden .obj-ltab-name { opacity: .5; }
 .obj-ltab.locked .obj-ltab-name { font-style: italic; }
 .obj-ltab-state { flex: none; display: flex; align-items: center; }

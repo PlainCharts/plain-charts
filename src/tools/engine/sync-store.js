@@ -189,6 +189,17 @@ export function removeLayer(symbol, id) {
   emit();
   return true;
 }
+// reorder a layer within the list (tab drag). Organization only -- layers never affect z-order.
+/** @param {string} symbol @param {string} id @param {number} toIndex */
+export function moveLayer(symbol, id, toIndex) {
+  const L = getLayers(symbol);
+  const from = L.list.findIndex((x) => x.id === id);
+  if (from < 0) return;
+  const [ly] = L.list.splice(from, 1);
+  L.list.splice(Math.max(0, Math.min(L.list.length, toIndex)), 0, ly);
+  bus.emit('workspace:changed');
+  emit();
+}
 /** @param {string} symbol @param {string} id @param {string} name */
 export function renameLayer(symbol, id, name) {
   const ly = getLayers(symbol).list.find((x) => x.id === id);

@@ -405,6 +405,13 @@ export class DrawingEngine {
       this._objectsChanged();
     }
   }
+  /** @param {string} id @param {number} toIndex */
+  moveLayer(id, toIndex) {
+    if (!this.isolated) {
+      syncStore.moveLayer(this.pane.symbol, id, toIndex);
+      this._objectsChanged();
+    }
+  }
   /** @param {string} id @param {string} flag @param {boolean} val */
   setLayerFlag(id, flag, val) {
     if (!this.isolated) {

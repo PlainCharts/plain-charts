@@ -8,6 +8,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Object tree: drag a layer tab up or down to reorder the layer column
 - Position tool: a Risk/reward input in the Profit level section sets the target from your desired R multiple
 - Create limit order from the Position tool: right-click it and the order dialog opens prefilled with entry, stop, target, and the risk-computed quantity
 - Studies can declare their own alert conditions: the Fair Value Gap study offers Bullish/Bearish FVG and their mitigations
@@ -27,6 +28,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - Position tool: the Inputs tab is laid out two fields per row, so the dialog no longer scrolls
 - Drawing settings open on the tool's Inputs tab when it has one, instead of always Style
+- Layer tab menu reordered: Hide, Lock, Rename, then Remove
 - Symbol dialog: browse MetaTrader 5 instruments in a tree of the broker's own groups
 - Symbol dialog: clear (✕) button in the search box
 - Symbol dialog: browse CQG instruments in a tree, with a saved exchange filter and per-broker recents

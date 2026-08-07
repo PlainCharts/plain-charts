@@ -43,7 +43,6 @@ function layerDrawingCount(ly) {
 /** @param {Engine} e @param {any} ly @param {number} x @param {number} y */
 function openLayerMenu(e, ly, x, y) {
   menu(x, y, (m, item) => {
-    m.appendChild(item('Rename', () => startRename(ly.id)));
     m.appendChild(
       item(ly.hidden ? 'Show layer' : 'Hide layer', () => {
         e.setLayerFlag(ly.id, 'hidden', !ly.hidden);
@@ -56,6 +55,7 @@ function openLayerMenu(e, ly, x, y) {
         render();
       }),
     );
+    m.appendChild(item('Rename', () => startRename(ly.id)));
     if (e.layers().list.length > 1) {
       m.appendChild(el('div', 'dwg-div'));
       m.appendChild(
@@ -76,8 +76,14 @@ function openLayerMenu(e, ly, x, y) {
   });
 }
 
+// the layer-tab drag (reorder within the column). Module-local so it can never be confused with a
+// drawing-row drag (state.dragId) -- a tab drop moves the LAYER, a row drop moves drawings INTO one.
+/** @type {string|null} */
+let dragLayerId = null;
+
 // left-edge tabs, one per layer of the active chart. Click switches the active layer (new drawings land
 // there); each tab hides/locks the WHOLE layer (own flag) and can be renamed / removed. "+" adds a layer.
+// Tabs are draggable to reorder the column (drop above/below another tab).
 /** @param {Engine} e */
 export function buildLayerTabs(e) {
   const L = e.layers();
@@ -120,17 +126,56 @@ export function buildLayerTabs(e) {
         ev.preventDefault();
         openLayerMenu(e, ly, ev.clientX, ev.clientY);
       };
+      // drag the tab itself -> reorder the layer column
+      tab.draggable = true;
+      tab.ondragstart = (ev) => {
+        dragLayerId = ly.id;
+        /** @type {DataTransfer} */ (ev.dataTransfer).effectAllowed = 'move';
+        try {
+          /** @type {DataTransfer} */ (ev.dataTransfer).setData('text/plain', ly.id);
+        } catch (_) {}
+        tab.classList.add('drag');
+      };
+      tab.ondragend = () => {
+        dragLayerId = null;
+        tab.classList.remove('drag');
+        col.querySelectorAll('.drop-above,.drop-below').forEach((t) => t.classList.remove('drop-above', 'drop-below'));
+      };
       // drop a drag-selection of drawings/folders onto another layer's tab -> move them into that layer.
       // Only from the same surface, and only onto a DIFFERENT layer (the active one is where they already are).
       const canDrop = () => state.dragId && state.dragEngine === e && ly.id !== L.active;
       tab.ondragover = (ev) => {
+        if (dragLayerId && dragLayerId !== ly.id) {
+          // another tab is in flight: mark whether it lands above or below this one
+          ev.preventDefault();
+          /** @type {DataTransfer} */ (ev.dataTransfer).dropEffect = 'move';
+          const r = tab.getBoundingClientRect();
+          const below = ev.clientY > r.top + r.height / 2;
+          tab.classList.toggle('drop-above', !below);
+          tab.classList.toggle('drop-below', below);
+          return;
+        }
         if (!canDrop()) return;
         ev.preventDefault();
         /** @type {DataTransfer} */ (ev.dataTransfer).dropEffect = 'move';
         tab.classList.add('drop-layer');
       };
-      tab.ondragleave = () => tab.classList.remove('drop-layer');
+      tab.ondragleave = () => tab.classList.remove('drop-layer', 'drop-above', 'drop-below');
       tab.ondrop = (ev) => {
+        if (dragLayerId && dragLayerId !== ly.id) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const below = ev.clientY > tab.getBoundingClientRect().top + tab.getBoundingClientRect().height / 2;
+          const list = L.list;
+          const from = list.findIndex((/** @type {any} */ x) => x.id === dragLayerId);
+          let to = list.findIndex((/** @type {any} */ x) => x.id === ly.id);
+          if (below) to++;
+          if (from >= 0 && from < to) to--;
+          e.moveLayer(dragLayerId, to);
+          dragLayerId = null;
+          render();
+          return;
+        }
         if (!canDrop()) return;
         ev.preventDefault();
         ev.stopPropagation();
