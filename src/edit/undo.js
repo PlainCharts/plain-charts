@@ -1,9 +1,11 @@
 // @ts-check
 // Undo/redo for the drawing canvas. Snapshot-based: every committed drawing change
 // (engine.persist / saveTree) records a JSON snapshot of the active chart's whole
-// drawing set — local + synced drawings + folder tree, same serialization as
-// Save/Load — onto a per-pane stack. Undo restores the previous snapshot; any new
-// action drops the redo branch. In-memory only (cleared on reload), capped depth.
+// drawing set — local + synced drawings + the full layer set (every layer's folder
+// tree), same serialization as Save/Load — onto a per-pane stack. Undo restores the
+// previous snapshot; any new action drops the redo branch. In-memory only (cleared
+// on reload), capped depth. Drawings are re-created under their ORIGINAL ids so
+// tree refs in every layer stay valid across a restore.
 // A restore suppresses the commit events it triggers so it never pollutes history.
 //
 // Scope is per active chart. Caveat: with two panes on the SAME symbol, a change
@@ -35,7 +37,9 @@ function snapshot(pane) {
     });
     return o;
   });
-  return JSON.stringify({ drawings, tree: e.getTree() });
+  // main chart: the whole layer set (every layer's tree); no-layer surface (study board): its single tree
+  const layers = e.layersSnapshot && e.layersSnapshot();
+  return JSON.stringify(layers ? { drawings, layers } : { drawings, tree: e.getTree() });
 }
 
 /** @param {any} pane @param {string} snapJSON */
@@ -52,38 +56,27 @@ function restore(pane, snapJSON) {
   restoring = true;
   try {
     e.clear();
-    /** @type {Record<string, string>} */
-    const idMap = {};
     (data.drawings || []).forEach((/** @type {any} */ d) => {
       if (!d || !d.tool || !getTool(d.tool)) return;
       /** @type {Record<string, any>} */
-      const params = {};
+      const params = { id: d.id }; // keep the original id — every layer's tree refs stay valid
       FIELDS.forEach((k) => {
         if (k !== 'tool' && d[k] !== undefined) params[k] = d[k];
       });
-      const nd = e.add(d.tool, params);
-      if (nd && d.id) idMap[d.id] = nd.id;
+      e.add(d.tool, params);
     });
-    /** @param {any[]} nodes @returns {any[]} */
-    const remap = (nodes) =>
-      (nodes || [])
-        .map((/** @type {any} */ n) => {
-          if (n.type === 'folder')
-            return {
-              type: 'folder',
-              id: n.id,
-              name: n.name,
-              expanded: n.expanded !== false,
-              children: remap(n.children),
-            };
-          const nid = idMap[n.id];
-          return nid ? { type: 'drawing', id: nid } : null;
-        })
-        .filter(Boolean);
-    const tree = e.getTree();
-    tree.length = 0;
-    remap(data.tree).forEach((/** @type {any} */ n) => tree.push(n));
-    e.saveTree();
+    if (data.layers) {
+      // keep the user's current active layer when it still exists in the restored set —
+      // undo restores the drawings/organization, not which layer they're working on
+      const cur = e.layers() && e.layers().active;
+      if (cur && (data.layers.list || []).some((/** @type {any} */ x) => x.id === cur)) data.layers.active = cur;
+      e.loadLayerSet(data.layers);
+    } else {
+      const tree = e.getTree();
+      tree.length = 0;
+      (data.tree || []).forEach((/** @type {any} */ n) => tree.push(n));
+      e.saveTree();
+    }
   } finally {
     restoring = false;
   }
