@@ -88,11 +88,14 @@ export function openSettingsDialog(engine, id, startTab) {
   if (!d || !tool) return;
   // open on a requested tab (e.g. double-click the text → 'Text'), but only if it's
   // valid and — for Text — the tool actually supports it.
-  // open on the requested tab only if it exists AND the tool offers it; otherwise Style (always available)
+  // open on the requested tab only if it exists AND the tool offers it; otherwise the tool's Inputs tab
+  // when it declares one (its "main" tab), else Style (always available)
   let tab =
     TABS.includes(/** @type {string} */ (startTab)) && tabAvailable(/** @type {string} */ (startTab), tool, d)
       ? /** @type {string} */ (startTab)
-      : 'Style';
+      : tabAvailable('Inputs', tool, d)
+        ? 'Inputs'
+        : 'Style';
   state = {
     engine,
     id,

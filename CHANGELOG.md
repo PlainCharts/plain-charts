@@ -8,6 +8,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Position tool: a Risk/reward input in the Profit level section sets the target from your desired R multiple
 - Create limit order from the Position tool: right-click it and the order dialog opens prefilled with entry, stop, target, and the risk-computed quantity
 - Studies can declare their own alert conditions: the Fair Value Gap study offers Bullish/Bearish FVG and their mitigations
 - Alert a study's value against a number you type (RSI Crossing Up 35)
@@ -24,6 +25,8 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The History stats bar and its Trade Desk > Configure > Stats tab; the Stats surface replaces them
 
 ### Changed
+- Position tool: the Inputs tab is laid out two fields per row, so the dialog no longer scrolls
+- Drawing settings open on the tool's Inputs tab when it has one, instead of always Style
 - Symbol dialog: browse MetaTrader 5 instruments in a tree of the broker's own groups
 - Symbol dialog: clear (✕) button in the search box
 - Symbol dialog: browse CQG instruments in a tree, with a saved exchange filter and per-broker recents

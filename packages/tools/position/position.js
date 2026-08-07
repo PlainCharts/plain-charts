@@ -457,6 +457,25 @@ function buildInputsPanel(body, d, ctx) {
       r.appendChild(c);
       body.appendChild(r);
     };
+    // a compact label+input group (set-row-left) -- two of these share one set-row, spread to the edges
+    /** @param {string} label @param {string} value @param {string} stp @param {(v:number)=>void} onCommit @param {boolean} [disabled] */
+    const pair = (label, value, stp, onCommit, disabled) => {
+      const grp = domEl('div', 'set-row-left', label);
+      const inp = /** @type {HTMLInputElement} */ (domEl('input', 'set-coord-in'));
+      inp.type = 'number';
+      inp.step = stp;
+      inp.value = value;
+      if (disabled) inp.disabled = true;
+      inp.onchange = () => {
+        const v = parseFloat(inp.value);
+        if (Number.isFinite(v)) onCommit(v);
+      };
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') inp.blur();
+      });
+      grp.appendChild(inp);
+      return grp;
+    };
     // units of a level from entry, and the price for a given unit count keeping the level's current side
     /** @param {number} lvl */
     const unitsOf = (lvl) => (unit > 0 ? String(Math.round(Math.abs(lvl - g.entry) / unit)) : '');
@@ -520,17 +539,26 @@ function buildInputsPanel(body, d, ctx) {
     }
 
     // ---- formatting: how the quantity is expressed (broker-agnostic; user-set) ----
+    // Row 1: Lot size (input) left, computed QUANTITY read-out right (shared calc + format with the
+    // entry-line stat). Row 2: Step dropdown (whole / micro / nano).
     body.appendChild(domEl('div', 'set-section', 'Formatting'));
-    row('Lot size', String(Number(st.lotSize) > 0 ? Number(st.lotSize) : 1), 'any', (v) => {
-      st.lotSize = v > 0 ? v : 1;
-      ctx.preview();
-      render();
-    });
-    // Step is a dropdown of the only realistic increments (whole / micro / nano) so users don't guess
     {
-      const r = domEl('div', 'set-row');
-      r.appendChild(domEl('div', 'set-row-left', 'Step'));
-      const c = domEl('div', 'set-controls');
+      const r1 = domEl('div', 'set-row');
+      r1.appendChild(
+        pair('Lot size', String(Number(st.lotSize) > 0 ? Number(st.lotSize) : 1), 'any', (v) => {
+          st.lotSize = v > 0 ? v : 1;
+          ctx.preview();
+          render();
+        }),
+      );
+      const qty = computeQty(st, g.entry, g.stop, ctx.tickSize, ctx.tickValue);
+      const qtyL = domEl('div', 'set-row-left', 'Quantity');
+      qtyL.appendChild(domEl('b', undefined, qty != null ? fmtQty(qty, st) : '—'));
+      r1.appendChild(qtyL);
+      body.appendChild(r1);
+
+      const r2 = domEl('div', 'set-row');
+      const stp = domEl('div', 'set-row-left', 'Step');
       const sel = /** @type {HTMLSelectElement} */ (domEl('select'));
       ['1', '0.01', '0.001'].forEach((v) => {
         const o = /** @type {HTMLOptionElement} */ (domEl('option', undefined, v));
@@ -544,28 +572,55 @@ function buildInputsPanel(body, d, ctx) {
         ctx.preview();
         render();
       };
-      c.appendChild(sel);
-      r.appendChild(c);
-      body.appendChild(r);
+      stp.appendChild(sel);
+      r2.appendChild(stp);
+      body.appendChild(r2);
     }
 
-    // ---- computed QUANTITY (read-out) -- shared calc + format with the entry-line stat ----
-    const qty = computeQty(st, g.entry, g.stop, ctx.tickSize, ctx.tickValue);
-    const qtyRow = domEl('div', 'set-row');
-    qtyRow.appendChild(domEl('div', 'set-row-left', 'Quantity'));
-    const qtyC = domEl('div', 'set-controls');
-    qtyC.appendChild(domEl('b', undefined, qty != null ? fmtQty(qty, st) : '—'));
-    qtyRow.appendChild(qtyC);
-    body.appendChild(qtyRow);
-
     body.appendChild(domEl('div', 'set-section', 'Levels'));
-    row('Entry price', g.entry.toFixed(dec), step, (v) => commit({ entry: v }));
+    {
+      const r = domEl('div', 'set-row');
+      r.appendChild(pair('Entry price', g.entry.toFixed(dec), step, (v) => commit({ entry: v })));
+      body.appendChild(r);
+    }
+    // Price | Units on one row, Risk/reward below (left, under Price). Risk/reward is the desired R
+    // multiple: stop is always 1R, so target = entry + R * |entry-stop| on the profit side -- same
+    // reward/risk calc the entry-line stat shows; the computed price snaps to the tick grid.
     body.appendChild(domEl('div', 'set-section', 'Profit level'));
-    row('Units', unitsOf(g.target), '1', (u) => commit({ target: priceFromUnits(u, tSign) }), !(unit > 0));
-    row('Price', g.target.toFixed(dec), step, (v) => commit({ target: v }));
+    {
+      const risk = Math.abs(g.stop - g.entry);
+      const r1 = domEl('div', 'set-row');
+      r1.append(
+        pair('Price', g.target.toFixed(dec), step, (v) => commit({ target: v })),
+        pair('Units', unitsOf(g.target), '1', (u) => commit({ target: priceFromUnits(u, tSign) }), !(unit > 0)),
+      );
+      body.appendChild(r1);
+      const r2 = domEl('div', 'set-row');
+      r2.append(
+        pair(
+          'Risk/reward',
+          risk > 0 ? (Math.abs(g.target - g.entry) / risk).toFixed(2) : '',
+          'any',
+          (v) => {
+            if (!(v > 0) || !(risk > 0)) return;
+            const dist = unit > 0 ? Math.round((v * risk) / unit) * unit : v * risk;
+            commit({ target: g.entry + tSign * dist });
+          },
+          !(risk > 0),
+        ),
+      );
+      body.appendChild(r2);
+    }
+    // one row: Price left, Units right
     body.appendChild(domEl('div', 'set-section', 'Stop level'));
-    row('Units', unitsOf(g.stop), '1', (u) => commit({ stop: priceFromUnits(u, sSign) }), !(unit > 0));
-    row('Price', g.stop.toFixed(dec), step, (v) => commit({ stop: v }));
+    {
+      const r = domEl('div', 'set-row');
+      r.append(
+        pair('Price', g.stop.toFixed(dec), step, (v) => commit({ stop: v })),
+        pair('Units', unitsOf(g.stop), '1', (u) => commit({ stop: priceFromUnits(u, sSign) }), !(unit > 0)),
+      );
+      body.appendChild(r);
+    }
   };
   render();
 }
