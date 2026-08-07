@@ -25,6 +25,7 @@ import {
   parseDateField,
 } from '../tools/engine/coord-inputs.js';
 import { openDrawingAlertDialog } from '../alerts/create-alert-dialog.js'; // routes vline -> time dialog, others -> price dialog
+import { drawingOrderAvailable, openDrawingOrderTicket } from '../chart/order-view/drawing-order.js'; // tool orderIntent -> order dialog
 
 // small calendar glyph (plain SVG, currentColor so it follows the theme)
 const SVG_CAL =
@@ -32,6 +33,9 @@ const SVG_CAL =
 // small bell glyph (plain SVG, currentColor so it follows the theme) -- the "create alert" quick button
 const SVG_BELL =
   '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2a4 4 0 0 0-4 4c0 3-1.2 4.2-1.5 4.8a.4.4 0 0 0 .35.6h10.3a.4.4 0 0 0 .35-.6C13.2 10.2 12 9 12 6a4 4 0 0 0-4-4Z"/><path d="M6.6 13.4a1.5 1.5 0 0 0 2.8 0"/></svg>';
+// a resting order at a level: the level line with the entry marker on it
+const SVG_ORDER =
+  '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8h3.5M11 8h3.5"/><rect x="6" y="5.5" width="4" height="5" rx="1"/><path d="M8 1.5v2M8 12.5v2"/></svg>';
 
 // The engine (`pane.drawings`), its panes, drawings and tool descriptors are the vendored
 // kapelka boundary — no TS types here, so they are treated as `any`.
@@ -441,6 +445,17 @@ function build(pane, eng, id, d, kind) {
     alertBtn.innerHTML = SVG_BELL;
     alertBtn.onclick = () => openDrawingAlertDialog(eng, id);
     host.append(alertBtn);
+  }
+
+  // Create-limit-order quick button -- same handoff as the right-click "Create limit order": the tool's
+  // order reading (orderIntent) prefills the order dialog. Same availability gate as the menu.
+  if (drawingOrderAvailable(d)) {
+    const orderBtn = document.createElement('button');
+    orderBtn.className = 'bb-qc-alert';
+    orderBtn.title = 'Create limit order…';
+    orderBtn.innerHTML = SVG_ORDER;
+    orderBtn.onclick = () => openDrawingOrderTicket(eng, id);
+    host.append(orderBtn);
   }
 }
 

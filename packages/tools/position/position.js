@@ -135,7 +135,11 @@ Tools.register({
       { name: 'Target', controls: [{ key: 'targetStats', type: 'multiselect', options: TS_STATS }] },
       { name: 'Stop', controls: [{ key: 'stopStats', type: 'multiselect', options: TS_STATS }] },
       { name: 'Price labels (price scale)', toggle: 'priceLabels' },
-      { name: 'Price labels (tool)', toggle: 'toolPriceLabels', controls: [{ key: 'toolPriceSide', type: 'select', options: SIDES }] },
+      {
+        name: 'Price labels (tool)',
+        toggle: 'toolPriceLabels',
+        controls: [{ key: 'toolPriceSide', type: 'select', options: SIDES }],
+      },
     ],
   },
 
@@ -154,7 +158,8 @@ Tools.register({
     let right = a.time;
     const i = times.indexOf(a.time);
     if (i >= 0 && times.length) right = times[Math.min(times.length - 1, i + 15)];
-    else if (times.length >= 2) right = a.time + ((times[times.length - 1] - times[0]) / Math.max(1, times.length - 1)) * 15;
+    else if (times.length >= 2)
+      right = a.time + ((times[times.length - 1] - times[0]) / Math.max(1, times.length - 1)) * 15;
     return [
       { time: a.time, price: a.price }, // entry-left (owns left edge)
       { time: right, price: a.price }, // entry-right (owns right edge)
@@ -274,8 +279,22 @@ Tools.register({
         .filter(Boolean)
         .join(' · ');
     // target above its line (reward color, +PnL), stop below its line (risk color, -PnL)
-    pill(joined(s.targetStats, g.target, 1), g.target, 'above', opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'), null, s.textColor || '#ffffff');
-    pill(joined(s.stopStats, g.stop, -1), g.stop, 'below', opaqueColor(s.stopColor || 'rgba(120,123,134,0.12)'), null, s.textColor || '#ffffff');
+    pill(
+      joined(s.targetStats, g.target, 1),
+      g.target,
+      'above',
+      opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'),
+      null,
+      s.textColor || '#ffffff',
+    );
+    pill(
+      joined(s.stopStats, g.stop, -1),
+      g.stop,
+      'below',
+      opaqueColor(s.stopColor || 'rgba(120,123,134,0.12)'),
+      null,
+      s.textColor || '#ffffff',
+    );
     // entry stats (risk/reward ratio and/or quantity), joined into one pill on the entry line
     {
       const es = s.entryStats || [];
@@ -293,7 +312,14 @@ Tools.register({
       // same fill as the target pill; the outline (band) is what makes it stand out, so no white needed.
       // entry stacks its stats (one per line) -- unlike the target/stop pills, which join on one line.
       if (parts.length)
-        pill(parts.join('\n'), g.entry, 'on', opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'), s.color || '#363a45', s.textColor || '#ffffff');
+        pill(
+          parts.join('\n'),
+          g.entry,
+          'on',
+          opaqueColor(s.targetColor || 'rgba(8,180,200,0.16)'),
+          s.color || '#363a45',
+          s.textColor || '#ffffff',
+        );
     }
 
     // ---- optional price labels ON THE TOOL, at the LEFT or RIGHT end of each level (user's choice; separate
@@ -317,6 +343,28 @@ Tools.register({
       out.push(label(g.target), label(g.entry), label(g.stop));
     }
     return out;
+  },
+
+  // The ORDER READING: the tool's levels + sizing as ONE neutral intent for the app's order flow
+  // ("Create limit order" opens the order dialog prefilled from this). Pure data from the tool's own
+  // geometry and sizing inputs -- the tool remains the single owner of its math and imports nothing.
+  // Levels are passed AS DRAWN (never corrected here); qty is the tradeable amount (computeQty floored
+  // by qtyLots), or null when the sizing inputs can't size (no account size / zero risk / zero stop
+  // distance) -- the consumer leaves its own quantity in place then.
+  /** @param {ToolDrawing} d @param {{ tickSize:any, tickValue:any }} ctx
+   *  @returns {{ side:'buy'|'sell', type:'limit', price:number, stopLoss:number, takeProfit:number, qty:(number|null) }} */
+  orderIntent(d, ctx) {
+    const g = geo(d);
+    const s = /** @type {any} */ (d.style || {});
+    const q = computeQty(s, g.entry, g.stop, ctx && ctx.tickSize, ctx && ctx.tickValue);
+    return {
+      side: sideOf(g.entry, g.stop) === 'long' ? 'buy' : 'sell',
+      type: 'limit',
+      price: g.entry,
+      stopLoss: g.stop,
+      takeProfit: g.target,
+      qty: q != null ? qtyLots(q, s) : null,
+    };
   },
 
   // Four handles: entry-left (moves entry + owns left edge), entry-right (owns right edge, time only), then
@@ -362,7 +410,8 @@ const computeQty = (style, entry, stop, tickSize, tickValue) => {
 const qtyLots = (qBase, style) => {
   const lot = Number(style.lotSize) > 0 ? Number(style.lotSize) : 1;
   const step = Number(style.step) > 0 ? Number(style.step) : 1;
-  return Math.floor(qBase / lot / step) * step;
+  // floor with an epsilon: FP noise (0.2/0.01 = 19.999...96) must not under-size an exact fit
+  return Math.floor(qBase / lot / step + 1e-9) * step;
 };
 // format that quantity with the decimals the step implies (1 -> 0, 0.01 -> 2, 0.001 -> 3).
 /** @param {number} qBase @param {any} style @returns {string} */

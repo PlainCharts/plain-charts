@@ -5,6 +5,7 @@
 // (Template, Slice, Extend, Settings) are omitted for a multi-selection.
 import { openSettingsDialog } from './settings-dialog.js';
 import { openDrawingAlertDialog } from '../../alerts/create-alert-dialog.js'; // routes vline -> time dialog, others -> price dialog
+import { drawingOrderAvailable, openDrawingOrderTicket } from '../../chart/order-view/drawing-order.js'; // tool orderIntent -> order dialog
 import { alertForObject, removeDrawingsWithAlerts } from '../../alerts/alert-drawing-sync.js';
 import { getTool } from '../registry.js';
 import { intervalPreset, matchesPreset } from './visibility.js';
@@ -95,9 +96,11 @@ export function openDrawingMenu(engine, id, clientX, clientY) {
   const tool = /** @type {any} */ (getTool(d.tool));
   menu = el('div', 'dwg-menu');
 
-  // ---- Create/Edit alert (single only) — anchors a price-crossing alert to this drawing. If an alert is
-  // already attached, the item becomes "Edit alert on <tool>…" and the dialog opens prefilled. A tool opts OUT
-  // with `noAlert` (a multi-level box like Position has no single crossing level to anchor an alert to).
+  // ---- the ACTION group (single only): alert + order handoffs, one divider after whichever exist ----
+  let actions = false;
+  // Create/Edit alert — anchors a price-crossing alert to this drawing. If an alert is already attached,
+  // the item becomes "Edit alert on <tool>…" and the dialog opens prefilled. A tool opts OUT with `noAlert`
+  // (a multi-level box like Position has no single crossing level to anchor an alert to).
   if (!multi && !(tool && tool.noAlert)) {
     const objName = (tool && tool.name) || d.tool;
     const hasAlert = alertForObject((engine.pane && engine.pane.symbol) || '', id);
@@ -112,8 +115,22 @@ export function openDrawingMenu(engine, id, clientX, clientY) {
       openDrawingAlertDialog(engine, id);
     };
     menu.appendChild(al);
-    menu.appendChild(el('div', 'dwg-div'));
+    actions = true;
   }
+  // Create limit order — a tool that exposes its ORDER READING (orderIntent, e.g. Position) hands its
+  // levels + quantity to the order dialog; the dialog owns the planning cycle and the execution.
+  if (!multi && drawingOrderAvailable(d)) {
+    const or = el('div', 'dwg-item');
+    or.append(el('span', 'dwg-check', ''), el('span', 'dwg-label', t('Create limit order') + '…'));
+    or.onclick = () => {
+      closeDrawingMenu();
+      engine.select(id);
+      openDrawingOrderTicket(engine, id);
+    };
+    menu.appendChild(or);
+    actions = true;
+  }
+  if (actions) menu.appendChild(el('div', 'dwg-div'));
 
   // ---- Template (single only)
   if (!multi) menu.appendChild(buildTemplateItem(engine, id, { onClose: closeDrawingMenu }));
