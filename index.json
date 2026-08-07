@@ -730,7 +730,8 @@
       "files": [
         "meta.json",
         "pin.js",
-        "position.js"
+        "position.js",
+        "position.png"
       ]
     },
     {
