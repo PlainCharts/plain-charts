@@ -8,47 +8,45 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- Create limit order from the Position tool: right-click the box (or use its quick-editor button) and the order dialog opens on the Limit tab with everything filled from the tool -- entry as the order price, stop and target as the bracket, and the tool's risk-computed quantity. The on-chart order projection hugs the box, the side implied by the stop gates the Buy/Sell buttons, and pressing the enabled one places the order as usual. The tool only provides the data; the dialog owns the planning cycle and the execution. A box whose sizing inputs are unset fills the levels and leaves the dialog's own quantity
-- Alert conditions declared by the study itself: a study can name its own moments (the Fair Value Gap study declares Bullish FVG, Bearish FVG, Bullish FVG mitigated, and Bearish FVG mitigated) and the Add-condition dialog offers them when that study is the subject. The sentence is subject-only ("Fair Value Gap: Bullish FVG"), with no second object and no value. The alert engine computes the study headless on the alert's own bar feed and fires when a new occurrence appears, stamped at the bar where it becomes knowable; pre-existing history never fires, and editing the study's settings re-arms the alert on the new settings. Studies with nothing alertable (no line, no declared condition) no longer appear as condition subjects
-- Indicator threshold alerts: a study's own value against a number you type, on the study's own scale (RSI Crossing Up 35, BB Upper Greater Than a level). Crossings compare consecutive bars of the study line. Guide lines (RSI's 70/30 bands) are decoration, not alert targets, and switching a condition's Object resets the Value to a fresh 0
-- Alerts on indicators: price crossing an overlay study's line fires for real. Pick an attached study as a condition Object (a multi-plot study offers a band picker: Upper/Basis/Lower), and the alert engine computes the study headless on its own bar feed, so it fires with every chart closed. Many alerts on one study share a single computation
-- Alerts on a Vertical Line: "Create alert" on a vline opens the time-alert dialog pre-set to a one-shot at the line's instant. The alert is bound to the line: dragging the line re-schedules it, the bell rides the line, and deleting either removes both. A one-shot pointed at the past refuses to save
-- Time alerts: a Name field in the dialog (default: the date only). Left empty, the panel titles the row from the live schedule, so a dragged line can never leave a stale time in the title
-- Alerts on a Rectangle: the zone fires only within its drawn time span. Crossing = a bar touches the box (a gap straight through counts), Crossing Up/Down = entering through the bottom/top edge, Greater/Less Than = closing beyond it. Moving or resizing the box updates its alert, and the bell sits on the box's right edge
-- Alerts on drawn lines: the trend-line family (trend line, ray, extended line), the level ray, and the multi-point path can now carry alerts. Price is tested against the line exactly as drawn, at every slope and strand, on the alert's own interval; rays extrapolate, a finite line past its end simply never fires. Dragging the line updates its alert, and the on-chart bell badge sits on the line where it meets the price scale
-- Alerts on a Horizontal Ray: right-click a horizontal ray, Create alert, and it evaluates like a horizontal line (fixed price level, follows the line when dragged)
-- Bracket on a resting order: a Limit or Stop entry can now carry a stop and target on any broker whose protocol supports it, including CQG netting accounts. CQG places it as a server-side OPO/OCO compound, so the target and stop stay parked until the entry fills, then one filling cancels the other. Each adapter declares its own resting-order bracket support, so the order dialog and the on-chart order pill enable it per broker
-- Stats desk tab: a strategy dashboard over your closed round-trips -- an equity curve, an edge/spread (mean ± σ) distribution, and a drag-configurable board of USD summary stats (EV, avg win/loss, win/loss/BE %, max drawdown, max loss streak, profit factor, Sharpe). Opt-in via the desk "+", with the same account + date filters as History plus a "last N trades" sample size; the gear opens a two-grid editor to arrange which tiles show and where
+- Create limit order from the Position tool: right-click it and the order dialog opens prefilled with entry, stop, target, and the risk-computed quantity
+- Studies can declare their own alert conditions: the Fair Value Gap study offers Bullish/Bearish FVG and their mitigations
+- Alert a study's value against a number you type (RSI Crossing Up 35)
+- Alerts on indicators: price crossing an attached study's line fires, even with every chart closed
+- Alerts on a Vertical Line: a one-shot time alert bound to the line
+- Time alerts have a Name field; an unnamed alert titles itself from its live schedule
+- Alerts on a Rectangle: touch, enter from below/above, or close beyond the zone, within its drawn time span
+- Alerts on drawn lines: the trend-line family, level ray, and path evaluate exactly as drawn and follow drags
+- Alerts on a Horizontal Ray
+- Bracket (stop + target) on a resting Limit or Stop order, per broker support, including CQG netting accounts
+- Stats desk tab: equity curve, edge distribution, and a configurable board of summary stats over closed trades
 
 ### Removed
-- Stats bar: removed the History surface's bottom stats strip and its Trade Desk > Configure > Stats tab (the reorderable, on/off stat list); a dedicated Stats surface replaces it
+- The History stats bar and its Trade Desk > Configure > Stats tab; the Stats surface replaces them
 
 ### Changed
-- Symbol dialog: browse MetaTrader 5 instruments in a tree built from the broker's own symbol groups, with each symbol's broker description
-- Symbol dialog: clear (✕) button in the search box that wipes the text in one click without closing the dialog
-- Symbol dialog: browse CQG instruments in a tree (group / exchange / instrument type) beside the search, with a saved exchange filter and per-broker recents
-
-### Changed
-- Creating an alert on a drawing now opens the Add-condition dialog first, pre-set to "Price Crossing" that drawing: craft the condition, press Add, and the alert dialog opens with it in the list. Cancel creates nothing. A drawing that already carries an alert opens straight into editing
-- Indicator alerts are bound to the study instance on your chart: edit the study's settings (BB length, RSI period) and the alert follows, firing where the bands now are; the alert itself never changes, it references only the band. Removing a study that carries an alert asks first, then removes both. The binding survives restarts
-- Alert conditions are now a plain list of sentences ("Price Crossing 7700", "RSI 14 Greater Than 70") instead of a column grid. Each condition is crafted or edited in its own Add-condition dialog that reveals controls as you pick: subject, condition, what it compares against, then the value or band
-- Alert bar feeds now load history back to the drawing's oldest anchor, so an alert on a line or box anchored days or weeks ago evaluates on real bars exactly where it is drawn, instead of approximating from a fixed 300-bar window
-- Drawing alerts: "Create alert on" is offered only on drawings that can carry an alert. Annotations and measurement tools (text, symbol, callout, arrow, the ranges, fib, position) no longer offer it, in the right-click menu or the price-scale quick editor
+- Symbol dialog: browse MetaTrader 5 instruments in a tree of the broker's own groups
+- Symbol dialog: clear (✕) button in the search box
+- Symbol dialog: browse CQG instruments in a tree, with a saved exchange filter and per-broker recents
+- Creating an alert on a drawing opens the Add-condition dialog first, pre-set to Price Crossing that drawing
+- Indicator alerts follow the study instance: edit its settings and the alert fires on the new values; removing the study asks, then removes both
+- Alert conditions are a list of sentences, each crafted in its own Add-condition dialog
+- Alert feeds load history back to the drawing's oldest anchor
+- "Create alert on" is offered only on drawings that can carry an alert
 
 ### Fixed
-- Critical: the netting stop auto-size no longer multiplies stop coverage when a resting bracket entry fills in pieces. CQG splits a bracket's stop/target legs per fill tranche (a 4-lot filling 1/1/2 leaves stops of 1, 1, 2); the auto-size rule assumed one protective stop and inflated every tranche stop to the full net, once leaving 12 contracts of stop against a 4-lot position. It now compares the SUM of working protective stops to the net: tranches that sum to the net are left alone, a lone mismatched stop still resizes as before, and a multi-stop mismatch is journaled and never touched
-- Position tool: an exactly-fitting quantity no longer loses one step to floating-point noise (a $100 risk sizing to exactly 0.2 lots showed and traded 0.19)
-- Alert conditions refuse studies the alert engine cannot compute headless (intrabar studies like Delta Candles, viewport-reactive and frame-clock ones like PR Terrain): the dialog warns and disables Create instead of saving an alert that would never fire
-- The #price placeholder formats with the instrument's decimals (7732.00, not 7732)
-- Alert notifications now say what YOU wrote: the title is the alert's Name, the body is the Message with placeholders actually substituted at fire time (#symbol, #broker, #interval, #price, #timenow). The hardcoded "SYMBOL @ price" body is gone; no message means a clean title-only notification, everywhere an alert lands (toast, popup, system, email, Telegram)
-- Alert dialog: picking Value in a condition now shows a plain number defaulting to 0 (a Value is scale-agnostic: a price against Price, an indicator level against a study), instead of an empty box hinting "Price"
-- Alerts: an alert whose condition can never be evaluated now shows an Unsupported status with a red dot in the panel, and the create/edit dialog refuses to save it with a clear warning. Before, such alerts (e.g. anchored to a trend line or a horizontal ray) saved fine, showed Active, and silently never fired
-- Planning pill: a Market projection can no longer be dragged off the live price. The pill refuses the drag until you cycle its type to Limit or Stop; switch back to Market and it locks to the live price again
-- Order dialog: placing an order now clears the on-chart planning projection, so the gray planning primitive no longer lingers on top of the order you just placed. Placement ends the planning session, the same way the pill's cancel and confirm already did
-- Order dialog: opening it now picks up a stop that was dragged on the chart while it was closed; a stale startup snapshot no longer wins over the live plan
-- Symbol dialog: CQG search now matches by symbol code (e.g. EP), not only by description
-- Order ticket: the window now grows to fit your quick buttons instead of squishing the form and hiding Buy/Sell
-- Order ticket: a rejected modify on a pending order now shows the error in the ticket status line instead of nothing
+- Critical: a resting bracket entry that fills in pieces no longer multiplies its stop coverage on netting accounts
+- Position tool: an exactly-fitting quantity no longer loses one step to floating-point rounding
+- Alert conditions refuse studies the engine cannot compute headless, instead of saving an alert that never fires
+- The #price placeholder uses the instrument's decimals
+- Alert notifications send your Name and Message with placeholders substituted; nothing is invented
+- Picking Value in an alert condition shows a plain number defaulting to 0
+- An alert that can never fire shows Unsupported and refuses to save, instead of sitting Active in silence
+- A Market projection can no longer be dragged off the live price
+- Placing an order clears the on-chart planning projection
+- The order dialog picks up a stop dragged on the chart while it was closed
+- Symbol dialog: CQG search matches by symbol code, not only by description
+- The order ticket grows to fit the quick buttons instead of hiding Buy/Sell
+- A rejected modify on a pending order shows its error in the ticket status line
 
 ## [0.1.0] - 2026-07-28
 
