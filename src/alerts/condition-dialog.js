@@ -124,9 +124,11 @@ export function closeConditionDialog() {
 
 /**
  * Open the Add/Edit-condition dialog.
- * @param {{ row?: any, ctx: CondCtx, level?: (number|null), extent?: any, title?: string,
+ * @param {{ row?: any, prefill?: any, ctx: CondCtx, level?: (number|null), extent?: any, title?: string,
  *   onDone: (row: CondRow) => void }} opts
  *   row     an existing condition row to EDIT (prefills; the button reads Save); omit to ADD
+ *   prefill a row-shaped seed for a NEW condition (ADD semantics with the form pre-set -- the drawing
+ *           entry flow opens "Price Crossing <drawing>" this way)
  *   ctx     the alert dialog's object context (anchored drawing name + attached-study map + decimals)
  *   level/extent  the anchored drawing's reductions (validation input, same values the alert dialog holds)
  *   onDone  receives the built row when Add/Save is pressed
@@ -137,7 +139,8 @@ export function openConditionDialog(opts) {
   const priceLabel = t('Price');
   const valueLabel = t('Value');
   const editing = !!opts.row;
-  const state = editing ? parseRow(opts.row, ctx, priceLabel, valueLabel) : freshState();
+  const init = opts.row || opts.prefill;
+  const state = init ? parseRow(init, ctx, priceLabel, valueLabel) : freshState();
 
   const dlg = el('div', 'dialog alert-dlg acond-dlg');
   panel = dlg;

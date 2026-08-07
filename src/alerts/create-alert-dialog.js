@@ -151,6 +151,60 @@ export function buildDraft(f) {
 }
 
 /**
+ * The condition-authoring CONTEXT for a pane + optional anchored drawing: the drawing's label and its
+ * data-space reductions, plus the attached-studies snapshot (the SERIES category) -- everything the
+ * condition dialog and the compiler read. One builder, shared by the alert dialog AND the drawing entry
+ * flow (which opens the condition dialog before any alert dialog exists).
+ * @param {any} pane @param {any|null} d
+ */
+function condContext(pane, d) {
+  const objectName = d ? /** @type {any} */ (getTool(d.tool) || {}).name || d.tool : '';
+  // the anchored drawing's data-space reduction -- compile input + live validation input: a fixed price
+  // (LEVEL category) or a polyline snapshot (SEGMENTS category); both null for other tools / Value alerts
+  const level = d ? anchorLevel(d) : null;
+  const extent = d ? anchorExtent(d) : null;
+  // Attached studies become condition OBJECTS (the SERIES category). Each entry snapshots everything the
+  // headless runner needs (id / module URL / merged params / plots); duplicate labels dedupe with a #N
+  // suffix. Multi-plot studies drive the plot/band picker.
+  /** @type {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean }>} */
+  const seriesByLabel = {};
+  const attached = (pane.studies && /** @type {any} */ (pane.studies).attached) || [];
+  /** @type {Record<string, number>} */
+  const seen = {};
+  for (const a of attached) {
+    let label;
+    try {
+      label = studyLabel(a);
+    } catch (_) {
+      label = (a.study && a.study.name) || 'Study';
+    }
+    seen[label] = (seen[label] || 0) + 1;
+    if (seen[label] > 1) label += ' #' + seen[label];
+    // live plot meta when the study has computed; a step study's static plots() declaration otherwise.
+    // legend:false plots are DECORATION (RSI's 70/30 guides, band edges a study grays out) -- not curves
+    // anyone alerts on; filtering them also keeps a single-curve study picker-free.
+    const metaPlots =
+      (a.plotMeta && a.plotMeta.length ? a.plotMeta : typeof a.study.plots === 'function' ? a.study.plots() : []) || [];
+    // headless: can the alert-host's study runner actually compute this? Inline-only studies
+    // (worker:false / frame-clock), intrabar studies (need sub-bar feeds), and viewport-reactive ones
+    // (no viewport exists headless) cannot -- the compiler refuses them so no dead alert is ever created.
+    const st = /** @type {any} */ (a.study);
+    const headless = !(st.worker === false || st.requestFrames || st.intrabar || st.lowerTimeframe || st.viewport);
+    seriesByLabel[label] = {
+      studyId: a.study.id,
+      studyUrl: studyUrlFor(a.study.id),
+      params: { ...a.params },
+      plots: metaPlots
+        .filter((/** @type {any} */ p) => p && p.legend !== false)
+        .map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key })),
+      overlay: a.study.overlay !== false,
+      headless,
+    };
+  }
+  return { objectName, level, extent, seriesByLabel };
+}
+
+/**
  * Open the Create-alert dialog anchored to one drawing (right-click menu, or Edit from the manager).
  * @param {any} engine   the pane's DrawingEngine (opaque handle)
  * @param {string} id    the drawing id the alert is anchored to
@@ -166,8 +220,10 @@ export function openCreateAlertDialog(engine, id) {
  * Route a drawing's Create/Edit-alert action to the RIGHT dialog -- the one entry both the right-click menu
  * and the price-scale quick editor call. A TIME-category drawing (vline: a pure time marker) opens the
  * time-alert dialog, prefilled to a one-shot at the line's instant and anchored to the drawing (so the
- * badge, the drag re-schedule, and the delete cascade all bind); an existing alert opens in edit mode.
- * Every other drawing opens the price dialog. @param {any} engine @param {string} id
+ * badge, the drag re-schedule, and the delete cascade all bind); an existing alert opens the alert dialog
+ * in edit mode. A NEW alert on any other drawing opens the ADD-CONDITION dialog first -- the user crafts
+ * the condition (prefilled Price Crossing the drawing), and Add lands it in the alert dialog's list;
+ * Cancel creates nothing. @param {any} engine @param {string} id
  */
 export function openDrawingAlertDialog(engine, id) {
   const d = engine.get(id);
@@ -182,7 +238,19 @@ export function openDrawingAlertDialog(engine, id) {
     );
     return;
   }
-  openCreateAlertDialog(engine, id);
+  const existing = alertForObject(pane.symbol || '', id);
+  if (existing) {
+    openAlertDialog({ pane, drawing: d, existing });
+    return;
+  }
+  const cc = condContext(pane, d);
+  openConditionDialog({
+    prefill: { left: t('Price'), op: 'Crossing', right: cc.objectName, value: null, plot: null },
+    ctx: { objectName: cc.objectName, seriesByLabel: cc.seriesByLabel, dec: pane.priceDecimals },
+    level: cc.level,
+    extent: cc.extent,
+    onDone: (row) => openAlertDialog({ pane, drawing: d, existing: null, firstRow: row }),
+  });
 }
 
 /**
@@ -206,10 +274,10 @@ export function openWatchlistAlertDialog(list, pane) {
 }
 
 /**
- * Shared dialog builder. `drawing` null => a Value-based alert: Object columns are Price + Value only and
- * the draft carries objectId/tool/anchor = null. `watchlist` set => the alert applies to a whole list and
- * opens pre-set to a Moving % condition. Otherwise the alert is anchored to the drawing.
- * @param {{ pane: any, drawing: any|null, existing: any|null, watchlist?: { id:string, name:string } }} ctx
+ * Shared dialog builder. `drawing` null => a Value-based alert (objectId/tool/anchor = null on the draft).
+ * `watchlist` set => the alert applies to a whole list and opens pre-set to a Moving % condition.
+ * `firstRow` = the condition the drawing ENTRY FLOW just crafted, seeding the list.
+ * @param {{ pane: any, drawing: any|null, existing: any|null, watchlist?: { id:string, name:string }, firstRow?: any }} ctx
  */
 function openAlertDialog(ctx) {
   closeCreateAlertDialog();
@@ -297,54 +365,14 @@ function openAlertDialog(ctx) {
   const trigSel = selectOf(TRIGGERS);
   if (editing && existing.trigger) trigSel.value = existing.trigger;
   const exp = expirationControl(editing ? existing.expiration : undefined, editing ? existing.expiryMs : undefined);
-  const objectName = isValue ? '' : /** @type {any} */ (getTool(d.tool) || {}).name || d.tool;
-  // the anchored drawing's data-space reduction -- compile input + live validation input: a fixed price
-  // (LEVEL category) or a polyline snapshot (SEGMENTS category); both null for other tools / Value alerts
-  const level = d ? anchorLevel(d) : null;
-  const extent = d ? anchorExtent(d) : null;
-  // Attached studies become condition OBJECTS (the SERIES category). Each entry snapshots everything the
-  // headless runner needs (id / module URL / merged params / plots); duplicate labels dedupe with a #N
-  // suffix. Multi-plot studies drive the plot dropdown in the Value column.
-  /** @type {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean }>} */
-  const seriesByLabel = {};
-  {
-    const attached = (pane.studies && /** @type {any} */ (pane.studies).attached) || [];
-    /** @type {Record<string, number>} */
-    const seen = {};
-    for (const a of attached) {
-      let label;
-      try {
-        label = studyLabel(a);
-      } catch (_) {
-        label = (a.study && a.study.name) || 'Study';
-      }
-      seen[label] = (seen[label] || 0) + 1;
-      if (seen[label] > 1) label += ' #' + seen[label];
-      // live plot meta when the study has computed; a step study's static plots() declaration otherwise.
-      // legend:false plots are DECORATION (RSI's 70/30 guides, band edges a study grays out) -- not curves
-      // anyone alerts on; filtering them also keeps a single-curve study picker-free.
-      const metaPlots =
-        (a.plotMeta && a.plotMeta.length ? a.plotMeta : typeof a.study.plots === 'function' ? a.study.plots() : []) ||
-        [];
-      // headless: can the alert-host's study runner actually compute this? Inline-only studies
-      // (worker:false / frame-clock), intrabar studies (need sub-bar feeds), and viewport-reactive ones
-      // (no viewport exists headless) cannot -- the compiler refuses them so no dead alert is ever created.
-      const st = /** @type {any} */ (a.study);
-      const headless = !(st.worker === false || st.requestFrames || st.intrabar || st.lowerTimeframe || st.viewport);
-      seriesByLabel[label] = {
-        studyId: a.study.id,
-        studyUrl: studyUrlFor(a.study.id),
-        params: { ...a.params },
-        plots: metaPlots
-          .filter((/** @type {any} */ p) => p && p.legend !== false)
-          .map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key })),
-        overlay: a.study.overlay !== false,
-        headless,
-      };
-    }
-  }
+  const cc = condContext(pane, isValue ? null : d);
+  const objectName = cc.objectName;
+  const level = cc.level;
+  const extent = cc.extent;
+  const seriesByLabel = cc.seriesByLabel;
   // Prefills: an edit shows the record's rows; a watchlist alert opens relative (Moving %); a Value alert
-  // opens at the live price; a drawing alert opens with Price Crossing the drawing.
+  // opens at the live price; a drawing alert opens with the condition the ENTRY FLOW just crafted
+  // (ctx.firstRow, from the condition dialog), or seeds Price Crossing the drawing.
   const initRows =
     editing && existing.conditions
       ? existing.conditions.conditions
@@ -352,7 +380,9 @@ function openAlertDialog(ctx) {
         ? [{ left: t('Price'), op: 'Moving Up %', right: '', value: null, percent: 1, lookback: 1 }]
         : isValue
           ? [{ left: t('Price'), op: 'Crossing', right: t('Value'), value: lastPrice(pane) }]
-          : [{ left: t('Price'), op: 'Crossing', right: objectName, value: null }];
+          : ctx.firstRow
+            ? [ctx.firstRow]
+            : [{ left: t('Price'), op: 'Crossing', right: objectName, value: null }];
   // decimals for rounding the Value: the current chart's for a NEW alert; for an EDIT, the record's own
   // precision (priceDecimalsOf: stamped at creation, legacy fallback to the stored values' precision).
   const dec = editing ? priceDecimalsOf(existing) : pane.priceDecimals;
