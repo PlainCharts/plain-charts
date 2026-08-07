@@ -54,21 +54,25 @@ export function initAlertStudySync() {
         const newTerms = terms.map((/** @type {any} */ tm) => {
           const a = tm && tm.extent && byUid.get(tm.extent.studyUid);
           if (!a) return tm;
-          const plots = alertablePlots(
-            a.plotMeta && a.plotMeta.length ? a.plotMeta : typeof a.study.plots === 'function' ? a.study.plots() : [],
-          );
-          const plot = plots.some((p) => p.key === tm.extent.plot)
-            ? tm.extent.plot
-            : plots.length
-              ? plots[0].key
-              : tm.extent.plot;
+          /** @type {any} */
           const ext = {
             ...tm.extent,
             studyId: a.study.id,
             studyUrl: studyUrlFor(a.study.id) || tm.extent.studyUrl,
             params: { ...a.params },
-            plot,
           };
+          // a PLOT term re-picks its band (kept when it still exists); an EVENT term has no plot -- its
+          // declared key is study-wide and rides the spread untouched
+          if (!tm.extent.event) {
+            const plots = alertablePlots(
+              a.plotMeta && a.plotMeta.length ? a.plotMeta : typeof a.study.plots === 'function' ? a.study.plots() : [],
+            );
+            ext.plot = plots.some((p) => p.key === tm.extent.plot)
+              ? tm.extent.plot
+              : plots.length
+                ? plots[0].key
+                : tm.extent.plot;
+          }
           if (JSON.stringify(ext) !== JSON.stringify(tm.extent)) changed = true;
           return { ...tm, extent: ext };
         });

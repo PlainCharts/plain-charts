@@ -14,9 +14,9 @@
 // `plots`/`fills` for Dynamic. The original's higher-timeframe input is covered by the engine's universal
 // Timeframe control (every study gets it), so it is not re-declared here; the dashboard is omitted.
 //
-// Declares alert conditions (Bullish FVG, Bearish FVG, FVG mitigated) and emits matching `events` from
-// calc, each stamped with the bar time where it becomes knowable: formation at the DETECTION bar (one bar
-// later under Confirmed bars only), mitigation at the bar that closes through the gap's far edge.
+// Declares alert conditions (Bullish/Bearish FVG formed, Bullish/Bearish FVG mitigated) and emits matching
+// `events` from calc, each stamped with the bar time where it becomes knowable: formation at the DETECTION
+// bar (one bar later under Confirmed bars only), mitigation at the bar that closes through the gap's far edge.
 
 // ---- option lists / helpers ----
 const LSTYLES = [
@@ -102,7 +102,8 @@ Studies.register({
   alertConditions: [
     { key: 'bull', name: 'Bullish FVG' },
     { key: 'bear', name: 'Bearish FVG' },
-    { key: 'mitigated', name: 'FVG mitigated' },
+    { key: 'bullMit', name: 'Bullish FVG mitigated' },
+    { key: 'bearMit', name: 'Bearish FVG mitigated' },
   ],
   inputs,
   /**
@@ -217,7 +218,7 @@ Studies.register({
       }
     }
     for (const r of records) {
-      if (r.mitigated && r.mitTime != null) events.push({ key: 'mitigated', time: r.mitTime });
+      if (r.mitigated && r.mitTime != null) events.push({ key: r.isbull ? 'bullMit' : 'bearMit', time: r.mitTime });
     }
     events.sort((a, b) => a.time - b.time);
 

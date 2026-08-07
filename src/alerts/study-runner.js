@@ -4,15 +4,16 @@
 // forming/append increments; any ambiguity -- backfill, multi-bar jump -- falls back to a full replace),
 // and each report execs the armed series terms' studies in one pass, deduped by study+params so ten alerts
 // on one SMA cost one compute. Values substitute into plain level terms host-side (eval.js
-// substituteSeries), so the pure eval core never learns about studies. Grew out of study-probe.js (the
-// spike); the probe stays as the standalone diagnostic.
+// substituteSeries), so the pure eval core never learns about studies. An EVENT extent (a study-declared
+// condition) resolves to the output's raw `events` channel; the host turns it into a {hit} verdict through
+// its persisted watermark. Grew out of study-probe.js (the spike); the probe stays as the standalone diagnostic.
 import { StudyWorker } from '../../lib/kapelka/studies/study-worker.js';
 import { barMs } from '../../data_engine/index.js';
 import { plotValueAt } from './eval.js';
 
 /** @typedef {{ time:number, open:number, high:number, low:number, close:number }} Bar */
 /** @typedef {{ id:string, unit:string, n:number }} Tf */
-/** @typedef {{ kind:'series', studyId:string, studyUrl:string, params:any, plot:string }} SeriesExtent */
+/** @typedef {{ kind:'series', studyId:string, studyUrl:string, params:any, plot?:string, event?:string }} SeriesExtent */
 /** @typedef {{ w: StudyWorker, tfObj: (Tf|null), have: boolean, lastTime: number, tick: (object|null),
  *   outs: Map<string, Promise<any>>, sids: Map<string, number>, sidSeq: number }} Runner */
 
@@ -100,15 +101,16 @@ function execStudy(r, ext, decimals) {
 }
 
 /**
- * Resolve every SERIES term of a compiled condition to its plot samples at the tested bar -- {cur, prev}
- * by term index (null = unresolvable; the substitution turns it 'unsupported'). `prev` (the value one bar
- * earlier, for the study-vs-Value crossing family) resolves null when no earlier bar exists. Syncs the
- * feed report into the worker first (idempotent per report). A study error logs once per exec and resolves
- * null -- a broken study must not wedge the eval loop.
+ * Resolve every SERIES term of a compiled condition -- by term index (null = unresolvable; the
+ * substitution turns it 'unsupported'). A PLOT term resolves to its samples at the tested bar {cur, prev}
+ * (`prev`, the value one bar earlier, feeds the study-vs-Value crossing family; null when no earlier bar
+ * exists). An EVENT term resolves to the output's raw `events` channel -- the HOST holds the watermark, so
+ * the verdict is its call. Syncs the feed report into the worker first (idempotent per report). A study
+ * error logs once per exec and resolves null -- a broken study must not wedge the eval loop.
  * @param {string|null} broker @param {string} symbol @param {any} tfObj @param {any} ev
  * @param {{ terms?: any[] }} compiled @param {number} barTime @param {number|null} prevBarTime
  * @param {number} [decimals]
- * @returns {Promise<({ cur:(number|null), prev:(number|null) }|null)[]>}
+ * @returns {Promise<({ cur:(number|null), prev:(number|null) }|{ events:{key?:string,time?:number}[] }|null)[]>}
  */
 export function resolveSeries(broker, symbol, tfObj, ev, compiled, barTime, prevBarTime, decimals) {
   const r = ensure(runnerKeyOf(broker, symbol, tfObj), tfObj || null);
@@ -119,10 +121,14 @@ export function resolveSeries(broker, symbol, tfObj, ev, compiled, barTime, prev
       const e = t && t.extent;
       if (!e || e.kind !== 'series') return Promise.resolve(null);
       return execStudy(r, e, decimals)
-        .then((out) => ({
-          cur: plotValueAt(out, e.plot, barTime),
-          prev: prevBarTime != null ? plotValueAt(out, e.plot, prevBarTime) : null,
-        }))
+        .then((out) =>
+          e.event
+            ? { events: (out && out.events) || [] }
+            : {
+                cur: plotValueAt(out, /** @type {string} */ (e.plot), barTime),
+                prev: prevBarTime != null ? plotValueAt(out, /** @type {string} */ (e.plot), prevBarTime) : null,
+              },
+        )
         .catch((err) => {
           console.error('[alert-studies]', e.studyId, (err && /** @type {any} */ (err).message) || err);
           return null;

@@ -27,6 +27,7 @@ import {
   cadenceOf,
   conditionEvaluable,
   substituteSeries,
+  eventAdvance,
 } from './eval.js';
 import { resolveSeries, runnerKeyOf, gcRunners } from './study-runner.js'; // headless study compute for SERIES terms
 import { nextFire, scheduleValid } from './schedule.js';
@@ -363,7 +364,32 @@ function onFeed(id, symbol, ev) {
       .then((vals) => {
         const cur = store.get(id); // re-read: the alert may have been edited/disabled during the roundtrip
         if (!cur || !cur.enabled || isExpired(cur.expiryMs, Date.now())) return;
-        tryFire(cur, symbol, ev, bar, substituteSeries(rec.compiled, vals));
+        // EVENT terms: turn each raw events channel into a {hit} verdict through the persisted watermark
+        // (rt.evw, by term index). The advance is state, not a side effect of firing -- it persists even
+        // when nothing fires (arming, and the forward march past already-seen events).
+        const terms = (rec.compiled && rec.compiled.terms) || [];
+        const rt0 = cur.rt || {};
+        /** @type {Record<number, number>|null} */
+        let evw = null;
+        const vals2 = terms.map((/** @type {any} */ t, /** @type {number} */ i) => {
+          const v = /** @type {any} */ (vals[i]);
+          if (!t || t.op !== 'event' || !t.extent || t.extent.kind !== 'series') return v;
+          if (!v || !Array.isArray(v.events)) return null; // study error -> unsupported
+          const prevWm = rt0.evw ? rt0.evw[i] : null;
+          const adv = eventAdvance(v.events, t.extent.event, prevWm, bar.time);
+          if (adv.wm !== prevWm) {
+            const w = evw || (evw = { ...(rt0.evw || {}) });
+            w[i] = adv.wm;
+          }
+          return { hit: adv.hit };
+        });
+        let cur2 = cur;
+        if (evw) {
+          cur2 = { ...cur, rt: { ...rt0, evw } };
+          store.set(id, cur2);
+          scheduleSave();
+        }
+        tryFire(cur2, symbol, ev, bar, substituteSeries(rec.compiled, vals2));
       })
       .catch((err) => console.error('[alert-host] series resolve failed', errStr(err)));
     return;
@@ -384,7 +410,9 @@ function tryFire(rec, symbol, ev, bar, compiled) {
   if (!cadenceAllows(cadence, rtFor(rec, symbol), bar.time, now, onClosed)) return;
   const next = {
     ...rec,
-    ...withRt(rec, symbol, markFired(bar.time, now)),
+    // the fire latch MERGES into the symbol's runtime state -- extra rt fields (the event watermarks
+    // under evw) must survive a fire
+    ...withRt(rec, symbol, { ...rtFor(rec, symbol), ...markFired(bar.time, now) }),
     lastFire: { at: now, price: bar.close, barTime: bar.time, symbol },
   };
   // 'Once only' is spent after it fires -> auto-STOP the alert (enabled=false). For a WATCHLIST
