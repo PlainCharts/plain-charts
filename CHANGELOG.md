@@ -34,6 +34,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - "Create alert on" is offered only on drawings that can carry an alert
 
 ### Fixed
+- Create limit order from the Position tool: the dialog's Price field can no longer end up at the live price instead of the box's entry
 - Critical: a resting bracket entry that fills in pieces no longer multiplies its stop coverage on netting accounts
 - Position tool: an exactly-fitting quantity no longer loses one step to floating-point rounding
 - Alert conditions refuse studies the engine cannot compute headless, instead of saving an alert that never fires

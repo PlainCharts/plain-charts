@@ -15,7 +15,7 @@ import { loadThemes } from '../settings/theme.js';
 import { loadAccounts } from '../connect/accounts.js';
 import { buildButtonBar } from './buttons.js';
 import { buildVisibilityFrame } from './visibility-frame.js'; // universal VISIBILITY / HIDE ON ENTRY frame (all tabs, like the button bar)
-import { setProjecting, setLevels, setLevel } from '../chart/order-view/plan-store.js'; // open = begin planning; a tab switch arms/re-types the projection (Modify disarms it)
+import { setProjecting, setLevels } from '../chart/order-view/plan-store.js'; // open = begin planning; a tab switch arms/re-types the projection (Modify disarms it)
 import { state, getCtx, setRenderer } from './ticket-state.js';
 import {
   populateAccounts,
@@ -254,27 +254,34 @@ if (desk && desk.onOrderTicketOpen) {
       const oc = getCtx();
       if (oc.symbol && (state.active === 'market' || state.active === 'limit' || state.active === 'stop')) {
         setProjecting(oc.broker, oc.symbol, true);
-        setLevels(oc.broker, oc.symbol, { orderType: state.active, qty: state.mktVol });
         // A drawing-tool HANDOFF ("Create limit order" on a Position box): the payload carries the tool's
         // order reading and THIS window seeds its own planning cycle from it -- entry as plan.ref, the
         // bracket as rung 0, side/dir from the stop's placement, the tool's quantity when it could size.
+        // ONE patch, WITH the type: the type and the ref must land together, or the chart overlay's
+        // seedTypeRef sees a ref-less limit plan mid-flight and pins the live price over the tool's entry
+        // (the cross-window race that left the pill on the box and the dialog's Price at the market).
         // The fields and the on-chart pill both mirror the plan (syncFields), so everything shows at once.
         const pf = opts.prefill;
         if (pf) {
           const qty = Number(pf.qty) > 0 ? Number(pf.qty) : null;
           if (qty) state.mktVol = qty;
+          const stop = Number(pf.stopLoss),
+            target = Number(pf.takeProfit);
           setLevels(oc.broker, oc.symbol, {
+            orderType: state.active,
+            qty: qty || state.mktVol,
             ref: Number(pf.price) > 0 ? Number(pf.price) : null,
             side: pf.side === 'sell' ? 'sell' : 'buy',
             dir: pf.side === 'sell' ? 'short' : 'long',
-            ...(qty ? { qty } : {}),
+            levels: [
+              {
+                ...(Number.isFinite(stop) && stop > 0 ? { stop } : {}),
+                ...(Number.isFinite(target) && target > 0 ? { target } : {}),
+              },
+            ],
           });
-          const stop = Number(pf.stopLoss),
-            target = Number(pf.takeProfit);
-          setLevel(oc.broker, oc.symbol, 0, {
-            ...(Number.isFinite(stop) && stop > 0 ? { stop } : {}),
-            ...(Number.isFinite(target) && target > 0 ? { target } : {}),
-          });
+        } else {
+          setLevels(oc.broker, oc.symbol, { orderType: state.active, qty: state.mktVol });
         }
       }
       syncTab(); // opened/refocused onto a live projection -> reflect its planned type as the active tab

@@ -159,7 +159,12 @@ export function setBracket(broker, symbol, on) {
     symbol,
     on
       ? { project: true, bracket: true }
-      : { bracket: false, armed: false, ref: null, levels: [], dir: null, activeIdx: null },
+      : // orderType clears WITH the session: a stale 'limit' surviving a close makes the next arming
+        // broadcast momentarily read as a ref-less limit plan, and the chart's seedTypeRef races to pin
+        // the live price over a ref another surface is about to seed (two windows can then keep
+        // different winners -- the split-brain that put the market price in the dialog's Price field
+        // while the pill sat on the tool's entry).
+        { bracket: false, armed: false, ref: null, levels: [], dir: null, activeIdx: null, orderType: null },
   );
 }
 /** ARM/disarm the projected bracket (session-only): flips the plan LIVE without touching the levels. @param {string} broker @param {string} symbol @param {boolean} on */
