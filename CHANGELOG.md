@@ -36,6 +36,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Drawing alerts: "Create alert on" is offered only on drawings that can carry an alert. Annotations and measurement tools (text, symbol, callout, arrow, the ranges, fib, position) no longer offer it, in the right-click menu or the price-scale quick editor
 
 ### Fixed
+- Critical: the netting stop auto-size no longer multiplies stop coverage when a resting bracket entry fills in pieces. CQG splits a bracket's stop/target legs per fill tranche (a 4-lot filling 1/1/2 leaves stops of 1, 1, 2); the auto-size rule assumed one protective stop and inflated every tranche stop to the full net, once leaving 12 contracts of stop against a 4-lot position. It now compares the SUM of working protective stops to the net: tranches that sum to the net are left alone, a lone mismatched stop still resizes as before, and a multi-stop mismatch is journaled and never touched
 - Position tool: an exactly-fitting quantity no longer loses one step to floating-point noise (a $100 risk sizing to exactly 0.2 lots showed and traded 0.19)
 - Alert conditions refuse studies the alert engine cannot compute headless (intrabar studies like Delta Candles, viewport-reactive and frame-clock ones like PR Terrain): the dialog warns and disables Create instead of saving an alert that would never fire
 - The #price placeholder formats with the instrument's decimals (7732.00, not 7732)
