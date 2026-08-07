@@ -10,6 +10,38 @@ import { state, eng } from './objects-state.js';
 /** @typedef {any} Engine */
 /** @typedef {import('./objects-tree-ops.js').TreeNode} TreeNode */
 
+// ---- drag auto-scroll. The browser's native drag edge-scroll is unreliable (fires on and off),
+// so while a row drag is live we drive the list's scrollTop ourselves: a document-level dragover
+// tracks the pointer, and a rAF loop scrolls whenever the pointer sits inside the top/bottom BAND
+// of the list, speed ramping toward the edge. The loop arms on the first dragover and disarms
+// itself when the drag ends (state.dragId cleared).
+const BAND = 48; // px from the list's top/bottom edge where scrolling kicks in
+const MAX_STEP = 16; // px per frame at the very edge
+let scrollRaf = 0;
+let dragY = -1;
+
+function scrollTick() {
+  scrollRaf = 0;
+  const box = state.listEl;
+  if (!state.dragId || !box || dragY < 0) {
+    dragY = -1;
+    return;
+  }
+  const r = box.getBoundingClientRect();
+  if (dragY < r.top + BAND) box.scrollTop -= Math.ceil((Math.min(BAND, r.top + BAND - dragY) / BAND) * MAX_STEP);
+  else if (dragY > r.bottom - BAND)
+    box.scrollTop += Math.ceil((Math.min(BAND, dragY - (r.bottom - BAND)) / BAND) * MAX_STEP);
+  scrollRaf = requestAnimationFrame(scrollTick);
+}
+
+if (typeof document !== 'undefined')
+  document.addEventListener('dragover', (ev) => {
+    if (!state.dragId) return;
+    if (!ev.clientX && !ev.clientY) return; // some engines emit a bogus 0,0 event mid-drag
+    dragY = ev.clientY;
+    if (!scrollRaf) scrollRaf = requestAnimationFrame(scrollTick);
+  });
+
 export function clearDrop() {
   if (state.listEl)
     state.listEl
