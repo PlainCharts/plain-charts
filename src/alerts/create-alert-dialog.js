@@ -32,6 +32,7 @@ import {
   isRelativeConds,
   condsUseTf,
   isMoveOp,
+  alertablePlots,
   TIME_TOOLS,
 } from './alert-conditions.js'; // pure UI-conditions -> compiled host terms + the condition-semantics rules (leaf, no DOM)
 import { openCreateTimeAlertDialog } from './create-time-alert-dialog.js'; // a TIME-category drawing (vline) routes there
@@ -166,7 +167,7 @@ function condContext(pane, d) {
   // Attached studies become condition OBJECTS (the SERIES category). Each entry snapshots everything the
   // headless runner needs (id / module URL / merged params / plots); duplicate labels dedupe with a #N
   // suffix. Multi-plot studies drive the plot/band picker.
-  /** @type {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean }>} */
+  /** @type {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean, uid:(string|null) }>} */
   const seriesByLabel = {};
   const attached = (pane.studies && /** @type {any} */ (pane.studies).attached) || [];
   /** @type {Record<string, number>} */
@@ -194,11 +195,10 @@ function condContext(pane, d) {
       studyId: a.study.id,
       studyUrl: studyUrlFor(a.study.id),
       params: { ...a.params },
-      plots: metaPlots
-        .filter((/** @type {any} */ p) => p && p.legend !== false)
-        .map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key })),
+      plots: alertablePlots(metaPlots),
       overlay: a.study.overlay !== false,
       headless,
+      uid: /** @type {any} */ (a).uid || null, // instance identity: the alert binds to THIS attachment
     };
   }
   return { objectName, level, extent, seriesByLabel };

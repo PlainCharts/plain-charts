@@ -17,18 +17,30 @@ const OP_MAP = {
 };
 const OP_FLIP = { 'cross-up': 'cross-down', 'cross-down': 'cross-up', gt: 'lt', lt: 'gt' };
 
+/** the ALERTABLE plots of a study's plot meta: legend:false entries are decoration (RSI's 70/30 guides),
+ * never alert targets. One filter, shared by the dialog context and the study sync.
+ * @param {any[]} metaPlots @returns {{ key:string, name:string }[]} */
+export const alertablePlots = (metaPlots) =>
+  (metaPlots || [])
+    .filter((/** @type {any} */ p) => p && p.legend !== false)
+    .map((/** @type {any} */ p) => ({ key: p.key, name: p.name || p.key }));
+
 /** a SERIES extent from a seriesByLabel entry + the row's chosen plot (or the study's first). Refuses a
  * study the headless runner cannot compute (`headless:false`: inline-only, intrabar, viewport-reactive) --
  * the ONE gate both term families (price-vs-study and study-vs-Value) pass through, so the dialog warns
  * instead of minting a dead alert.
- * @param {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], headless?:boolean }} s
+ * @param {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], headless?:boolean, uid?:(string|null) }} s
  * @param {string|null|undefined} rowPlot
  * @returns {{ kind:'series', studyId:string, studyUrl:string, params:any, plot:string }|null} */
 function seriesExtentOf(s, rowPlot) {
   if (!s || !s.studyUrl || s.headless === false) return null;
   const plots = s.plots || [];
   const plot = rowPlot && plots.some((p) => p.key === rowPlot) ? rowPlot : plots.length ? plots[0].key : null;
-  return plot ? { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, plot } : null;
+  if (!plot) return null;
+  /** @type {any} */
+  const ext = { kind: 'series', studyId: s.studyId, studyUrl: s.studyUrl, params: s.params, plot };
+  if (s.uid) ext.studyUid = s.uid; // instance binding: the live-follow sync re-snapshots by this
+  return ext;
 }
 // Relative (symbol-self) operators: close moved X% over N bars. No Price/Value/level -- percent + lookback.
 // Moving Up/Down = absolute price move over N bars (the base); Moving Up/Down % = the same as a percent (derived).
@@ -95,7 +107,7 @@ export function anchorExtent(d) {
  * @param {string} objectLabel the anchored drawing's label
  * @param {number|null} level  the drawing's snapshotted price level (LEVEL category), null otherwise
  * @param {{ kind:'segments'|'region', points:{time:number,price:number}[], extend?:string }|null} [extent]  the drawing's extent snapshot (SEGMENTS/REGION category), null otherwise
- * @param {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean }>|null} [seriesByLabel]
+ * @param {Record<string, { studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless?:boolean, uid?:(string|null) }>|null} [seriesByLabel]
  *   attached studies by their dropdown label (the SERIES category). The row's chosen plot (or the only one)
  *   snapshots into a series extent. Sub-pane (non-overlay) studies stay unsupported here until
  *   study-vs-Value lands -- price never reaches a different scale.

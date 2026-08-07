@@ -47,6 +47,7 @@ import { initWatchlist } from './panels/watchlist.js';
 import { initAlertsPanel } from './alerts/alerts-panel.js';
 import { initAlertToasts } from './alerts/toast.js';
 import { initAlertDrawingSync } from './alerts/alert-drawing-sync.js';
+import { initAlertStudySync } from './alerts/alert-study-sync.js';
 import { initUndo } from './edit/undo.js';
 import { initHotkeys } from './edit/hotkeys.js';
 import { initClipboard } from './edit/clipboard.js';
@@ -129,6 +130,7 @@ async function start() {
     initAlertsPanel(); // right slide-out Alerts manager
     initAlertToasts(); // in-app toast when an alert fires (listens for the alert-host's fired broadcast)
     initAlertDrawingSync(); // keep a drawing-anchored alert's level in sync when its line is moved
+    initAlertStudySync(); // keep a study-bound alert's snapshot in sync when its study is edited
     initChartDialog(); // right-click → full settings dialog + templates + settings rail action
     initThemeModes(); // Light/Dark theme-mode rail toggle (by the camera/gear)
     initUndo(); // drawing-canvas undo/redo (must run after initLayout)

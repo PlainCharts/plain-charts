@@ -28,6 +28,7 @@ Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 - Creating an alert on a drawing now opens the Add-condition dialog first, pre-set to "Price Crossing" that drawing: craft the condition, press Add, and the alert dialog opens with it in the list. Cancel creates nothing. A drawing that already carries an alert opens straight into editing
+- Indicator alerts are bound to the study instance on your chart: edit the study's settings (BB length, RSI period) and the alert follows, firing where the bands now are; the alert itself never changes, it references only the band. Removing a study that carries an alert asks first, then removes both. The binding survives restarts
 - Alert conditions are now a plain list of sentences ("Price Crossing 7700", "RSI 14 Greater Than 70") instead of a column grid. Each condition is crafted or edited in its own Add-condition dialog that reveals controls as you pick: subject, condition, what it compares against, then the value or band
 - Alert bar feeds now load history back to the drawing's oldest anchor, so an alert on a line or box anchored days or weeks ago evaluates on real bars exactly where it is drawn, instead of approximating from a fixed 300-bar window
 - Drawing alerts: "Create alert on" is offered only on drawings that can carry an alert. Annotations and measurement tools (text, symbol, callout, arrow, the ranges, fib, position) no longer offer it, in the right-click menu or the price-scale quick editor

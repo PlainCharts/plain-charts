@@ -13,6 +13,11 @@ import { Line } from '../../lib/kapelka/index.js';
 import { tfFromId } from '../../lib/kapelka/studies/channels.js';
 import { getStudyDefaults } from './defaults-store.js';
 import { studyUrlFor } from './user-loader.js';
+// app-layer glue for the study->alert remove cascade (an alert bound to this instance dies with it)
+import { alertsForStudy } from '../alerts/alert-study-sync.js';
+import { alertCommand } from '../alerts/funnel.js';
+import { confirmDialog } from '../ui/confirm.js';
+import { t } from '../i18n/i18n.js';
 
 export class StudyHost extends CoreStudyHost {
   /** @param {any} pane the owning Pane (host object): chart, api(), contractId, settings, skin, etc. */
@@ -159,10 +164,10 @@ export class StudyHost extends CoreStudyHost {
   }
 
   // ---- lifecycle (app keeps its positional add signature + extra persistence fields) ----
-  /** @param {string} id @param {any} [params] @param {boolean} [hidden] @param {any[]} [drawings] @param {number|null} [paneIdx] @param {any} [style] @param {any[]} [tree] */
-  // @ts-expect-error -- the app's positional add(id, params, hidden, drawings, paneIdx, style, tree) is a
+  /** @param {string} id @param {any} [params] @param {boolean} [hidden] @param {any[]} [drawings] @param {number|null} [paneIdx] @param {any} [style] @param {any[]} [tree] @param {string} [uid] */
+  // @ts-expect-error -- the app's positional add(id, params, hidden, drawings, paneIdx, style, tree, uid) is a
   // DELIBERATE override of kapelka's add(id, params, opts); it adapts to the base via super.add (below).
-  add(id, params, hidden, drawings, paneIdx, style, tree) {
+  add(id, params, hidden, drawings, paneIdx, style, tree, uid) {
     // a FRESH user-add (no explicit params/style) seeds from the user's saved defaults for this study
     // (the "Save as default" feature), else built-in defaults apply. An EMPTY params object counts as
     // "nothing set" too -- the study board attaches its studies with params:{} (from the builder), so
@@ -175,7 +180,17 @@ export class StudyHost extends CoreStudyHost {
         style = def.style;
       }
     }
-    return super.add(id, params, { hidden, style, drawings, paneIdx, tree });
+    const n0 = this.attached.length;
+    const ret = super.add(id, params, { hidden, style, drawings, paneIdx, tree });
+    // INSTANCE identity: a stable uid the alert engine binds to (the objectId analog for studies), minted
+    // at first attach and carried through restarts (restore passes the persisted one). Templates pass none
+    // and mint fresh -- a template is a blueprint, not an instance.
+    if (this.attached.length > n0) {
+      const a = /** @type {any} */ (this.attached[this.attached.length - 1]);
+      a.uid = uid || 'su' + Math.random().toString(36).slice(2, 10);
+      this.persist(); // the base persisted before the stamp: write once more so the uid lands on disk
+    }
+    return ret;
   }
   /** @param {any[]} studies */
   applyTemplate(studies) {
@@ -185,10 +200,42 @@ export class StudyHost extends CoreStudyHost {
     );
   }
   clearAll() {
-    while (this.attached.length) this.remove(this.attached.length - 1);
+    // BULK removal (template apply, pane teardown): never per-study confirms; bound alerts stay and keep
+    // firing on their snapshot (the documented orphan rule)
+    this._bulk = true;
+    try {
+      while (this.attached.length) this.remove(this.attached.length - 1);
+    } finally {
+      this._bulk = false;
+    }
   }
   /** @param {number} i */
   remove(i) {
+    const a = /** @type {any} */ (this.attached[i]);
+    // STUDY -> ALERT cascade (direct user removal only): an alert bound to this instance dies with it,
+    // confirmed first -- the drawings rule applied to studies. One-way on purpose: deleting an alert
+    // never deletes the study (they are not one unit the way a drawing and its alert are).
+    if (!this._bulk && a && a.uid) {
+      const bound = alertsForStudy(a.uid);
+      if (bound.length) {
+        confirmDialog({
+          title: t('Remove study and its alert?'),
+          message: t('This study has an alert. Removing it deletes the alert too.'),
+          yes: t('Remove'),
+          no: t('Cancel'),
+        }).then((ok) => {
+          if (!ok) return;
+          bound.forEach((al) => alertCommand('remove', { id: al.id }).catch(() => {}));
+          const idx = this.attached.indexOf(a); // re-locate: the index may have shifted during the confirm
+          if (idx >= 0) this._removeAt(idx);
+        });
+        return;
+      }
+    }
+    this._removeAt(i);
+  }
+  /** @param {number} i */
+  _removeAt(i) {
     super.remove(i);
     this._reindexPanes();
     this._updateFutureSpacer();
@@ -447,6 +494,7 @@ export class StudyHost extends CoreStudyHost {
   persist() {
     this.pane.settings.studies = this.attached.map((a) => ({
       id: a.study.id,
+      uid: /** @type {any} */ (a).uid || undefined, // instance identity (alert binding survives restarts)
       params: a.params,
       hidden: !!a.hidden,
       drawings: a.drawings && a.drawings.length ? a.drawings : undefined,
@@ -455,13 +503,16 @@ export class StudyHost extends CoreStudyHost {
       style: a.style && Object.keys(a.style).length ? a.style : undefined,
     }));
     bus.emit('pane:changed');
+    // every study mutation funnels through here (param edit, add, remove, style, hidden) -- the alert
+    // engine's study sync listens and re-snapshots bound alerts (the drawings:committed analog)
+    bus.emit('studies:changed', this.pane);
   }
   _persist() {
     this.persist();
   }
   restore() {
     (this.pane.settings.studies || []).forEach((/** @type {any} */ s) =>
-      this.add(s.id, s.params, s.hidden, s.drawings, s.paneIdx, s.style, s.tree),
+      this.add(s.id, s.params, s.hidden, s.drawings, s.paneIdx, s.style, s.tree, s.uid),
     );
   }
 

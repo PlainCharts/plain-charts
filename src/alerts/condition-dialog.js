@@ -16,9 +16,9 @@ import { conditionEvaluable } from './eval.js';
 // Level operators between two objects (the Moving family is Price-only and self-referential).
 const LEVEL_OPS = ['Crossing', 'Crossing Up', 'Crossing Down', 'Greater Than', 'Less Than'];
 
-/** @typedef {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean }} SeriesEntry */
+/** @typedef {{ studyId:string, studyUrl:(string|null), params:any, plots:{key:string,name:string}[], overlay:boolean, headless:boolean, uid?:(string|null) }} SeriesEntry */
 /** @typedef {{ objectName:string, seriesByLabel:Record<string, SeriesEntry>, dec?:number }} CondCtx */
-/** @typedef {{ left:string, op:string, right:string, value:(number|null), percent:(number|null), amount:(number|null), lookback:(number|null), plot:(string|null) }} CondRow */
+/** @typedef {{ left:string, op:string, right:string, value:(number|null), percent:(number|null), amount:(number|null), lookback:(number|null), plot:(string|null), suid?:(string|null) }} CondRow */
 /** @typedef {{ subject:string, op:string, obj2:(string|null), value:(number|null), plot:(string|null), percent:(number|null), amount:(number|null), lookback:(number|null) }} CondState */
 
 /** the study labels usable as a SUBJECT (their own value vs Value): any headless study. @param {CondCtx} ctx */
@@ -110,6 +110,11 @@ export function buildRow(s, ctx, priceLabel, valueLabel) {
   } else {
     row.right = s.obj2 || '';
   }
+  // the study side's INSTANCE uid rides the row (the alert binds to the attachment, not to a display label)
+  const studySide =
+    s.subject !== 'price' ? s.subject : s.obj2 && s.obj2 !== 'value' && s.obj2 !== 'drawing' ? s.obj2 : null;
+  const entry = studySide ? (ctx.seriesByLabel || {})[studySide] : null;
+  row.suid = entry && entry.uid ? entry.uid : null;
   return row;
 }
 
