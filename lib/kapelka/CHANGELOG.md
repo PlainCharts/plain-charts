@@ -33,6 +33,10 @@ What stayed is the rendering core; what left is everything that assumed a partic
 
 - Session day-roll for tick classification (`timeAxis.dayRoll`, ms) — on daily+ timeframes, bars stamped at the session open are rolled into their trade day before day/month/year boundary tests, so the month tick lands on the first bar trading the new month. Unset = raw-UTC behavior unchanged.
 
+### Fixed
+
+- Wheel zoom guards measure the visible span (bar slots on screen), not the real-bar count — a dataset shorter than minZoom (e.g. 15 monthly bars) no longer deadlocks the wheel.
+
 ## [0.1.0] - 2026-07-28
 
 ### Added
