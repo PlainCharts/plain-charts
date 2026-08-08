@@ -354,12 +354,31 @@ function makeRange({ id, name, glyph, price, time, description, icon }) {
     /** @param {ToolDrawing} [d] */
     textEnabled: (d) => !(d && d.style && d.style.measureMethod === 'conventional'),
 
-    /** @param {ToolScreenPoint[]} pts @param {number} x @param {number} y @param {number} tol */
-    hitTest(pts, x, y, tol) {
+    // Only the DRAWN lines are hit targets -- the boundary stems and the measure line (standard
+    // connector at the midpoint, or the conventional dimension line at the dragged-to edge). The
+    // fill and the empty interior are NOT (fib-style): whatever sits inside the measured span --
+    // other drawings, the candles themselves -- stays reachable. Grab the tool by a stem or the
+    // measure line.
+    /** @param {ToolScreenPoint[]} pts @param {number} x @param {number} y @param {number} tol @param {ToolDrawing} [d] */
+    hitTest(pts, x, y, tol, d) {
       if (pts.length < 2) return null;
       for (let i = 0; i < pts.length; i++)
         if (Tools.geom.dist(x, y, pts[i].x, pts[i].y) <= tol + 3) return { part: 'point', index: i };
-      if (Tools.geom.pointInRect(x, y, pts[0].x, pts[0].y, pts[1].x, pts[1].y)) return { part: 'body' };
+      const x1 = pts[0].x,
+        y1 = pts[0].y,
+        x2 = pts[1].x,
+        y2 = pts[1].y;
+      /** @param {number} ax @param {number} ay @param {number} bx @param {number} by */
+      const seg = (ax, ay, bx, by) => Tools.geom.distToSegment(x, y, ax, ay, bx, by) <= tol;
+      // boundary lines: vertical stems for time ends, horizontals for price ends
+      if (time && (seg(x1, y1, x1, y2) || seg(x2, y1, x2, y2))) return { part: 'body' };
+      if (price && (seg(x1, y1, x2, y1) || seg(x1, y2, x2, y2))) return { part: 'body' };
+      // the measure line: conventional sits on the dragged-to (P2) edge, standard on the midline
+      const conv = !!(d && d.style && /** @type {any} */ (d.style).measureMethod === 'conventional');
+      const xm = (x1 + x2) / 2,
+        ym = (y1 + y2) / 2;
+      if (time && seg(x1, conv ? y2 : ym, x2, conv ? y2 : ym)) return { part: 'body' };
+      if (price && seg(conv ? x2 : xm, y1, conv ? x2 : xm, y2)) return { part: 'body' };
       return null;
     },
   };
